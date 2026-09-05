@@ -26,7 +26,6 @@ export default function ResetPassword() {
         setTokenState("valid");
       } else {
         setTokenState("invalid");
-        toast.error("This reset link is invalid or expired");
       }
     });
   }, []);
