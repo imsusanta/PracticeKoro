@@ -19,6 +19,8 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          notes: string | null
+          rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["approval_status_type"]
@@ -29,6 +31,8 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          notes?: string | null
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["approval_status_type"]
@@ -39,6 +43,8 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          notes?: string | null
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["approval_status_type"]
@@ -561,9 +567,13 @@ export type Database = {
           age: number | null
           avatar_url: string | null
           created_at: string
+          deactivated_at: string | null
+          deactivated_by: string | null
+          deactivation_reason: string | null
           email: string | null
           full_name: string | null
           id: string
+          is_active: boolean
           updated_at: string
           whatsapp_number: string | null
         }
@@ -571,9 +581,13 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -581,9 +595,13 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean
           updated_at?: string
           whatsapp_number?: string | null
         }

@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Users, CheckCircle, XCircle, Search, UserX, Key, UserCheck, Trash2, Clock, MoreVertical, Plus, Phone, Mail, User, Calendar, Shield, MessageSquare, Send, CreditCard, Edit, Sparkles } from "lucide-react";
+import { Users, CheckCircle, XCircle, Search, UserX, Key, UserCheck, Trash2, Clock, MoreVertical, Plus, Phone, Mail, User, Calendar, Shield, MessageSquare, Send, CreditCard, Edit, Sparkles, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { StudentPerformanceSummary } from "@/components/admin/StudentPerformanceSummary";
+import {
+  aggregatePerformanceByUser,
+  computeExpiresAt,
+  emptyPerformance,
+  hasActiveSubscription,
+  type StudentPerformance,
+} from "@/lib/studentManagement";
 
 interface Student {
   id: string;
@@ -21,10 +30,15 @@ interface Student {
   avatar_url: string | null;
   age: number | null;
   created_at: string;
+  is_active?: boolean | null;
+  deactivation_reason?: string | null;
+  deactivated_at?: string | null;
   approval_status?: {
     status: string;
     reviewed_at: string | null;
     expires_at: string | null;
+    rejection_reason?: string | null;
+    notes?: string | null;
   };
   purchases?: {
     id?: string;
@@ -32,6 +46,7 @@ interface Student {
     content_type?: string;
     created_at?: string;
   }[];
+  performance?: StudentPerformance;
 }
 
 const StudentManagement = () => {
@@ -67,6 +82,15 @@ const StudentManagement = () => {
   const [editCustomDate, setEditCustomDate] = useState<string>("");
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [approveTargetIds, setApproveTargetIds] = useState<string[]>([]);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [deactivationReason, setDeactivationReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -98,11 +122,22 @@ const StudentManagement = () => {
   const loadStudents = async () => {
     try {
       console.log("Loading students...");
-      const { data: studentsData, error: studentError } = await supabase.from("profiles").select(`
+      let { data: studentsData, error: studentError } = await supabase.from("profiles").select(`
         id, email, full_name, whatsapp_number, avatar_url, age, created_at,
+        is_active, deactivation_reason, deactivated_at,
         user_roles(role),
-        approval_status(status, reviewed_at, expires_at)
+        approval_status(status, reviewed_at, expires_at, rejection_reason, notes)
       `).order("created_at", { ascending: false });
+
+      if (studentError) {
+        const fallback = await supabase.from("profiles").select(`
+          id, email, full_name, whatsapp_number, avatar_url, age, created_at,
+          user_roles(role),
+          approval_status(status, reviewed_at, expires_at)
+        `).order("created_at", { ascending: false });
+        studentsData = fallback.data;
+        studentError = fallback.error;
+      }
 
       if (studentError) {
         console.error("Error loading students profiles:", studentError);
@@ -123,6 +158,16 @@ const StudentManagement = () => {
         console.error("Error loading purchases:", purchaseError);
       }
 
+      const { data: attemptsData, error: attemptsError } = await supabase
+        .from("test_attempts")
+        .select("user_id, percentage, passed, is_active");
+
+      if (attemptsError) {
+        console.error("Error loading test attempts:", attemptsError);
+      }
+
+      const performanceByUser = aggregatePerformanceByUser(attemptsData || []);
+
       const students = (studentsData || [])
         .filter((s: any) => {
           const role = Array.isArray(s.user_roles) ? s.user_roles[0]?.role : s.user_roles?.role;
@@ -136,10 +181,18 @@ const StudentManagement = () => {
           avatar_url: s.avatar_url,
           age: s.age,
           created_at: s.created_at,
+          is_active: s.is_active,
+          deactivation_reason: s.deactivation_reason,
+          deactivated_at: s.deactivated_at,
           approval_status: Array.isArray(s.approval_status) ? s.approval_status[0] : s.approval_status,
-          purchases: (purchasesData || []).filter(p => p.user_id === s.id)
+          purchases: (purchasesData || []).filter(p => p.user_id === s.id),
+          performance: performanceByUser[s.id] || emptyPerformance(),
         }));
       setStudents(students);
+      setSelectedIds((prev) => {
+        const validIds = new Set(students.map((student) => student.id));
+        return new Set([...prev].filter((id) => validIds.has(id)));
+      });
     } catch (err: any) {
       console.error("Critical error in loadStudents:", err);
       toast({ title: "Error", description: "Critical error loading students: " + err.message, variant: "destructive" });
@@ -148,16 +201,6 @@ const StudentManagement = () => {
 
   const applyFilters = () => {
     let filtered = [...students];
-
-    // Helper to check for active subscription
-    const hasActiveSubscription = (s: any) => {
-      return s.purchases?.some(p => {
-        if (p.content_type !== 'subscription') return false;
-        const expiryDate = new Date(p.created_at || "");
-        expiryDate.setDate(expiryDate.getDate() + 365);
-        return new Date() < expiryDate;
-      });
-    };
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -181,14 +224,14 @@ const StudentManagement = () => {
       filtered = filtered.filter(s => {
         const studentStatus = s.approval_status?.status || "pending";
         // If they have active subscription, they are treated as approved
-        if (filterStatus === "approved" && hasActiveSubscription(s)) return true;
+        if (filterStatus === "approved" && hasActiveSubscription(s.purchases)) return true;
         return studentStatus === filterStatus;
       });
     }
 
     if (paymentFilter !== "all") {
       filtered = filtered.filter(s => {
-        const isPremium = hasActiveSubscription(s);
+        const isPremium = hasActiveSubscription(s.purchases);
         if (paymentFilter === "premium") return isPremium;
         return !isPremium;
       });
@@ -197,71 +240,154 @@ const StudentManagement = () => {
     setFilteredStudents(filtered);
   };
 
-  const handleApprove = async (studentId: string, expiresAt?: string) => {
+  const activateProfiles = async (studentIds: string[]) => {
+    const { error } = await supabase.from("profiles").update({
+      is_active: true,
+      deactivation_reason: null,
+      deactivated_at: null,
+      deactivated_by: null,
+    }).in("id", studentIds);
+    if (error) {
+      console.warn("Profile activation fields not persisted:", error);
+    }
+  };
+
+  const handleApprove = async (studentIds: string[], expiresAt?: string | null) => {
+    if (studentIds.length === 0) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const { error } = await supabase.from("approval_status").update({
-      status: "approved",
+    setApproving(true);
+    const payload = {
+      status: "approved" as const,
       reviewed_by: session.user.id,
       reviewed_at: new Date().toISOString(),
-      expires_at: expiresAt || null
-    }).eq("user_id", studentId);
+      expires_at: expiresAt || null,
+      rejection_reason: null,
+    };
+    let { error } = await supabase.from("approval_status").update(payload).in("user_id", studentIds);
     if (error) {
+      const fallback = await supabase.from("approval_status").update({
+        status: payload.status,
+        reviewed_by: payload.reviewed_by,
+        reviewed_at: payload.reviewed_at,
+        expires_at: payload.expires_at,
+      }).in("user_id", studentIds);
+      error = fallback.error;
+    }
+    if (error) {
+      setApproving(false);
       toast({ title: "Error", description: "Failed to approve student", variant: "destructive" });
       return;
     }
-    toast({ title: "Success", description: "Student approved" });
+    await activateProfiles(studentIds);
+    setApproving(false);
+    toast({
+      title: "Success",
+      description: studentIds.length > 1 ? `${studentIds.length} students approved` : "Student approved",
+    });
+    setSelectedIds(new Set());
     await loadStudents();
   };
 
   const handleApproveWithDuration = async () => {
-    if (!selectedStudent) return;
-    let expiresAt: string | undefined;
-    if (selectedDuration === "30days") {
-      const date = new Date(); date.setDate(date.getDate() + 30);
-      expiresAt = date.toISOString();
-    } else if (selectedDuration === "60days") {
-      const date = new Date(); date.setDate(date.getDate() + 60);
-      expiresAt = date.toISOString();
-    } else if (selectedDuration === "90days") {
-      const date = new Date(); date.setDate(date.getDate() + 90);
-      expiresAt = date.toISOString();
-    } else if (selectedDuration === "custom" && customDate) {
-      expiresAt = new Date(customDate).toISOString();
-    }
-    await handleApprove(selectedStudent.id, expiresAt);
+    const ids = approveTargetIds.length > 0 ? approveTargetIds : (selectedStudent ? [selectedStudent.id] : []);
+    if (ids.length === 0) return;
+    const expiresAt = computeExpiresAt(selectedDuration, customDate);
+    await handleApprove(ids, expiresAt);
     setDurationDialogOpen(false);
+    setApproveTargetIds([]);
   };
 
-  const handleReject = async (studentId: string) => {
+  const openApproveDialog = (studentIds: string[], student?: Student) => {
+    const pendingIds = studentIds.filter((id) => {
+      const match = students.find((item) => item.id === id);
+      return (match?.approval_status?.status || "pending") === "pending";
+    });
+    if (pendingIds.length === 0) {
+      toast({ title: "Nothing to approve", description: "Select at least one pending student", variant: "destructive" });
+      return;
+    }
+    setApproveTargetIds(pendingIds);
+    setSelectedStudent(student || null);
+    setSelectedDuration("permanent");
+    setCustomDate("");
+    setDurationDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!selectedStudent) return;
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      toast({ title: "Reason required", description: "Please enter a rejection reason", variant: "destructive" });
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const { error } = await supabase.from("approval_status").update({
+    setRejecting(true);
+    let { error } = await supabase.from("approval_status").update({
       status: "rejected",
       reviewed_by: session.user.id,
-      reviewed_at: new Date().toISOString()
-    }).eq("user_id", studentId);
+      reviewed_at: new Date().toISOString(),
+      rejection_reason: reason,
+    }).eq("user_id", selectedStudent.id);
+    if (error) {
+      const fallback = await supabase.from("approval_status").update({
+        status: "rejected",
+        reviewed_by: session.user.id,
+        reviewed_at: new Date().toISOString(),
+      }).eq("user_id", selectedStudent.id);
+      error = fallback.error;
+      if (!error) {
+        console.warn("rejection_reason column unavailable; status updated without reason");
+      }
+    }
+    setRejecting(false);
     if (error) {
       toast({ title: "Error", description: "Failed to reject", variant: "destructive" });
       return;
     }
     toast({ title: "Success", description: "Student rejected" });
+    setRejectDialogOpen(false);
+    setRejectionReason("");
     await loadStudents();
   };
 
-  const handleDeactivate = async (studentId: string) => {
+  const handleDeactivate = async () => {
+    if (!selectedStudent) return;
+    const reason = deactivationReason.trim();
+    if (!reason) {
+      toast({ title: "Reason required", description: "Please enter a deactivation reason", variant: "destructive" });
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    setDeactivating(true);
+    const now = new Date().toISOString();
     const { error } = await supabase.from("approval_status").update({
       status: "deactivated",
       reviewed_by: session.user.id,
-      reviewed_at: new Date().toISOString()
-    }).eq("user_id", studentId);
+      reviewed_at: now,
+    }).eq("user_id", selectedStudent.id);
     if (error) {
+      setDeactivating(false);
       toast({ title: "Error", description: "Failed to deactivate", variant: "destructive" });
       return;
     }
-    toast({ title: "Success", description: "Student deactivated" });
+    const { error: profileError } = await supabase.from("profiles").update({
+      is_active: false,
+      deactivation_reason: reason,
+      deactivated_at: now,
+      deactivated_by: session.user.id,
+    }).eq("id", selectedStudent.id);
+    setDeactivating(false);
+    if (profileError) {
+      console.warn("Profile deactivation fields not persisted:", profileError);
+      toast({ title: "Partial success", description: "Student deactivated, but profile reason fields could not be saved. Apply the latest migration if this persists.", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Student deactivated" });
+    }
+    setDeactivateDialogOpen(false);
+    setDeactivationReason("");
     await loadStudents();
   };
 
@@ -307,17 +433,44 @@ const StudentManagement = () => {
   const handleActivate = async (studentId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const { error } = await supabase.from("approval_status").update({
+    let { error } = await supabase.from("approval_status").update({
       status: "approved",
       reviewed_by: session.user.id,
       reviewed_at: new Date().toISOString(),
-      expires_at: null
+      expires_at: null,
+      rejection_reason: null,
     }).eq("user_id", studentId);
+    if (error) {
+      const fallback = await supabase.from("approval_status").update({
+        status: "approved",
+        reviewed_by: session.user.id,
+        reviewed_at: new Date().toISOString(),
+        expires_at: null,
+      }).eq("user_id", studentId);
+      error = fallback.error;
+    }
     if (error) {
       toast({ title: "Error", description: "Failed to activate", variant: "destructive" });
       return;
     }
+    await activateProfiles([studentId]);
     toast({ title: "Success", description: "Student activated" });
+    await loadStudents();
+  };
+
+  const handlePaymentLock = async (studentId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { error } = await supabase.from("approval_status").update({
+      status: "payment_locked",
+      reviewed_by: session.user.id,
+      reviewed_at: new Date().toISOString(),
+    }).eq("user_id", studentId);
+    if (error) {
+      toast({ title: "Error", description: "Failed to lock student for payment", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Success", description: "Student locked for payment" });
     await loadStudents();
   };
 
@@ -489,20 +642,7 @@ const StudentManagement = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    let expiresAt: string | null = null;
-    if (editDuration === "30days") {
-      const date = new Date(); date.setDate(date.getDate() + 30);
-      expiresAt = date.toISOString();
-    } else if (editDuration === "60days") {
-      const date = new Date(); date.setDate(date.getDate() + 60);
-      expiresAt = date.toISOString();
-    } else if (editDuration === "90days") {
-      const date = new Date(); date.setDate(date.getDate() + 90);
-      expiresAt = date.toISOString();
-    } else if (editDuration === "custom" && editCustomDate) {
-      expiresAt = new Date(editCustomDate).toISOString();
-    }
-    // permanent means null (no expiry)
+    const expiresAt = computeExpiresAt(editDuration, editCustomDate);
 
     const { error } = await supabase.from("approval_status").update({
       expires_at: expiresAt,
@@ -535,33 +675,39 @@ const StudentManagement = () => {
 
   const statusCounts = {
     all: students.length,
-    pending: students.filter(s => {
-      const isPremium = s.purchases?.some(p => {
-        if (p.content_type !== 'subscription') return false;
-        const expiryDate = new Date(p.created_at || "");
-        expiryDate.setDate(expiryDate.getDate() + 365);
-        return new Date() < expiryDate;
-      });
-      return s.approval_status?.status === "pending" && !isPremium;
-    }).length,
-    approved: students.filter(s => {
-      const isPremium = s.purchases?.some(p => {
-        if (p.content_type !== 'subscription') return false;
-        const expiryDate = new Date(p.created_at || "");
-        expiryDate.setDate(expiryDate.getDate() + 365);
-        return new Date() < expiryDate;
-      });
-      return s.approval_status?.status === "approved" || isPremium;
-    }).length,
+    pending: students.filter(s => s.approval_status?.status === "pending" && !hasActiveSubscription(s.purchases)).length,
+    approved: students.filter(s => s.approval_status?.status === "approved" || hasActiveSubscription(s.purchases)).length,
     rejected: students.filter(s => s.approval_status?.status === "rejected").length,
     deactivated: students.filter(s => s.approval_status?.status === "deactivated").length,
     payment_locked: students.filter(s => s.approval_status?.status === "payment_locked").length,
-    premium: students.filter(s => s.purchases?.some(p => {
-      if (p.content_type !== 'subscription') return false;
-      const expiryDate = new Date(p.created_at || "");
-      expiryDate.setDate(expiryDate.getDate() + 365);
-      return new Date() < expiryDate;
-    })).length,
+    premium: students.filter(s => hasActiveSubscription(s.purchases)).length,
+  };
+
+  const pendingFilteredStudents = useMemo(
+    () => filteredStudents.filter((student) => (student.approval_status?.status || "pending") === "pending"),
+    [filteredStudents],
+  );
+  const allPendingSelected = pendingFilteredStudents.length > 0 && pendingFilteredStudents.every((student) => selectedIds.has(student.id));
+  const somePendingSelected = pendingFilteredStudents.some((student) => selectedIds.has(student.id));
+
+  const toggleStudentSelected = (studentId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(studentId);
+      else next.delete(studentId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllPending = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      pendingFilteredStudents.forEach((student) => {
+        if (checked) next.add(student.id);
+        else next.delete(student.id);
+      });
+      return next;
+    });
   };
 
   const AddButton = (
@@ -651,6 +797,27 @@ const StudentManagement = () => {
           </div>
         </div>
 
+        {selectedIds.size > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-800">{selectedIds.size} student{selectedIds.size === 1 ? "" : "s"} selected</p>
+              <p className="text-xs text-emerald-700">Bulk approve applies only to pending accounts</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="rounded-xl h-10" onClick={() => setSelectedIds(new Set())}>
+                Clear
+              </Button>
+              <Button
+                className="rounded-xl h-10 bg-gradient-to-r from-emerald-500 to-teal-600"
+                onClick={() => openApproveDialog([...selectedIds])}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Approve selected
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Students List - Row Based */}
         {filteredStudents.length === 0 ? (
           <Card className="border-0 bg-white rounded-2xl">
@@ -665,10 +832,20 @@ const StudentManagement = () => {
         ) : (
           <Card className="border-0 bg-white rounded-2xl overflow-hidden">
             {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[2fr_1.5fr_1fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="hidden md:grid md:grid-cols-[40px_2fr_1.4fr_1fr_1.2fr_0.9fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide items-center">
+              <span className="flex justify-center">
+                <Checkbox
+                  checked={allPendingSelected ? true : somePendingSelected ? "indeterminate" : false}
+                  onCheckedChange={(checked) => toggleSelectAllPending(checked === true)}
+                  disabled={pendingFilteredStudents.length === 0}
+                  aria-label="Select all pending students"
+                  className="border-gray-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                />
+              </span>
               <span>Student</span>
               <span>Contact</span>
               <span>Status</span>
+              <span>Performance</span>
               <span>Joined</span>
               <span className="text-center">Actions</span>
             </div>
@@ -680,7 +857,19 @@ const StudentManagement = () => {
                 return (
                   <div key={student.id} className="hover:bg-gray-50/50 transition-colors">
                     {/* Desktop Row */}
-                    <div className="hidden md:grid md:grid-cols-[2fr_1.5fr_1fr_1fr_80px] gap-4 px-4 py-3 items-center">
+                    <div className="hidden md:grid md:grid-cols-[40px_2fr_1.4fr_1fr_1.2fr_0.9fr_80px] gap-4 px-4 py-3 items-center">
+                      <div className="flex justify-center">
+                        {status === "pending" ? (
+                          <Checkbox
+                            checked={selectedIds.has(student.id)}
+                            onCheckedChange={(checked) => toggleStudentSelected(student.id, checked === true)}
+                            aria-label={`Select ${student.full_name || "student"}`}
+                            className="border-gray-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                          />
+                        ) : (
+                          <span className="w-4 h-4" />
+                        )}
+                      </div>
                       {/* Student Info */}
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${!student.avatar_url ? (status === "approved" ? "bg-gradient-to-br from-emerald-500 to-teal-600" :
@@ -761,6 +950,9 @@ const StudentManagement = () => {
                         )}
                       </div>
 
+                      {/* Performance */}
+                      <StudentPerformanceSummary stats={student.performance} compact />
+
                       {/* Joined Date */}
                       <div className="text-sm text-gray-600">
                         {new Date(student.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -781,10 +973,10 @@ const StudentManagement = () => {
                             <DropdownMenuSeparator />
                             {status === "pending" && (
                               <>
-                                <DropdownMenuItem onClick={() => { setSelectedStudent(student); setDurationDialogOpen(true); }} className="gap-2 text-emerald-600">
+                                <DropdownMenuItem onClick={() => openApproveDialog([student.id], student)} className="gap-2 text-emerald-600">
                                   <CheckCircle className="w-4 h-4" /> Approve
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleReject(student.id)} className="gap-2 text-red-600">
+                                <DropdownMenuItem onClick={() => { setSelectedStudent(student); setRejectionReason(""); setRejectDialogOpen(true); }} className="gap-2 text-red-600">
                                   <XCircle className="w-4 h-4" /> Reject
                                 </DropdownMenuItem>
                               </>
@@ -821,7 +1013,7 @@ const StudentManagement = () => {
                                       <Sparkles className="w-4 h-4" /> Upgrade to Premium
                                     </DropdownMenuItem>
                                   )}
-                                <DropdownMenuItem onClick={() => handleDeactivate(student.id)} className="gap-2 text-orange-600">
+                                <DropdownMenuItem onClick={() => { setSelectedStudent(student); setDeactivationReason(""); setDeactivateDialogOpen(true); }} className="gap-2 text-orange-600">
                                   <UserX className="w-4 h-4" /> Deactivate
                                 </DropdownMenuItem>
                               </>
@@ -864,6 +1056,14 @@ const StudentManagement = () => {
                     {/* Mobile Row */}
                     <div className="md:hidden p-3">
                       <div className="flex items-center gap-3">
+                        {status === "pending" && (
+                          <Checkbox
+                            checked={selectedIds.has(student.id)}
+                            onCheckedChange={(checked) => toggleStudentSelected(student.id, checked === true)}
+                            aria-label={`Select ${student.full_name || "student"}`}
+                            className="border-gray-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 shrink-0"
+                          />
+                        )}
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${!student.avatar_url ? (status === "approved" ? "bg-gradient-to-br from-emerald-500 to-teal-600" :
                           status === "pending" ? "bg-gradient-to-br from-amber-500 to-orange-500" :
                             "bg-gradient-to-br from-gray-400 to-gray-500") : ""
@@ -935,10 +1135,10 @@ const StudentManagement = () => {
                             <DropdownMenuSeparator />
                             {status === "pending" && (
                               <>
-                                <DropdownMenuItem onClick={() => { setSelectedStudent(student); setDurationDialogOpen(true); }} className="gap-2 text-emerald-600">
+                                <DropdownMenuItem onClick={() => openApproveDialog([student.id], student)} className="gap-2 text-emerald-600">
                                   <CheckCircle className="w-4 h-4" /> Approve
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleReject(student.id)} className="gap-2 text-red-600">
+                                <DropdownMenuItem onClick={() => { setSelectedStudent(student); setRejectionReason(""); setRejectDialogOpen(true); }} className="gap-2 text-red-600">
                                   <XCircle className="w-4 h-4" /> Reject
                                 </DropdownMenuItem>
                               </>
@@ -975,7 +1175,7 @@ const StudentManagement = () => {
                                       <Sparkles className="w-4 h-4" /> Upgrade to Premium
                                     </DropdownMenuItem>
                                   )}
-                                <DropdownMenuItem onClick={() => handleDeactivate(student.id)} className="gap-2 text-orange-600">
+                                <DropdownMenuItem onClick={() => { setSelectedStudent(student); setDeactivationReason(""); setDeactivateDialogOpen(true); }} className="gap-2 text-orange-600">
                                   <UserX className="w-4 h-4" /> Deactivate
                                 </DropdownMenuItem>
                               </>
@@ -1007,6 +1207,11 @@ const StudentManagement = () => {
                         </DropdownMenu>
                       </div>
 
+                      <div className="mt-2 ml-[52px] flex items-center gap-2 text-[11px] text-gray-500">
+                        <BarChart3 className="w-3 h-3 text-gray-400" />
+                        <StudentPerformanceSummary stats={student.performance} compact />
+                      </div>
+
                       {/* Expiry Warning for Mobile */}
                       {status === "approved" && student.approval_status?.expires_at && (
                         <div className="mt-2 ml-13">
@@ -1027,7 +1232,7 @@ const StudentManagement = () => {
 
       {/* View Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
           </DialogHeader>
@@ -1091,25 +1296,48 @@ const StudentManagement = () => {
                   <Calendar className="w-4 h-4 text-gray-400" />
                   <span>Joined {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
                 </div>
-                {(() => {
+                {hasActiveSubscription(selectedStudent.purchases) && (() => {
                   const activeSub = selectedStudent.purchases?.find(p => {
                     if (p.content_type !== 'subscription') return false;
                     const expiryDate = new Date(p.created_at || "");
                     expiryDate.setDate(expiryDate.getDate() + 365);
                     return new Date() < expiryDate;
                   });
-                  if (activeSub) {
-                    const expiryDate = new Date(activeSub.created_at || "");
-                    expiryDate.setDate(expiryDate.getDate() + 365);
-                    return (
-                      <div className="flex items-center gap-3 text-amber-600 font-medium">
-                        <Shield className="w-4 h-4 text-amber-500" />
-                        <span>Premium Valid Till: {expiryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                    );
-                  }
-                  return null;
+                  if (!activeSub) return null;
+                  const expiryDate = new Date(activeSub.created_at || "");
+                  expiryDate.setDate(expiryDate.getDate() + 365);
+                  return (
+                    <div className="flex items-center gap-3 text-amber-600 font-medium">
+                      <Shield className="w-4 h-4 text-amber-500" />
+                      <span>Premium Valid Till: {expiryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  );
                 })()}
+              </div>
+              {(selectedStudent.approval_status?.rejection_reason || selectedStudent.deactivation_reason) && (
+                <div className="space-y-2">
+                  {selectedStudent.approval_status?.rejection_reason && (
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">Rejection reason</p>
+                      <p className="text-sm text-red-800">{selectedStudent.approval_status.rejection_reason}</p>
+                    </div>
+                  )}
+                  {selectedStudent.deactivation_reason && (
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl p-3">
+                      <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">Deactivation reason</p>
+                      <p className="text-sm text-orange-800">{selectedStudent.deactivation_reason}</p>
+                      {selectedStudent.deactivated_at && (
+                        <p className="text-[11px] text-orange-600 mt-1">
+                          {new Date(selectedStudent.deactivated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="pt-2 border-t">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Performance</h4>
+                <StudentPerformanceSummary stats={selectedStudent.performance} />
               </div>
               <div className="pt-2 border-t mt-4">
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Subscription History</h4>
@@ -1147,8 +1375,12 @@ const StudentManagement = () => {
       <Dialog open={durationDialogOpen} onOpenChange={setDurationDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Approve Student</DialogTitle>
-            <DialogDescription>Set access duration for {selectedStudent?.full_name}</DialogDescription>
+            <DialogTitle>{approveTargetIds.length > 1 ? `Approve ${approveTargetIds.length} Students` : "Approve Student"}</DialogTitle>
+            <DialogDescription>
+              {approveTargetIds.length > 1
+                ? `Set the same access duration for ${approveTargetIds.length} pending students. This cannot be undone from this dialog.`
+                : `Set access duration for ${selectedStudent?.full_name}`}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
             {[
@@ -1169,9 +1401,63 @@ const StudentManagement = () => {
             )}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDurationDialogOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleApproveWithDuration} disabled={selectedDuration === "custom" && !customDate} className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
-              <CheckCircle className="w-4 h-4 mr-2" /> Approve
+            <Button variant="outline" onClick={() => setDurationDialogOpen(false)} className="rounded-xl" disabled={approving}>Cancel</Button>
+            <Button onClick={handleApproveWithDuration} disabled={approving || (selectedDuration === "custom" && !customDate)} className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
+              <CheckCircle className="w-4 h-4 mr-2" /> {approving ? "Approving..." : approveTargetIds.length > 1 ? `Approve ${approveTargetIds.length}` : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={(open) => { setRejectDialogOpen(open); if (!open) setRejectionReason(""); }}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Reject Student</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting <strong>{selectedStudent?.full_name || "this student"}</strong>. They will see this if they contact support.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="rejection-reason">Rejection reason</Label>
+            <Textarea
+              id="rejection-reason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="e.g. Incomplete registration details, duplicate account..."
+              className="rounded-xl min-h-[110px]"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)} className="rounded-xl" disabled={rejecting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={rejecting || !rejectionReason.trim()} className="rounded-xl">
+              <XCircle className="w-4 h-4 mr-2" /> {rejecting ? "Rejecting..." : "Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deactivateDialogOpen} onOpenChange={(open) => { setDeactivateDialogOpen(open); if (!open) setDeactivationReason(""); }}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-orange-600">Deactivate Student</DialogTitle>
+            <DialogDescription>
+              Deactivating <strong>{selectedStudent?.full_name || "this student"}</strong> will block login. A reason is required and stored on their profile.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="deactivation-reason">Deactivation reason</Label>
+            <Textarea
+              id="deactivation-reason"
+              value={deactivationReason}
+              onChange={(e) => setDeactivationReason(e.target.value)}
+              placeholder="e.g. Payment overdue, policy violation..."
+              className="rounded-xl min-h-[110px]"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeactivateDialogOpen(false)} className="rounded-xl" disabled={deactivating}>Cancel</Button>
+            <Button onClick={handleDeactivate} disabled={deactivating || !deactivationReason.trim()} className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white">
+              <UserX className="w-4 h-4 mr-2" /> {deactivating ? "Deactivating..." : "Deactivate"}
             </Button>
           </DialogFooter>
         </DialogContent>

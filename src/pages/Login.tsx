@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, Eye, EyeOff, Lock, Loader2, AlertCircle, CheckCircle2, Zap, Trophy, BookOpen, Target, Sparkles, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { getDeactivatedAccountMessage } from "@/lib/studentManagement";
 
 // Password strength calculation
 const getPasswordStrength = (password: string): { level: number; label: string; color: string } => {
@@ -111,6 +112,20 @@ const Login = () => {
       return;
     }
 
+    if (authData.user) {
+      const deactivatedMessage = await getDeactivatedAccountMessage(authData.user.id);
+      if (deactivatedMessage) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        toast({
+          title: "Account Deactivated",
+          description: deactivatedMessage,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setLoading(false);
     toast({
       title: "Welcome Back!",
@@ -167,6 +182,20 @@ const Login = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    if (authData.user) {
+      const deactivatedMessage = await getDeactivatedAccountMessage(authData.user.id);
+      if (deactivatedMessage) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        toast({
+          title: "Account Deactivated",
+          description: deactivatedMessage,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setLoading(false);
