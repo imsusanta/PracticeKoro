@@ -56,7 +56,7 @@ const NotesManagement = () => {
     if (!session) { navigate("/admin/login"); return; }
 
     const { data: roleData } = await supabase
-      .from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+      .from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
 
     if (!roleData) {
       await supabase.auth.signOut();

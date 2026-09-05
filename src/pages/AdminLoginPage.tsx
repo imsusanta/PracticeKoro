@@ -27,10 +27,19 @@ const AdminLoginPage = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       // Check if user has admin role
-      const { data: hasAdminRole } = await supabase
+      const { data: hasAdminRole, error: adminRoleError } = await supabase
         .rpc('has_role', { _user_id: session.user.id, _role: 'admin' });
-      const { data: hasSuperAdminRole } = await supabase
+      const { data: hasSuperAdminRole, error: superAdminRoleError } = await supabase
         .rpc('has_role', { _user_id: session.user.id, _role: 'super_admin' });
+
+      if (adminRoleError && superAdminRoleError) {
+        toast({
+          title: "Could not verify admin access",
+          description: "Please try again. You were not signed out.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (hasAdminRole || hasSuperAdminRole) {
         navigate("/admin/dashboard");
@@ -133,6 +142,16 @@ const AdminLoginPage = () => {
           console.error("RPC role check error:", rpcError);
         }
 
+        if (!isAdmin && rpcError) {
+          toast({
+            title: "Could not verify admin access",
+            description: "Please try again. You were not signed out.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
         if (!isAdmin) {
           console.error("Role check failed - user is not an admin:", {
             userId: authData.user.id,
@@ -171,7 +190,7 @@ const AdminLoginPage = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     // Store where we want to redirect after auth
-    sessionStorage.setItem("authRedirect", "/admin/login");
+    sessionStorage.setItem("authRedirect", "/admin/dashboard");
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

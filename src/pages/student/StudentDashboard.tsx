@@ -96,7 +96,7 @@ const StudentDashboard = () => {
         supabase.from("exams").select("id, name").order("created_at", { ascending: true }),  // Removed is_active filter
         supabase.from("test_attempts").select("percentage, passed, created_at").eq("user_id", session.user.id),
         supabase.from("test_attempts")
-          .select("id, percentage, passed, created_at, mock_test_id, mock_tests(name)")
+          .select("id, percentage, passed, created_at, test_id, mock_tests(title)")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false })
           .limit(5),
@@ -179,7 +179,7 @@ const StudentDashboard = () => {
       if (recentAttemptsResult.data) {
         setRecentActivity(recentAttemptsResult.data.map((a: any) => ({
           id: a.id,
-          testName: a.mock_tests?.name || "Unknown Test",
+          testName: a.mock_tests?.title || "Unknown Test",
           score: Math.round(a.percentage),
           passed: a.passed,
           date: a.created_at

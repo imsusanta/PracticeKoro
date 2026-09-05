@@ -20,15 +20,73 @@ export default function ResetPassword() {
   const [passwordReset, setPasswordReset] = useState(false);
 
   useEffect(() => {
-    // Check if user came from password reset email
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsValidToken(true);
-      } else {
-        toast.error("Invalid or expired reset link");
-        setTimeout(() => navigate("/forgot-password"), 3000);
+    let cancelled = false;
+    let resolved = false;
+
+    const markValid = () => {
+      if (cancelled || resolved) return;
+      resolved = true;
+      setIsValidToken(true);
+    };
+
+    const markInvalid = () => {
+      if (cancelled || resolved) return;
+      resolved = true;
+      toast.error("Invalid or expired reset link");
+      setTimeout(() => navigate("/forgot-password"), 3000);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        markValid();
       }
     });
+
+    const bootstrap = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get("type");
+
+      if (code) {
+        const { data: existing } = await supabase.auth.getSession();
+        if (existing.session) {
+          markValid();
+          return;
+        }
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          markValid();
+          return;
+        }
+      }
+
+      if (type === "recovery") {
+        markValid();
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        markValid();
+        return;
+      }
+
+      // Hash/PKCE exchange can land after first getSession()
+      setTimeout(async () => {
+        if (cancelled || resolved) return;
+        const { data: { session: laterSession } } = await supabase.auth.getSession();
+        if (laterSession) markValid();
+        else markInvalid();
+      }, 1500);
+    };
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const validatePassword = (password: string): string | null => {

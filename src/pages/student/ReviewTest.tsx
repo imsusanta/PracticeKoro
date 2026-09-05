@@ -93,14 +93,16 @@ const ReviewTest = () => {
         return;
       }
 
+      if (answersResult.error) {
+        toast({ title: "Error", description: "Failed to load your answers", variant: "destructive" });
+      }
+
       // Handle both object and array for mock_tests join
       const rawAttempt = attemptResult.data as any;
       if (Array.isArray(rawAttempt.mock_tests)) {
         rawAttempt.mock_tests = rawAttempt.mock_tests[0];
       }
       setAttempt(rawAttempt);
-
-      console.log("[ReviewTest] Fetched answers with questions:", answersResult.data);
 
       const rawAnswers = answersResult.data || [];
       // Ensure questions is always an object, not an array
@@ -110,6 +112,19 @@ const ReviewTest = () => {
         }
         return a;
       });
+
+      if (rawAttempt.test_id && processedAnswers.length > 0) {
+        const { data: testQuestions } = await supabase
+          .from("test_questions")
+          .select("question_id, question_order")
+          .eq("test_id", rawAttempt.test_id);
+        if (testQuestions?.length) {
+          const orderByQuestion = new Map(testQuestions.map((q) => [q.question_id, q.question_order ?? 999]));
+          processedAnswers.sort((a: any, b: any) =>
+            (orderByQuestion.get(a.question_id) ?? 999) - (orderByQuestion.get(b.question_id) ?? 999)
+          );
+        }
+      }
 
       setAnswers(processedAnswers);
     } catch (error) {

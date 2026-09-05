@@ -90,7 +90,7 @@ const SendNotifications = () => {
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
-            .eq("role", "admin")
+            .in("role", ["admin", "super_admin"])
             .maybeSingle();
 
         if (!roleData) {
@@ -327,13 +327,20 @@ const SendNotifications = () => {
         if (!notifToDelete) return;
         setIsDeleting(true);
         try {
-            const { error } = await supabase
+            let deleteQuery = supabase
                 .from("notifications")
                 .delete()
                 .eq("title", notifToDelete.title)
                 .eq("message", notifToDelete.message)
-                .eq("type", notifToDelete.type)
-                .eq("link", notifToDelete.link);
+                .eq("type", notifToDelete.type);
+
+            if (notifToDelete.link) {
+                deleteQuery = deleteQuery.eq("link", notifToDelete.link);
+            } else {
+                deleteQuery = deleteQuery.or("link.is.null,link.eq.");
+            }
+
+            const { error } = await deleteQuery;
 
             if (error) throw error;
 
