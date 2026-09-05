@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { LoadError } from "@/components/PageState";
 
 interface DbNotification {
     id: string;
@@ -33,6 +34,7 @@ const StudentNotifications = () => {
     const { toast } = useToast();
     const [notifications, setNotifications] = useState<DbNotification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -50,6 +52,7 @@ const StudentNotifications = () => {
 
     const loadNotifications = async (uId: string) => {
         setLoading(true);
+        setLoadError(false);
         const { data, error } = await supabase
             .from("notifications")
             .select("*")
@@ -58,6 +61,7 @@ const StudentNotifications = () => {
 
         if (error) {
             console.error("Error loading notifications:", error);
+            setLoadError(true);
         } else if (data) {
             setNotifications(data);
         }
@@ -85,7 +89,9 @@ const StudentNotifications = () => {
 
         if (!error) {
             setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-            toast({ title: "Success", description: "All notifications marked as read" });
+            toast({ title: "All caught up", description: "All notifications marked as read" });
+        } else {
+            toast({ title: "Couldn't update", description: "Try marking them as read again.", variant: "destructive" });
         }
     };
 
@@ -98,7 +104,9 @@ const StudentNotifications = () => {
 
         if (!error) {
             setNotifications(notifications.filter(n => n.id !== id));
-            toast({ title: "Deleted", description: "Notification removed" });
+            toast({ title: "Removed", description: "Notification deleted" });
+        } else {
+            toast({ title: "Couldn't delete", description: "Try again in a moment.", variant: "destructive" });
         }
     };
 
@@ -127,6 +135,8 @@ const StudentNotifications = () => {
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <button
+                            type="button"
+                            aria-label="Back"
                             onClick={() => navigate(-1)}
                             className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
                         >
@@ -157,6 +167,12 @@ const StudentNotifications = () => {
                         Array.from({ length: 5 }).map((_, i) => (
                             <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-2xl border border-slate-200/60" />
                         ))
+                    ) : loadError ? (
+                        <LoadError
+                            title="Couldn't load notifications"
+                            description="Your updates didn't load. Try again."
+                            onRetry={() => userId && loadNotifications(userId)}
+                        />
                     ) : notifications.length === 0 ? (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -215,15 +231,17 @@ const StudentNotifications = () => {
                                                     </span>
                                                 </div>
 
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                     {notif.link && (
                                                         <div className="text-xs font-bold text-indigo-500 flex items-center gap-1 mr-2 bg-indigo-50 px-2 py-1 rounded-lg">
                                                             Open <ArrowRight className="w-3 h-3" />
                                                         </div>
                                                     )}
                                                     <button
+                                                        type="button"
+                                                        aria-label="Delete notification"
                                                         onClick={(e) => handleDelete(notif.id, e)}
-                                                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>

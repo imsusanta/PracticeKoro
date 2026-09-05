@@ -254,6 +254,7 @@ const BlogDetail = () => {
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Share article"
                             onClick={handleShare}
                             className="text-gray-600 hover:text-emerald-600 rounded-xl"
                         >
@@ -514,7 +515,7 @@ const BlogDetail = () => {
             <footer className="bg-white border-t border-gray-100 py-6 px-4">
                 <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                     <p className="text-sm text-gray-500">
-                        © 2025 Practice Koro. All rights reserved.
+                        © {new Date().getFullYear()} Practice Koro. All rights reserved.
                     </p>
                     <div className="flex items-center gap-4">
                         <Link to="/" className="text-sm text-gray-500 hover:text-emerald-600 transition-colors">

@@ -169,8 +169,8 @@ const ReviewTest = () => {
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-7 h-7 text-slate-400" />
           </div>
-          <p className="text-slate-800 text-lg font-bold mb-2">No data found</p>
-          <p className="text-slate-500 text-sm mb-6">This test review is not available</p>
+          <p className="text-slate-800 text-lg font-bold mb-2">We couldn't load this review</p>
+          <p className="text-slate-500 text-sm mb-6">This attempt may be missing or still saving. Go back and try again.</p>
           <Button onClick={() => navigate("/student/results")} className="bg-indigo-600 text-white rounded-xl h-11 w-full">
             Back to Results
           </Button>
@@ -205,6 +205,8 @@ const ReviewTest = () => {
           {/* Navigation */}
           <div className="flex items-center mb-4">
             <motion.button
+              type="button"
+              aria-label="Back to results"
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/student/results")}
               className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30"
@@ -304,6 +306,14 @@ const ReviewTest = () => {
 
         {/* Questions List */}
         <div className="space-y-3">
+          {filteredAnswers.length === 0 && (
+            <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+              <p className="font-bold text-slate-900">
+                No {filter === "all" ? "" : filter} questions in this attempt
+              </p>
+              <p className="text-sm text-slate-500 mt-1">Try another filter to review your answers.</p>
+            </div>
+          )}
           {filteredAnswers.map((answer, index) => {
             const isExpanded = expandedQuestions.has(answer.id);
             const originalIndex = answers.findIndex(a => a.id === answer.id);
@@ -487,9 +497,12 @@ const ReviewTest = () => {
         {/* Action Buttons */}
         <div className="pt-4 space-y-3 pb-8">
           <motion.button
+            type="button"
+            disabled={!attempt?.mock_tests?.id}
+            aria-disabled={!attempt?.mock_tests?.id}
             whileTap={{ scale: 0.98 }}
             onClick={() => attempt?.mock_tests?.id && navigate(`/student/take-test/${attempt.mock_tests.id}`)}
-            className="w-full btn-native bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/25"
+            className="w-full btn-native bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/25 disabled:opacity-50 disabled:pointer-events-none"
           >
             <RotateCw className="w-5 h-5" />
             Retake This Test

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,20 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, Eye, EyeOff, Lock, Loader2, AlertCircle, CheckCircle2, Zap, Trophy, BookOpen, Target, Sparkles, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-// Password strength calculation
-const getPasswordStrength = (password: string): { level: number; label: string; color: string } => {
-  if (!password) return { level: 0, label: "", color: "bg-gray-200" };
-  let score = 0;
-  if (password.length >= 6) score++;
-  if (password.length >= 8) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-
-  if (score <= 2) return { level: 1, label: "Weak", color: "bg-red-500" };
-  if (score <= 3) return { level: 2, label: "Medium", color: "bg-amber-500" };
-  return { level: 3, label: "Strong", color: "bg-emerald-500" };
-};
+const REMEMBER_EMAIL_KEY = "practicekoro_remember_email";
 
 // Email validation
 const isValidEmail = (email: string): boolean => {
@@ -53,12 +40,12 @@ const Login = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem(REMEMBER_EMAIL_KEY));
   const [loginMethod, setLoginMethod] = useState<"email" | "whatsapp">("email");
   const [touched, setTouched] = useState({ email: false, password: false, whatsappNumber: false });
 
   const [emailFormData, setEmailFormData] = useState({
-    email: "",
+    email: localStorage.getItem(REMEMBER_EMAIL_KEY) || "",
     password: "",
   });
 
@@ -74,8 +61,13 @@ const Login = () => {
     return { valid: true, message: "" };
   }, [emailFormData.email, touched.email]);
 
-  const passwordStrength = useMemo(() => getPasswordStrength(emailFormData.password), [emailFormData.password]);
-  const whatsappPasswordStrength = useMemo(() => getPasswordStrength(whatsappFormData.password), [whatsappFormData.password]);
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    if (saved) {
+      setEmailFormData((prev) => ({ ...prev, email: saved }));
+      setRememberMe(true);
+    }
+  }, []);
 
   const validateWhatsAppNumber = (number: string): boolean => {
     return /^\d{10}$/.test(number);
@@ -111,6 +103,11 @@ const Login = () => {
       return;
     }
 
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, emailFormData.email);
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+    }
     setLoading(false);
     toast({
       title: "Welcome Back!",
@@ -375,25 +372,13 @@ const Login = () => {
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    {/* Password Strength Indicator */}
-                    {emailFormData.password && (
-                      <div className="space-y-1.5">
-                        <div className="flex gap-1">
-                          <div className={`h-1 flex-1 rounded-full transition-all ${passwordStrength.level >= 1 ? passwordStrength.color : 'bg-gray-200'}`} />
-                          <div className={`h-1 flex-1 rounded-full transition-all ${passwordStrength.level >= 2 ? passwordStrength.color : 'bg-gray-200'}`} />
-                          <div className={`h-1 flex-1 rounded-full transition-all ${passwordStrength.level >= 3 ? passwordStrength.color : 'bg-gray-200'}`} />
-                        </div>
-                        <p className={`text-xs font-medium ${passwordStrength.color.replace('bg-', 'text-')}`}>
-                          {passwordStrength.label} password
-                        </p>
-                      </div>
-                    )}
                   </div>
 
                   {/* Remember Me & Forgot Password */}
@@ -479,25 +464,13 @@ const Login = () => {
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    {/* Password Strength Indicator */}
-                    {whatsappFormData.password && (
-                      <div className="space-y-1.5">
-                        <div className="flex gap-1">
-                          <div className={`h-1 flex-1 rounded-full transition-all ${whatsappPasswordStrength.level >= 1 ? whatsappPasswordStrength.color : 'bg-gray-200'}`} />
-                          <div className={`h-1 flex-1 rounded-full transition-all ${whatsappPasswordStrength.level >= 2 ? whatsappPasswordStrength.color : 'bg-gray-200'}`} />
-                          <div className={`h-1 flex-1 rounded-full transition-all ${whatsappPasswordStrength.level >= 3 ? whatsappPasswordStrength.color : 'bg-gray-200'}`} />
-                        </div>
-                        <p className={`text-xs font-medium ${whatsappPasswordStrength.color.replace('bg-', 'text-')}`}>
-                          {whatsappPasswordStrength.label} password
-                        </p>
-                      </div>
-                    )}
                   </div>
 
                   {/* Remember Me & Forgot Password */}

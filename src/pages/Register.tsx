@@ -37,12 +37,12 @@ const Register = () => {
         e.preventDefault();
 
         if (emailFormData.password !== emailFormData.confirmPassword) {
-            toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Passwords do not match", variant: "destructive" });
             return;
         }
 
         if (emailFormData.password.length < 6) {
-            toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Password must be at least 6 characters", variant: "destructive" });
             return;
         }
 
@@ -59,11 +59,11 @@ const Register = () => {
         setLoading(false);
 
         if (error) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Check your details and try again.", variant: "destructive" });
             return;
         }
 
-        toast({ title: "Success", description: "Account created successfully!" });
+        toast({ title: "Account created", description: "You can sign in now." });
         navigate("/login");
     };
 
@@ -71,17 +71,17 @@ const Register = () => {
         e.preventDefault();
 
         if (!validateWhatsAppNumber(whatsappFormData.whatsappNumber)) {
-            toast({ title: "Error", description: "Please enter a valid 10-digit WhatsApp number", variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Please enter a valid 10-digit WhatsApp number", variant: "destructive" });
             return;
         }
 
         if (whatsappFormData.password !== whatsappFormData.confirmPassword) {
-            toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Passwords do not match", variant: "destructive" });
             return;
         }
 
         if (whatsappFormData.password.length < 6) {
-            toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Password must be at least 6 characters", variant: "destructive" });
             return;
         }
 
@@ -96,7 +96,7 @@ const Register = () => {
 
         if (existing) {
             setLoading(false);
-            toast({ title: "Error", description: "This WhatsApp number is already registered", variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "This WhatsApp number is already registered", variant: "destructive" });
             return;
         }
 
@@ -116,11 +116,11 @@ const Register = () => {
         setLoading(false);
 
         if (error) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
+            toast({ title: "Couldn't create account", description: "Check your details and try again.", variant: "destructive" });
             return;
         }
 
-        toast({ title: "Success", description: "Account created successfully!" });
+        toast({ title: "Account created", description: "You can sign in now." });
         navigate("/login");
     };
 
@@ -136,8 +136,8 @@ const Register = () => {
         if (error) {
             setLoading(false);
             toast({
-                title: "Login Failed",
-                description: error.message,
+                title: "Google sign-in failed",
+                description: "Try again, or create an account with email.",
                 variant: "destructive",
             });
         }

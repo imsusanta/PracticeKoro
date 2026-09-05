@@ -44,7 +44,7 @@ export const DeleteAlertDialog: React.FC<DeleteAlertDialogProps> = ({
                         <AlertDialogDescription className="text-slate-600 text-base">
                             {description || (
                                 <>
-                                    Are you sure you want to delete {itemName ? <span className="font-bold text-slate-900">"{itemName}"</span> : "this item"}?
+                                    Are you sure you want to delete {itemName ? <span className="font-bold text-slate-900">{itemName}</span> : "this item"}?
                                     This action cannot be undone.
                                 </>
                             )}

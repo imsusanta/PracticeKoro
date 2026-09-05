@@ -162,6 +162,7 @@ const BlogManagement = () => {
         <Button
             onClick={() => navigate("/admin/blogs/new")}
             size="icon"
+            aria-label="Create blog post"
             className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 border border-white/20 shadow-lg shadow-emerald-500/20"
         >
             <Plus className="w-5 h-5" />

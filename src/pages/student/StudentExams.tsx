@@ -90,10 +90,10 @@ const StudentExams = () => {
   const [mockTests, setMockTests] = useState<{ [key: string]: MockTest[] }>({});
   const [testAttempts, setTestAttempts] = useState<{ [key: string]: TestAttemptInfo }>({});
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
-  const [selectedExam, setSelectedExam] = useState<string>("all");
-  const [selectedSubject, setSelectedSubject] = useState<string>("all");
-
   const urlType = searchParams.get("type");
+  const urlExam = searchParams.get("exam");
+  const [selectedExam, setSelectedExam] = useState<string>(urlExam || "all");
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [filterType, setFilterType] = useState<"all" | "full_mock" | "topic_wise">(
     urlType === "full_mock" || urlType === "topic_wise" ? urlType : "all"
   );
@@ -160,9 +160,10 @@ const StudentExams = () => {
     }
     setSubjects((subjectsData as any) || []);
 
-    // Auto-select first exam if search params type is set but no exam is selected
-    if (examsData && examsData.length > 0 && selectedExam === "all" && searchParams.get("type")) {
-      // Keep "all" but we can use this data for badges
+    const examFromUrl = searchParams.get("exam");
+    const loadedExams = (examsData as Exam[] | null) || [];
+    if (examFromUrl && loadedExams.some((exam) => exam.id === examFromUrl)) {
+      setSelectedExam(examFromUrl);
     }
 
     // Try fetching tests with order_index
@@ -335,7 +336,9 @@ const StudentExams = () => {
               { key: "topic_wise", label: "Topic", icon: Target }
             ].map((tab) => (
               <button
+                type="button"
                 key={tab.key}
+                aria-pressed={filterType === tab.key}
                 onClick={() => {
                   setFilterType(tab.key as any);
                   setSelectedExam("all");
@@ -511,8 +514,28 @@ const StudentExams = () => {
                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <BookOpen className="w-10 h-10 text-slate-300" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">No tests found</h3>
-                <p className="text-slate-500 text-sm">Try changing your filters or choosing another category</p>
+                {totalPublishedTests === 0 ? (
+                  <>
+                    <h3 className="text-lg font-bold text-slate-900">No tests published yet</h3>
+                    <p className="text-slate-500 text-sm">Check back soon — new practice tests will appear here.</p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-bold text-slate-900">No tests match these filters</h3>
+                    <p className="text-slate-500 text-sm mb-4">Try another exam, subject, or category.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterType("all");
+                        setSelectedExam("all");
+                        setSelectedSubject("all");
+                      }}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold"
+                    >
+                      Clear filters
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -5,6 +5,7 @@ import { studentNav } from "@/config/studentNav";
 import { Home, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
+import NotificationBell from "@/components/NotificationBell";
 interface StudentLayoutProps {
   title: string;
   subtitle?: string;
@@ -20,7 +21,7 @@ const SidebarToggleButton = () => {
     toggleSidebar
   } = useSidebar();
   const isCollapsed = state === "collapsed";
-  return <button onClick={toggleSidebar} className={`hidden md:flex fixed z-[100] rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 items-center justify-center hover:from-indigo-600 hover:to-violet-700 hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white w-8 h-8 ${isCollapsed ? "left-[4rem] top-5" : "left-[15.5rem] top-5"}`} title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
+  return <button type="button" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={toggleSidebar} className={`hidden md:flex fixed z-[100] rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 items-center justify-center hover:from-indigo-600 hover:to-violet-700 hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white w-8 h-8 ${isCollapsed ? "left-[4rem] top-5" : "left-[15.5rem] top-5"}`} title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
     {isCollapsed ? <ChevronRight className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
   </button>;
 };
@@ -111,6 +112,10 @@ const StudentLayout = ({
     checkSubscription();
   }, [location.pathname, checkSubscription]);
 
+  useEffect(() => {
+    document.title = `${title} · Practice Koro`;
+  }, [title]);
+
   const goToHome = () => {
     navigate("/");
   };
@@ -165,7 +170,7 @@ const StudentLayout = ({
                 const colorSet = iconColors[index % iconColors.length];
                 return <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton asChild isActive={isActive} className={`rounded-2xl transition-all duration-150 group/item h-auto py-2.5 px-3 ${isActive ? `bg-gradient-to-r ${colorSet.activeBg} text-white shadow-lg ${colorSet.glow}` : "text-slate-600 hover:bg-slate-50"} group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:justify-center ${isActive ? 'group-data-[collapsible=icon]:bg-gradient-to-br group-data-[collapsible=icon]:shadow-md' : 'group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:hover:bg-slate-100'}`}>
-                    <Link to={item.path} title={item.name} className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+                    <Link to={item.path} title={item.name} aria-label={item.name} aria-current={isActive ? "page" : undefined} className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
                       {/* Round icon container */}
                       <motion.div
                         whileTap={{ scale: 0.9, backgroundColor: isActive ? 'rgba(255,255,255,0.4)' : 'rgba(99, 102, 241, 0.15)' }}
@@ -183,7 +188,7 @@ const StudentLayout = ({
 
           <div className="mt-auto pt-4 border-t border-slate-100/60 space-y-1.5 group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:pt-2">
             <SidebarMenuButton asChild className="w-full rounded-2xl text-slate-600 hover:bg-blue-50 transition-all duration-150 group/btn h-auto py-2.5 px-3 group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:hover:bg-blue-50">
-              <button onClick={goToHome} title="Home" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+              <button type="button" onClick={goToHome} title="Home" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
                 <motion.div
                   whileTap={{ scale: 0.9, backgroundColor: 'rgba(59, 130, 246, 0.2)' }}
                   className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center shrink-0"
@@ -208,6 +213,11 @@ const StudentLayout = ({
             className="flex flex-col px-0 pt-1 pb-32 sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
           >
             <div className="w-full max-w-7xl mx-auto">
+              <h1 className="sr-only">{title}{subtitle ? ` — ${subtitle}` : ""}</h1>
+              <div className="hidden md:flex justify-end items-center gap-2 mb-2">
+                {headerActions}
+                <NotificationBell />
+              </div>
               {children}
             </div>
           </motion.main>
@@ -218,8 +228,13 @@ const StudentLayout = ({
     {/* ═══════════════════════════════════════════════════════════════
                         MOBILE BOTTOM NAVIGATION - Premium Round Icons
                         ═══════════════════════════════════════════════════════════════ */}
+    <div className="md:hidden fixed top-3 right-3 z-[90] pointer-events-auto">
+      <NotificationBell />
+    </div>
+
     {!hideNavbar && (
       <nav
+        aria-label="Student navigation"
         className="md:hidden fixed bottom-0 left-0 right-0 z-[100] pointer-events-none w-full"
         style={{
           paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
@@ -237,6 +252,8 @@ const StudentLayout = ({
                 <Link
                   key={item.path}
                   to={item.path}
+                  aria-label={item.name}
+                  aria-current={isActive ? "page" : undefined}
                   className="relative flex flex-col items-center justify-center flex-1 py-1 tap-highlight overflow-visible"
                 >
                   <motion.div

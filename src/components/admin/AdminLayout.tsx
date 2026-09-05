@@ -39,7 +39,9 @@ const SidebarToggleButton = () => {
 
     return (
         <button
+            type="button"
             onClick={toggleSidebar}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={`hidden md:flex fixed z-[100] rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 items-center justify-center hover:from-indigo-600 hover:to-violet-700 hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white w-8 h-8 ${isCollapsed
                 ? "left-[4rem] top-5"
                 : "left-[15.5rem] top-5"
@@ -77,6 +79,10 @@ let sidebarScrollPosition = 0;
 const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutProps) => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    useEffect(() => {
+        document.title = `${title} · Practice Koro Admin`;
+    }, [title]);
 
     // Controlled sidebar state - persists across navigation
     const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarState);
@@ -140,7 +146,9 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
         }
         // Clear sidebar state cookie so next login starts fresh
         document.cookie = 'sidebar:state=true; path=/; max-age=0';
-        localStorage.clear();
+        ["sidebar:state", "practicekoro_remember_email", "practicekoro_admin_remember_email"].forEach((key) => {
+            localStorage.removeItem(key);
+        });
         navigate("/");
     };
 
@@ -250,6 +258,7 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                 className="w-full rounded-xl text-gray-600 hover:bg-emerald-50/80 hover:text-emerald-700 transition-all duration-150 group/btn group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
                             >
                                 <button
+                                    type="button"
                                     onClick={() => navigate("/")}
                                     title="Go to Home"
                                     className="flex items-center gap-3 px-3 py-2.5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
@@ -270,6 +279,7 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                 className="w-full rounded-xl text-gray-600 hover:bg-red-50/80 hover:text-red-600 transition-all duration-150 group/btn group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
                             >
                                 <button
+                                    type="button"
                                     onClick={handleLogout}
                                     title="Logout"
                                     className="flex items-center gap-3 px-3 py-2.5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
@@ -373,6 +383,8 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <button
+                                                type="button"
+                                                aria-label="More admin pages"
                                                 className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-150 ${managementTools.slice(4).some(t => location.pathname === t.path)
                                                     ? "text-emerald-600 bg-emerald-50 shadow-sm"
                                                     : "text-gray-400 hover:text-emerald-600"

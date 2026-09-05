@@ -9,7 +9,6 @@ const NotFound = () => {
 
   // Determine if we're in admin section
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const dashboardPath = isAdminRoute ? '/admin/dashboard' : '/student/dashboard';
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
@@ -35,9 +34,9 @@ const NotFound = () => {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button asChild variant="outline" className="h-12 rounded-xl px-6 font-bold border-2">
-            <Link to={dashboardPath}>
+            <Link to={isAdminRoute ? "/admin/login" : "/login"}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {isAdminRoute ? 'Admin Dashboard' : 'Dashboard'}
+              {isAdminRoute ? "Admin sign in" : "Sign in"}
             </Link>
           </Button>
           <Button asChild className="h-12 rounded-xl px-6 font-bold bg-gradient-to-r from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200">

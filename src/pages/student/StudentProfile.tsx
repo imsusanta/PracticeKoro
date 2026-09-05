@@ -107,7 +107,7 @@ const StudentProfile = () => {
       toast({ title: "Success", description: "Profile photo updated!" });
     } catch (error: any) {
       console.error("Avatar upload error:", error);
-      toast({ title: "Error", description: error.message || "Failed to upload", variant: "destructive" });
+      toast({ title: "Couldn't update photo", description: "Try a JPG or PNG under 2MB.", variant: "destructive" });
     }
     setUploadingImage(false);
   };
@@ -157,6 +157,7 @@ const StudentProfile = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/login");
+      setLoading(false);
       return;
     }
     setUserEmail(session.user.email || null);
@@ -277,7 +278,7 @@ const StudentProfile = () => {
 
   const handleSubmit = async () => {
     if (formData.whatsapp_number && !/^\d{10}$/.test(formData.whatsapp_number)) {
-      toast({ title: "Error", description: "Enter valid 10-digit number", variant: "destructive" });
+      toast({ title: "Check your number", description: "Enter a valid 10-digit WhatsApp number.", variant: "destructive" });
       return;
     }
 
@@ -290,7 +291,7 @@ const StudentProfile = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Saved!" });
+      toast({ title: "Profile saved" });
       setIsEditing(false);
     }
     setSaving(false);
@@ -342,6 +343,8 @@ const StudentProfile = () => {
                 onChange={handleImageUpload}
               />
               <button
+                type="button"
+                aria-label="Change profile photo"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingImage}
                 className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shrink-0 overflow-hidden group"
@@ -471,9 +474,10 @@ const StudentProfile = () => {
                 <User className="w-4 h-4 text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">Full Name</p>
+                <label htmlFor="full_name" className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">Full Name</label>
                 {isEditing ? (
                   <Input
+                    id="full_name"
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     className="h-9 text-sm"
@@ -492,9 +496,10 @@ const StudentProfile = () => {
                 <Phone className="w-4 h-4 text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">WhatsApp</p>
+                <label htmlFor="whatsapp_number" className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">WhatsApp</label>
                 {isEditing ? (
                   <Input
+                    id="whatsapp_number"
                     value={formData.whatsapp_number}
                     onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value.replace(/\D/g, '') })}
                     className="h-9 text-sm"
@@ -583,12 +588,13 @@ const StudentProfile = () => {
               })
             )}
           </div>
-          {notifications.length > 3 && (
+          {notifications.length > 0 && (
             <button
-              onClick={() => navigate("/student/notifications")} // Assuming this route exists or we just want the UI
+              type="button"
+              onClick={() => navigate("/student/notifications")}
               className="w-full p-2.5 text-center text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-100"
             >
-              View All Notifications
+              View all notifications
             </button>
           )}
         </motion.div>

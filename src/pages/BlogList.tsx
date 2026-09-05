@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Clock, Search, Filter, X, Home } from "lucide-reac
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
+import { LoadError } from "@/components/PageState";
 
 interface BlogPost {
     id: string;
@@ -36,6 +37,7 @@ const BlogList = () => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [filteredBlogs, setFilteredBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
 
@@ -59,6 +61,7 @@ const BlogList = () => {
             setBlogs(data as BlogPost[] || []);
         } catch (error) {
             console.error("Error fetching blogs:", error);
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
@@ -132,6 +135,7 @@ const BlogList = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
+                                aria-label="Back to home"
                                 onClick={() => navigate("/")}
                                 className="rounded-full text-white hover:bg-white/20"
                             >
@@ -176,12 +180,15 @@ const BlogList = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <Input
                             placeholder="Search articles..."
+                            aria-label="Search articles"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 pr-10 bg-slate-50 border-slate-200"
                         />
                         {searchQuery && (
                             <button
+                                type="button"
+                                aria-label="Clear search"
                                 onClick={() => setSearchQuery("")}
                                 className="absolute right-3 top-1/2 -translate-y-1/2"
                             >
@@ -216,6 +223,12 @@ const BlogList = () => {
                         <div className="flex items-center justify-center py-20">
                             <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         </div>
+                    ) : loadError ? (
+                        <LoadError
+                            title="Couldn't load articles"
+                            description="The blog feed didn't load. Try again."
+                            onRetry={() => { setLoadError(false); setLoading(true); fetchBlogs(); }}
+                        />
                     ) : filteredBlogs.length === 0 ? (
                         <div className="text-center py-20">
                             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">

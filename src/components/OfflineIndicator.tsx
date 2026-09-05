@@ -36,6 +36,8 @@ const OfflineIndicator = () => {
         <AnimatePresence>
             {showIndicator && (
                 <motion.div
+                    role="status"
+                    aria-live="polite"
                     initial={{ opacity: 0, y: -50 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -50 }}
@@ -58,6 +60,8 @@ const OfflineIndicator = () => {
                                 <WifiOff className="w-4 h-4 text-white" />
                                 <span className="text-xs font-bold text-white">You're Offline</span>
                                 <button
+                                    type="button"
+                                    aria-label="Retry connection"
                                     onClick={() => window.location.reload()}
                                     className="ml-1 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
                                 >

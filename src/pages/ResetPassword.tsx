@@ -16,20 +16,20 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isValidToken, setIsValidToken] = useState(false);
+  const [tokenState, setTokenState] = useState<"checking" | "invalid" | "valid">("checking");
   const [passwordReset, setPasswordReset] = useState(false);
 
   useEffect(() => {
     // Check if user came from password reset email
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setIsValidToken(true);
+        setTokenState("valid");
       } else {
-        toast.error("Invalid or expired reset link");
-        setTimeout(() => navigate("/forgot-password"), 3000);
+        setTokenState("invalid");
+        toast.error("This reset link is invalid or expired");
       }
     });
-  }, [navigate]);
+  }, []);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 6) {
@@ -81,14 +81,26 @@ export default function ResetPassword() {
     }
   };
 
-  if (!isValidToken) {
+  if (tokenState !== "valid") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <p className="text-gray-600">Verifying reset link...</p>
+            <div className="flex flex-col items-center justify-center space-y-4 py-4">
+              {tokenState === "checking" ? (
+                <>
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <p className="text-gray-600">Verifying reset link...</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-lg text-slate-900">This reset link is invalid or expired</p>
+                  <p className="text-sm text-gray-600 text-center">Request a new password reset email to continue.</p>
+                  <Button type="button" onClick={() => navigate("/forgot-password")}>
+                    Request a new link
+                  </Button>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -148,6 +160,7 @@ export default function ResetPassword() {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                 >
@@ -174,6 +187,7 @@ export default function ResetPassword() {
                 />
                 <button
                   type="button"
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                 >

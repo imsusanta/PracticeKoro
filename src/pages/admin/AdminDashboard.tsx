@@ -78,7 +78,7 @@ const AdminDashboard = () => {
           // Removed signOut() here to prevent accidental logouts
           toast({
             title: "Access Denied",
-            description: `No admin privileges found for user ID: ${session.user.id.substring(0, 8)}...`,
+            description: "This account is not an admin.",
             variant: "destructive",
           });
           navigate("/admin/login");
@@ -262,7 +262,7 @@ const AdminDashboard = () => {
       label: "Total Students",
       value: stats.totalStudents,
       icon: Users,
-      trend: "+12%",
+      trend: "Enrolled",
       color: "emerald",
       gradient: "from-emerald-500 to-teal-500"
     },
@@ -278,7 +278,7 @@ const AdminDashboard = () => {
       label: "Total Questions",
       value: stats.totalQuestions,
       icon: FileQuestion,
-      trend: "+8%",
+      trend: "In bank",
       color: "blue",
       gradient: "from-blue-500 to-cyan-500"
     },
@@ -395,6 +395,7 @@ const AdminDashboard = () => {
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   type="date"
+                  aria-label="Activity date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white w-full sm:w-auto"

@@ -11,6 +11,7 @@ import {
     ChatMessage,
 } from "@/config/chat";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 interface StudentChatProps {
     studentId: string;
@@ -35,7 +36,8 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const loadMessages = async () => {
+    const loadMessages = async (showSpinner = false) => {
+        if (showSpinner) setLoading(true);
         try {
             const conv = await getConversation(studentId);
             if (conv) {
@@ -47,12 +49,14 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
             setUnreadCount(count);
         } catch (e) {
             console.error("Error loading messages:", e);
+        } finally {
+            if (showSpinner) setLoading(false);
         }
     };
 
     // Initial load and polling for new messages
     useEffect(() => {
-        loadMessages();
+        loadMessages(true);
 
         // Poll for new messages every 3 seconds (fallback for realtime)
         const pollInterval = setInterval(() => {
@@ -119,9 +123,12 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
                 setNewMessage("");
                 // Add message immediately to UI
                 setMessages(prev => [...prev, result]);
+            } else {
+                toast.error("Message didn't send. Try again.");
             }
         } catch (e) {
             console.error("Error sending message:", e);
+            toast.error("Message didn't send. Try again.");
         }
         setIsSending(false);
     };
@@ -157,6 +164,9 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="student-chat-title"
                     className="fixed inset-x-0 top-0 bottom-2 z-[100] md:inset-auto md:bottom-4 md:right-4 md:w-[400px] md:h-[550px] flex flex-col md:rounded-[28px] overflow-hidden"
                     style={{
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
@@ -182,14 +192,13 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
                                 <MessageCircle className="w-5 h-5 text-white" />
                             </motion.div>
                             <div>
-                                <h3 className="text-white font-bold text-base">Student Support</h3>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50" />
-                                    <p className="text-white/70 text-xs font-medium">Online now</p>
-                                </div>
+                                <h3 id="student-chat-title" className="text-white font-bold text-base">Student Support</h3>
+                                <p className="text-white/70 text-xs font-medium">We usually reply within a few hours</p>
                             </div>
                         </div>
                         <motion.button
+                            type="button"
+                            aria-label="Close chat"
                             whileHover={{ scale: 1.1, rotate: 90 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setIsOpen(false)}
@@ -203,7 +212,12 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
                         MESSAGES AREA - ULTRA PREMIUM
                         ═══════════════════════════════════════════════════════════════ */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-slate-50 to-white">
-                        {messages.length === 0 ? (
+                        {loading && messages.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 gap-3">
+                                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                <p className="text-slate-400 text-sm font-medium">Loading conversation…</p>
+                            </div>
+                        ) : messages.length === 0 ? (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -290,9 +304,12 @@ const StudentChat = ({ studentId, studentName, isOpen: controlledOpen, onOpenCha
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 onKeyPress={handleKeyPress}
                                 placeholder="Type a message..."
+                                aria-label="Message"
                                 className="flex-1 px-5 py-3.5 rounded-2xl bg-slate-100 border-2 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-sm text-slate-700 placeholder:text-slate-400 outline-none"
                             />
                             <motion.button
+                                type="button"
+                                aria-label="Send message"
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={handleSend}

@@ -10,6 +10,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import StudentLayout from "@/components/student/StudentLayout";
 import { format } from "date-fns";
+import { LoadError, EmptyState } from "@/components/PageState";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface TestAttempt {
   id: string;
@@ -25,12 +28,14 @@ interface TestAttempt {
 const StudentResults = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [stats, setStats] = useState({ passed: 0, avg: 0 });
 
   const loadResults = useCallback(async () => {
+    setLoadError(false);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { navigate("/login"); return; }
+    if (!session) { navigate("/login"); setLoading(false); return; }
 
     const { data, error } = await supabase
       .from("test_attempts")
@@ -47,6 +52,13 @@ const StudentResults = () => {
       .eq("user_id", session.user.id)
       .eq("is_active", false)
       .order("completed_at", { ascending: false });
+
+    if (error) {
+      setLoadError(true);
+      setAttempts([]);
+      setLoading(false);
+      return;
+    }
 
     if (data) {
       const formattedAttempts = data.map((a: any) => ({
@@ -151,26 +163,34 @@ const StudentResults = () => {
 
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
-              {attempts.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-white rounded-xl border border-slate-100 p-8 text-center"
-                >
-                  <Award className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                  <h4 className="font-bold text-slate-900 text-sm">No attempts yet</h4>
-                  <p className="text-xs text-slate-500 mt-1">Start your first test to see results.</p>
-                </motion.div>
+              {loadError ? (
+                <LoadError
+                  title="Couldn't load results"
+                  description="Your attempts didn't load. Try again."
+                  onRetry={loadResults}
+                />
+              ) : attempts.length === 0 ? (
+                <EmptyState
+                  icon={Award}
+                  title="No attempts yet"
+                  description="Start your first test to see results here."
+                  action={
+                    <Button onClick={() => navigate("/student/exams")} className="rounded-xl bg-indigo-600 text-white">
+                      Browse tests
+                    </Button>
+                  }
+                />
               ) : (
                 attempts.map((attempt, idx) => (
-                  <motion.div
+                  <motion.button
+                    type="button"
                     key={attempt.id}
                     layout
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ delay: idx * 0.02 }}
-                    className="bg-white rounded-xl border border-slate-100 p-3 active:scale-[0.98] transition-transform"
+                    className="w-full text-left bg-white rounded-xl border border-slate-100 p-3 active:scale-[0.98] transition-transform cursor-pointer"
                     onClick={() => navigate(`/student/test-review/${attempt.id}`)}
                   >
                     <div className="flex items-center gap-3">
@@ -189,12 +209,12 @@ const StudentResults = () => {
                         </h4>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-slate-400">{formatDate(attempt.completed_at)}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${attempt.passed
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-red-100 text-red-700'
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${attempt.passed
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : 'bg-red-100 text-red-700 border-red-200'
                             }`}>
                             {attempt.passed ? 'Pass' : 'Fail'}
-                          </span>
+                          </Badge>
                         </div>
                       </div>
 
@@ -203,7 +223,7 @@ const StudentResults = () => {
                         <ChevronRight className="w-4 h-4 text-slate-400" />
                       </div>
                     </div>
-                  </motion.div>
+                  </motion.button>
                 ))
               )}
             </AnimatePresence>

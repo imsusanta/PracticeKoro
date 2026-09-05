@@ -740,6 +740,7 @@ const MockTestCreation = () => {
         <Button
           onClick={openCreateDialog}
           size="icon"
+          aria-label="Create test"
           className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border border-white/20"
         >
           <Plus className="w-5 h-5" />
@@ -760,7 +761,7 @@ const MockTestCreation = () => {
             <Textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={2} className="rounded-xl mt-1" />
           </div>
           <div className="space-y-2">
-            <Label>{formData.test_type === "topic_wise" ? "Subject *" : "Exam Category *"}</Label>
+            <Label>{formData.test_type === "topic_wise" ? "Subject" : "Exam Category"}</Label>
             {formData.test_type === "topic_wise" ? (
               <>
                 <select
@@ -845,7 +846,7 @@ const MockTestCreation = () => {
               <Button onClick={handleUpdateTest} disabled={!formData.title} className="rounded-xl h-12 bg-gradient-to-r from-emerald-500 to-teal-600 flex-1 sm:flex-none">Update Test</Button>
             </>
           ) : (
-            <Button onClick={proceedToQuestionSelection} disabled={!formData.title} className="rounded-xl h-12 bg-gradient-to-r from-emerald-500 to-teal-600 flex-1 sm:flex-none">Next: Select Que.</Button>
+            <Button onClick={proceedToQuestionSelection} disabled={!formData.title} className="rounded-xl h-12 bg-gradient-to-r from-emerald-500 to-teal-600 flex-1 sm:flex-none">Next: Select questions</Button>
           )}
         </DialogFooter>
       </DialogContent>

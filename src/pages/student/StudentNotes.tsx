@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
-  NotebookPen, Search, BookOpen, FolderOpen, ChevronLeft,
-  ChevronRight, FileText, BookOpenCheck, Sparkles, Clock, Share2, ArrowLeft, Bookmark,
+  Search, BookOpen, FolderOpen,
+  ChevronRight, BookOpenCheck, Sparkles, Clock, Share2, ArrowLeft,
   CreditCard
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StudentLayout from "@/components/student/StudentLayout";
+import { LoadError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { initRazorpayPayment } from "@/utils/payment";
@@ -86,7 +87,7 @@ const SubjectsView = ({
           <Sparkles className="w-8 h-8 text-yellow-300" />
           Study Notes
         </h2>
-        <p className="text-indigo-100 font-medium max-w-md">Access premium study materials and notes across all subjects, globally published.</p>
+        <p className="text-indigo-100 font-medium max-w-md">Study notes and articles organized by subject.</p>
         <div className="flex gap-4 mt-6">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2 border border-white/20">
             <span className="text-2xl font-bold block">{subjects.length}</span>
@@ -103,7 +104,8 @@ const SubjectsView = ({
     <div className="relative">
       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
       <input
-        placeholder="Search for articles or subjects..."
+        placeholder="Search subjects..."
+        aria-label="Search subjects"
         className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white border-0 shadow-sm focus:ring-2 focus:ring-violet-500/20 transition-all font-medium"
         value={searchQuery}
         onChange={e => setSearchQuery(e.target.value)}
@@ -111,6 +113,16 @@ const SubjectsView = ({
     </div>
 
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {subjects.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+        <div className="col-span-full rounded-2xl border border-slate-100 bg-white p-8 text-center">
+          <h3 className="font-bold text-slate-900">
+            {subjects.length === 0 ? "No study notes yet" : `No subjects match “${searchQuery}”`}
+          </h3>
+          <p className="text-sm text-slate-500 mt-1">
+            {subjects.length === 0 ? "Notes will appear here when they are published." : "Try a different search."}
+          </p>
+        </div>
+      )}
       {subjects.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((subject) => {
         const color = getColor(subject.id);
         const articleCount = notes.filter(n => n.subject_id === subject.id).length;
@@ -179,6 +191,12 @@ const TopicsView = ({
       </div>
 
       <div className="grid gap-4 pt-2">
+        {subjectTopics.filter(t => getNotesForTopic(t.id).length > 0).length === 0 && (
+          <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center">
+            <h3 className="font-bold text-slate-900">No chapters in this subject yet</h3>
+            <p className="text-sm text-slate-500 mt-1">Check back soon for new notes.</p>
+          </div>
+        )}
         {subjectTopics.map(topic => {
           const topicNotes = getNotesForTopic(topic.id);
           if (topicNotes.length === 0) return null;
@@ -207,7 +225,7 @@ const TopicsView = ({
                 <h3 className="text-xl font-black text-gray-900 group-hover:text-indigo-700 transition-colors truncate tracking-tight">{topic.name}</h3>
                 <div className="flex items-center gap-4 mt-3">
                   <span className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider">
-                    <Clock className="w-3.5 h-3.5" /> 8 MIN READ
+                    <Clock className="w-3.5 h-3.5" /> Ready to read
                   </span>
                   <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-500 uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-lg">
                     <BookOpenCheck className="w-3.5 h-3.5" /> READY TO READ
@@ -297,10 +315,24 @@ const ArticleReader = ({
         </button>
 
         <div className="flex items-center gap-2">
-          <button className="p-2.5 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all">
-            <Bookmark className="w-5 h-5" />
-          </button>
-          <button className="p-2.5 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all">
+          <button
+            type="button"
+            aria-label="Share note"
+            className="p-2.5 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all"
+            onClick={async () => {
+              const shareData = { title: selectedNote.title, url: window.location.href };
+              try {
+                if (navigator.share) {
+                  await navigator.share(shareData);
+                } else {
+                  await navigator.clipboard.writeText(window.location.href);
+                  toast({ title: "Link copied", description: "Share it with a classmate." });
+                }
+              } catch {
+                /* user cancelled share */
+              }
+            }}
+          >
             <Share2 className="w-5 h-5" />
           </button>
         </div>
@@ -351,7 +383,7 @@ const ArticleReader = ({
                   }
                 }}
               >
-                Unlock Full Note
+                Subscribe — ₹{subscriptionFee}/year
                 <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
@@ -377,7 +409,7 @@ const ArticleReader = ({
               </div>
             </div>
             <div className="ml-auto hidden sm:flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-              <Clock className="w-3.5 h-3.5" /> 6 min read
+              <Clock className="w-3.5 h-3.5" /> Study note
             </div>
           </motion.div>
 
@@ -395,13 +427,10 @@ const ArticleReader = ({
                 <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Knowledge Mastered!</h3>
                 <p className="text-gray-500 mb-8 font-medium max-w-sm mx-auto">You've reached the end of this <span className="text-emerald-600 font-bold">"{selectedTopic.name}"</span> chapter. Great job!</p>
                 <Button
-                  onClick={() => {
-                    toast({ title: "Success", description: "Progress updated. Keep it up!", className: "bg-emerald-500 text-white border-0 rounded-2xl shadow-xl" });
-                    handleBack();
-                  }}
+                  onClick={handleBack}
                   className={`h-16 px-12 rounded-2xl font-black text-lg shadow-xl shadow-indigo-500/20 bg-gradient-to-r ${color.bg} text-white hover:scale-105 hover:shadow-2xl transition-all duration-300 relative overflow-hidden group/btn`}
                 >
-                  <span className="relative z-10 flex items-center gap-2">Mark as Complete</span>
+                  <span className="relative z-10 flex items-center gap-2">Back to chapters</span>
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                 </Button>
               </div>
@@ -419,6 +448,7 @@ const StudentNotes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -468,7 +498,7 @@ const StudentNotes = () => {
 
   const loadData = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { navigate("/login"); return; }
+    if (!session) { navigate("/login"); setLoading(false); return; }
 
     const [notesRes, subjectsRes, topicsRes] = await Promise.all([
       supabase.from("pdfs").select("*").order("created_at", { ascending: false }),
@@ -476,6 +506,12 @@ const StudentNotes = () => {
       supabase.from("topics").select("id, subject_id, name, content").eq("category", "notes").order("order_index", { ascending: true })
     ]);
 
+    if (notesRes.error || subjectsRes.error || topicsRes.error) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+    setLoadError(false);
     if (notesRes.data) {
       const mappedNotes = (notesRes.data || []).map(note => ({
         ...note,
@@ -525,6 +561,13 @@ const StudentNotes = () => {
   return (
     <StudentLayout title="Notes" subtitle="University of Knowledge">
       <div className="w-full max-w-5xl mx-auto py-2 px-1">
+        {loadError && (
+          <LoadError
+            title="Couldn't load notes"
+            description="Study notes didn't load. Try again."
+            onRetry={loadData}
+          />
+        )}
         <AnimatePresence mode="wait">
           {currentScreen === "subjects" && (
             <SubjectsView

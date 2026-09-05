@@ -89,7 +89,7 @@ const NotesManagement = () => {
 
     if (error) {
       console.error("Error loading notes:", error);
-      toast({ title: "Error", description: "Failed to load notes. Please check if the 'pdfs' table exists and has the required columns.", variant: "destructive" });
+      toast({ title: "Couldn't load notes", description: "Refresh and try again.", variant: "destructive" });
       return;
     }
 
@@ -140,6 +140,19 @@ const NotesManagement = () => {
           (searchQuery === "" || n.title.toLowerCase().includes(searchQuery.toLowerCase())))
       })).filter(t => t.notes.length > 0 || searchQuery === "");
 
+      const orphanNotes = subjectNotes.filter(n =>
+        (!n.topic_id || !subjectTopics.some(t => t.id === n.topic_id)) &&
+        (searchQuery === "" || n.title.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      if (orphanNotes.length > 0) {
+        topicsWithNotes.push({
+          id: `${subject.id}-uncategorized`,
+          subject_id: subject.id,
+          name: "Uncategorized",
+          notes: orphanNotes,
+        } as typeof topicsWithNotes[number]);
+      }
+
       return {
         ...subject,
         topics: topicsWithNotes,
@@ -148,7 +161,7 @@ const NotesManagement = () => {
     }).filter(s => s.topics.some(t => t.notes.length > 0) || (searchQuery === "" && filterSubject === "all" && s.totalNotes > 0));
 
   const CreateButton = (
-    <Button onClick={() => navigate("/admin/add-note")} size="icon" className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 border border-white/20 shadow-lg shadow-emerald-500/20">
+    <Button aria-label="Add note" onClick={() => navigate("/admin/add-note")} size="icon" className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 border border-white/20 shadow-lg shadow-emerald-500/20">
       <Plus className="w-5 h-5" />
     </Button>
   );
@@ -195,8 +208,14 @@ const NotesManagement = () => {
               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <NotebookPen className="w-8 h-8 text-gray-300" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-1 text-lg">No Articles Found</h3>
-              <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Create your first educational article and organize it by subject.</p>
+              <h3 className="font-bold text-gray-900 mb-1 text-lg">
+                {searchQuery || filterSubject !== "all" ? "No notes match these filters" : "No notes yet"}
+              </h3>
+              <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
+                {searchQuery || filterSubject !== "all"
+                  ? "Try another subject or clear search."
+                  : "Create your first note and organize it by subject."}
+              </p>
               <Button onClick={() => navigate("/admin/add-note")} className="rounded-xl px-6 bg-emerald-500 hover:bg-emerald-600 transition-colors">
                 <Plus className="w-4 h-4 mr-2" /> Create First Note
               </Button>
@@ -249,10 +268,11 @@ const NotesManagement = () => {
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  aria-label="Edit note"
                                   className="h-8 w-8 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                   onClick={() => navigate(`/admin/add-note?edit=${note.id}`)}
                                 >
@@ -261,6 +281,7 @@ const NotesManagement = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  aria-label="Delete note"
                                   className="h-8 w-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
                                   onClick={() => handleDelete(note)}
                                 >

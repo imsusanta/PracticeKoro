@@ -148,6 +148,7 @@ export default function ForgotPassword() {
                   <p className="mt-2 text-xs text-gray-500">
                     Didn't receive the email? Check your spam folder or{" "}
                     <button
+                      type="button"
                       onClick={() => setEmailSent(false)}
                       className="text-blue-600 hover:underline font-medium"
                     >

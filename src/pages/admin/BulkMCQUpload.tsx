@@ -121,7 +121,6 @@ Short Notes:
 
     if (data && data.length > 0) {
       setExams(data);
-      setSelectedExamId(data[0].id);
     }
     // Load subjects for questions category
     await loadSubjects();
@@ -304,8 +303,7 @@ Short Notes:
       return;
     }
 
-    // Exam selection is optional for Question Bank
-    const finalExamId = selectedExamId || (exams.length > 0 ? exams[0].id : null);
+    const finalExamId = selectedExamId || null;
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;

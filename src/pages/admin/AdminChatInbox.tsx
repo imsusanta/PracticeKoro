@@ -157,12 +157,16 @@ const AdminChatInbox = () => {
     const handleSend = useCallback(async () => {
         if (!newMessage.trim() || !selectedStudent || !adminId) return;
 
-        await sendMessage(
+        const result = await sendMessage(
             selectedStudent,
             adminId,
             "admin",
             newMessage.trim()
         );
+        if (!result) {
+            toast({ title: "Message didn't send", description: "Try again in a moment.", variant: "destructive" });
+            return;
+        }
         setNewMessage("");
         await loadMessages(selectedStudent);
         await loadConversations();
@@ -368,6 +372,8 @@ const AdminChatInbox = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <button
+                                            type="button"
+                                            aria-label="Back to conversation list"
                                             onClick={() => setSelectedStudent(null)}
                                             className="lg:hidden w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center"
                                         >
@@ -385,6 +391,7 @@ const AdminChatInbox = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            aria-label="Delete conversation"
                                             onClick={() => handleDelete(selectedStudent)}
                                             className="text-white/70 hover:text-white hover:bg-white/20"
                                         >
@@ -436,11 +443,13 @@ const AdminChatInbox = () => {
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={(e) => e.key === "Enter" && handleSend()}
                                         placeholder="Type a message..."
+                                        aria-label="Message"
                                         className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                     />
                                     <Button
                                         onClick={handleSend}
                                         disabled={!newMessage.trim()}
+                                        aria-label="Send message"
                                         className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600"
                                     >
                                         <Send className="w-5 h-5" />

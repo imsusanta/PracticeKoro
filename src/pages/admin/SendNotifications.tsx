@@ -440,27 +440,28 @@ const SendNotifications = () => {
                             <label className="text-sm font-medium text-gray-700 mb-3 block">Notification Type</label>
                             <div className="grid grid-cols-3 gap-2">
                                 {[
-                                    { id: "mock_test", label: "Mock Test", icon: TestTube2, color: "emerald" },
-                                    { id: "notes", label: "Notes", icon: FileText, color: "blue" },
-                                    { id: "custom", label: "Custom", icon: MessageSquare, color: "purple" },
+                                    { id: "mock_test", label: "Mock Test", icon: TestTube2, selected: "border-emerald-500 bg-emerald-50 text-emerald-600", labelClass: "text-emerald-700" },
+                                    { id: "notes", label: "Notes", icon: FileText, selected: "border-blue-500 bg-blue-50 text-blue-600", labelClass: "text-blue-700" },
+                                    { id: "custom", label: "Custom", icon: MessageSquare, selected: "border-purple-500 bg-purple-50 text-purple-600", labelClass: "text-purple-700" },
                                 ].map((type) => {
                                     const Icon = type.icon;
                                     const isSelected = notificationType === type.id;
                                     return (
                                         <button
+                                            type="button"
                                             key={type.id}
+                                            aria-pressed={isSelected}
                                             onClick={() => setNotificationType(type.id as any)}
                                             className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${isSelected
-                                                ? `border-${type.color}-500 bg-${type.color}-50`
+                                                ? type.selected
                                                 : "border-gray-200 hover:border-gray-300"
                                                 }`}
                                         >
                                             <Icon
-                                                className={`w-5 h-5 ${isSelected ? `text-${type.color}-600` : "text-gray-400"
-                                                    }`}
+                                                className={`w-5 h-5 ${isSelected ? "" : "text-gray-400"}`}
                                             />
                                             <span
-                                                className={`text-xs font-medium ${isSelected ? `text-${type.color}-700` : "text-gray-600"
+                                                className={`text-xs font-medium ${isSelected ? type.labelClass : "text-gray-600"
                                                     }`}
                                             >
                                                 {type.label}
@@ -692,8 +693,10 @@ const SendNotifications = () => {
                                                         {notif.title}
                                                     </p>
                                                     <button
+                                                        type="button"
+                                                        aria-label="Delete notification"
                                                         onClick={() => handleDeleteNotification(notif)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
+                                                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
                                                     >
                                                         <Trash2 className="w-3 h-3 text-red-500" />
                                                     </button>

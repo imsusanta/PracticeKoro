@@ -129,6 +129,7 @@ const NotificationBell = () => {
                 <Button
                     variant="ghost"
                     size="icon"
+                    aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
                     className="relative w-10 h-10 rounded-xl hover:bg-emerald-50"
                 >
                     <Bell className="w-5 h-5 text-gray-600" />

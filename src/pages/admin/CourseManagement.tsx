@@ -215,7 +215,10 @@ export default function CourseManagement() {
 
     setUploadingFile(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setUploadingFile(false);
+      return;
+    }
 
     const fileExt = materialFormData.file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
@@ -279,6 +282,7 @@ export default function CourseManagement() {
     <Button
       onClick={openCreateDialog}
       size="icon"
+      aria-label="Create course"
       className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-200"
     >
       <Plus className="w-5 h-5" />

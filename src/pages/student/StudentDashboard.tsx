@@ -25,6 +25,7 @@ import {
 import StudentLayout from "@/components/student/StudentLayout";
 import { motion } from "framer-motion";
 import { initRazorpayPayment } from "@/utils/payment";
+import { LoadError } from "@/components/PageState";
 
 interface Statistics {
   totalTestsTaken: number;
@@ -83,6 +84,8 @@ const StudentDashboard = () => {
   }>>([]);
   const [subscriptionFee, setSubscriptionFee] = useState<number>(0);
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
+  const [paying, setPaying] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -187,8 +190,9 @@ const StudentDashboard = () => {
       }
     } catch (error) {
       console.error("Error loading dashboard data:", error);
+      setLoadError(true);
       toast({
-        title: "Error loading data",
+        title: "Couldn't load dashboard",
         description: "Please refresh the page and try again.",
         variant: "destructive",
       });
@@ -207,7 +211,7 @@ const StudentDashboard = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-    localStorage.clear();
+    ["practicekoro_remember_email"].forEach((key) => localStorage.removeItem(key));
     navigate("/");
   };
 
@@ -241,6 +245,13 @@ const StudentDashboard = () => {
   return (
     <StudentLayout title="Dashboard" subtitle="Your learning hub" hideNavbar={showChat}>
       <div className="w-full mx-auto space-y-3 pb-4 px-1">
+        {loadError && (
+          <LoadError
+            title="Couldn't load dashboard"
+            description="Stats and activity may be incomplete."
+            onRetry={loadDashboardData}
+          />
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════
             PREMIUM HERO CARD - Standardized Size
@@ -263,8 +274,8 @@ const StudentDashboard = () => {
                   whileHover={{ scale: 1.05 }}
                   className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shrink-0 overflow-hidden"
                 >
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-2xl sm:text-3xl font-bold text-white">{firstName[0]}</span>
                   )}
@@ -274,9 +285,14 @@ const StudentDashboard = () => {
                   <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{firstName}</h1>
                   <div className="flex items-center gap-2 mt-1.5">
                     {hasSubscription ? (
-                      <button className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold flex items-center gap-1 shadow-lg shadow-amber-500/30">
+                      <span className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold flex items-center gap-1 shadow-lg shadow-amber-500/30">
                         ⚡ Premium
-                      </button>
+                      </span>
+                    ) : approvalStatus === "pending" ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+                        <p className="text-white/80 text-xs font-semibold">Pending approval</p>
+                      </>
                     ) : (
                       <>
                         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-emerald-400/50" />
@@ -309,6 +325,13 @@ const StudentDashboard = () => {
         {/* ═══════════════════════════════════════════════════════════════
             PREMIUM UPGRADE CARD (If not subscribed)
             ═══════════════════════════════════════════════════════════════ */}
+        {approvalStatus === "pending" && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-900">Your account is waiting for approval</p>
+            <p className="text-xs text-amber-800 mt-0.5">Tests, notes, and chat will appear once an admin approves you.</p>
+          </div>
+        )}
+
         {
           !hasSubscription && isApproved && (
             <motion.div
@@ -329,8 +352,11 @@ const StudentDashboard = () => {
                 </div>
 
                 <motion.button
+                  type="button"
                   whileTap={{ scale: 0.95 }}
+                  disabled={paying}
                   onClick={async () => {
+                    setPaying(true);
                     try {
                       await initRazorpayPayment({
                         amount: subscriptionFee,
@@ -338,15 +364,17 @@ const StudentDashboard = () => {
                         contentType: "subscription" as any,
                         title: "Yearly Premium Subscription",
                       });
-                      toast({ title: "Success!", description: "Subscription activated!" });
+                      toast({ title: "Subscription activated", description: "You now have premium access." });
                       window.location.reload();
                     } catch (err: any) {
-                      toast({ title: "Payment Failed", description: err.message, variant: "destructive" });
+                      toast({ title: "Payment didn't go through", description: "Try again in a moment.", variant: "destructive" });
+                    } finally {
+                      setPaying(false);
                     }
                   }}
-                  className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black shadow-lg shadow-slate-200 active:bg-black transition-colors whitespace-nowrap"
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black shadow-lg shadow-slate-200 active:bg-black transition-colors whitespace-nowrap disabled:opacity-60"
                 >
-                  Buy Now
+                  {paying ? "Opening…" : "Buy Now"}
                 </motion.button>
               </div>
             </motion.div>
@@ -564,7 +592,7 @@ const StudentDashboard = () => {
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span className="font-medium text-slate-600">Tests Completed</span>
-                <span className="font-bold text-slate-900">{Math.min(statistics.totalTestsTaken, 10)}/10</span>
+                <span className="font-bold text-slate-900">{statistics.totalTestsTaken}</span>
               </div>
               <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <motion.div

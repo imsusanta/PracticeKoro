@@ -284,7 +284,7 @@ const AddNote = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between ml-1">
                                     <Label className="text-sm font-bold text-gray-700">Article Content</Label>
-                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">Supports Rich Text (Upcoming)</span>
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">Plain text for now</span>
                                 </div>
                                 <Textarea
                                     value={formData.content}

@@ -547,7 +547,10 @@ Examples:
 
             if (error) throw error;
 
-            toast({ title: "Success", description: editId ? "Blog updated successfully" : "Blog published successfully" });
+            toast({
+                title: formData.is_published ? (editId ? "Blog updated" : "Blog published") : (editId ? "Draft saved" : "Draft created"),
+                description: formData.is_published ? "Readers can see this post." : "This post is saved as a draft.",
+            });
             navigate("/admin/blogs");
         } catch (error) {
             console.error(error);
@@ -704,7 +707,7 @@ Examples:
                                             <ImagePlus className="w-10 h-10 text-white" />
                                         </div>
                                         <span className="text-lg font-bold text-gray-700 mb-1">Add Cover Image</span>
-                                        <span className="text-sm text-gray-400">Drag & drop or click to upload</span>
+                                        <span className="text-sm text-gray-400">Click to upload a cover image</span>
                                         <span className="text-xs text-gray-300 mt-2">PNG, JPG, WebP up to 5MB</span>
                                         <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                                     </label>

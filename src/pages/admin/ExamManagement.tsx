@@ -274,6 +274,7 @@ const ExamManagement = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -431,8 +432,10 @@ const ExamManagement = () => {
   };
 
   const handleCreateExam = async () => {
+    if (saving) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    setSaving(true);
 
     // First try with all fields
     const fullPayload = {
@@ -458,18 +461,21 @@ const ExamManagement = () => {
 
     if (error) {
       console.error("Create exam error:", error);
-      toast({ title: "Error", description: `Failed to create exam: ${error.message}`, variant: "destructive" });
+      toast({ title: "Couldn't create exam", description: "Try again in a moment.", variant: "destructive" });
+      setSaving(false);
       return;
     }
 
-    toast({ title: "Success", description: "Exam created successfully" });
+    toast({ title: "Exam created", description: "The new exam is ready to use." });
     setDialogOpen(false);
     setFormData({ name: "", description: "", is_active: true, is_paid: false, price: 0 });
+    setSaving(false);
     await loadExams();
   };
 
   const handleUpdateExam = async () => {
-    if (!editingExam) return;
+    if (!editingExam || saving) return;
+    setSaving(true);
 
     const fullPayload = {
       name: formData.name,
@@ -497,14 +503,16 @@ const ExamManagement = () => {
 
     if (error) {
       console.error("Update exam error:", error);
-      toast({ title: "Error", description: `Failed to update exam: ${error.message}`, variant: "destructive" });
+      toast({ title: "Couldn't update exam", description: "Try again in a moment.", variant: "destructive" });
+      setSaving(false);
       return;
     }
 
-    toast({ title: "Success", description: "Exam updated successfully" });
+    toast({ title: "Exam updated", description: "Your changes were saved." });
     setDialogOpen(false);
     setEditingExam(null);
     setFormData({ name: "", description: "", is_active: true, is_paid: false, price: 0 });
+    setSaving(false);
     await loadExams();
   };
 
@@ -568,6 +576,7 @@ const ExamManagement = () => {
         <Button
           onClick={openCreateDialog}
           size="icon"
+          aria-label="Create exam"
           className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border border-white/20"
         >
           <Plus className="w-5 h-5" />
@@ -644,10 +653,10 @@ const ExamManagement = () => {
           </Button>
           <Button
             onClick={editingExam ? handleUpdateExam : handleCreateExam}
-            disabled={!formData.name.trim()}
+            disabled={!formData.name.trim() || saving}
             className="rounded-xl h-12 bg-gradient-to-r from-emerald-500 to-teal-600 flex-1 sm:flex-none"
           >
-            {editingExam ? "Update" : "Create"}
+            {saving ? "Saving..." : editingExam ? "Update" : "Create"}
           </Button>
         </DialogFooter>
       </DialogContent>

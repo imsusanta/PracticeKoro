@@ -22,7 +22,8 @@ const AdminProfile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [fullName, setFullName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -64,7 +65,7 @@ const AdminProfile = () => {
       } catch (err) {
         console.error('Sign out error:', err);
       }
-      localStorage.clear();
+      ["practicekoro_admin_remember_email"].forEach((key) => localStorage.removeItem(key));
       toast({
         title: "Access Denied",
         description: "You do not have admin privileges",
@@ -85,14 +86,14 @@ const AdminProfile = () => {
   const handleUpdateProfile = async () => {
     if (!profile) return;
 
-    setSaving(true);
+    setProfileSaving(true);
 
     const { error } = await supabase
       .from("profiles")
       .update({ full_name: fullName })
       .eq("id", profile.id);
 
-    setSaving(false);
+    setProfileSaving(false);
 
     if (error) {
       toast({
@@ -104,8 +105,8 @@ const AdminProfile = () => {
     }
 
     toast({
-      title: "Success",
-      description: "Profile updated successfully",
+      title: "Profile saved",
+      description: "Your name was updated.",
     });
 
     await loadProfile();
@@ -139,13 +140,13 @@ const AdminProfile = () => {
       return;
     }
 
-    setSaving(true);
+    setPasswordSaving(true);
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
 
-    setSaving(false);
+    setPasswordSaving(false);
 
     if (error) {
       toast({
@@ -157,8 +158,8 @@ const AdminProfile = () => {
     }
 
     toast({
-      title: "Success",
-      description: "Password changed successfully",
+      title: "Password changed",
+      description: "Use your new password next time you sign in.",
     });
 
     setNewPassword("");
@@ -215,22 +216,23 @@ const AdminProfile = () => {
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Email (read-only)</Label>
-                <Input value={profile?.email || ""} disabled className="rounded-xl bg-gray-50" />
+                <Label htmlFor="admin_email" className="text-sm font-medium">Email (read-only)</Label>
+                <Input id="admin_email" value={profile?.email || ""} disabled className="rounded-xl bg-gray-50" />
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Member Since</Label>
+                <Label htmlFor="admin_member_since" className="text-sm font-medium">Member Since</Label>
                 <Input
+                  id="admin_member_since"
                   value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : ""}
                   disabled
                   className="rounded-xl bg-gray-50"
                 />
               </div>
 
-              <Button onClick={handleUpdateProfile} disabled={saving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-12">
+              <Button onClick={handleUpdateProfile} disabled={profileSaving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-12">
                 <Save className="w-4 h-4 mr-2" />
-                {saving ? "Saving..." : "Update Profile"}
+                {profileSaving ? "Saving..." : "Update Profile"}
               </Button>
             </div>
           </CardContent>
@@ -269,9 +271,9 @@ const AdminProfile = () => {
                 />
               </div>
 
-              <Button onClick={handleChangePassword} disabled={saving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-12">
+              <Button onClick={handleChangePassword} disabled={passwordSaving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-12">
                 <Lock className="w-4 h-4 mr-2" />
-                {saving ? "Changing..." : "Change Password"}
+                {passwordSaving ? "Changing..." : "Change Password"}
               </Button>
             </div>
           </CardContent>

@@ -14,9 +14,9 @@ const AdminLoginPage = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem("practicekoro_admin_remember_email"));
   const [formData, setFormData] = useState({
-    email: "",
+    email: localStorage.getItem("practicekoro_admin_remember_email") || "",
     password: "",
   });
 
@@ -143,13 +143,18 @@ const AdminLoginPage = () => {
           await supabase.auth.signOut();
           toast({
             title: "Access Denied",
-            description: `No admin privileges found for user ID: ${authData.user.id.substring(0, 8)}...`,
+            description: "This account is not an admin.",
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
 
+        if (rememberMe) {
+          localStorage.setItem("practicekoro_admin_remember_email", formData.email);
+        } else {
+          localStorage.removeItem("practicekoro_admin_remember_email");
+        }
         toast({
           title: "Login Successful",
           description: "Welcome back, Admin.",
@@ -378,6 +383,7 @@ const AdminLoginPage = () => {
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
