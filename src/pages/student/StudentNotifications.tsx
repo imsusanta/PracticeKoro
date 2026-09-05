@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 
 interface DbNotification {
@@ -34,19 +35,17 @@ const StudentNotifications = () => {
     const [notifications, setNotifications] = useState<DbNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<string | null>(null);
+    const { user, status } = useAuth();
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setUserId(user.id);
-                loadNotifications(user.id);
-            } else {
-                navigate("/login");
-            }
-        };
-        fetchUser();
-    }, []);
+        if (status === "loading") return;
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+        setUserId(user.id);
+        loadNotifications(user.id);
+    }, [user, status, navigate]);
 
     const loadNotifications = async (uId: string) => {
         setLoading(true);

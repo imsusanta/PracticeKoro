@@ -28,6 +28,7 @@ import { motion } from "framer-motion";
 import StudentChat from "@/components/StudentChat";
 import { getStudentUnreadCount } from "@/config/chat";
 import { formatDistanceToNow } from "date-fns";
+import { getActiveSubscription, getYearlySubscriptionFee } from "@/lib/subscription";
 import { initRazorpayPayment } from "@/utils/payment";
 import { Badge } from "@/components/ui/badge";
 
@@ -161,19 +162,11 @@ const StudentProfile = () => {
     }
     setUserEmail(session.user.email || null);
 
-    const [profileResult, approvalResult, subscriptionResult, settingsResult] = await Promise.all([
+    const [profileResult, approvalResult, subscription, fee] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", session.user.id).single(),
       supabase.from("approval_status").select("status").eq("user_id", session.user.id).single(),
-      supabase
-        .from("purchases" as any)
-        .select("*")
-        .eq("user_id", session.user.id)
-        .eq("content_type", "subscription")
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase.from("site_settings").select("value").eq("key", "yearly_subscription_fee").maybeSingle()
+      getActiveSubscription(session.user.id),
+      getYearlySubscriptionFee(),
     ]);
 
     if (profileResult.data) {
@@ -188,24 +181,8 @@ const StudentProfile = () => {
     }
 
     setApprovalStatus(approvalResult.data?.status || "pending");
-
-    // Set subscription fee
-    const fee = (settingsResult as any).data?.value;
-    if (fee) setSubscriptionFee(parseFloat(fee));
-
-    const subscriptionData = (subscriptionResult as any).data;
-    if (subscriptionData) {
-      const createdAt = new Date(subscriptionData.created_at);
-      const expiryDate = new Date(createdAt);
-      expiryDate.setDate(expiryDate.getDate() + 365);
-
-      if (new Date() < expiryDate) {
-        setSubscription({
-          ...subscriptionData,
-          expiryDate: expiryDate
-        });
-      }
-    }
+    if (fee) setSubscriptionFee(fee);
+    if (subscription) setSubscription(subscription);
     await loadStatistics(session.user.id);
     setLoading(false);
   }, [navigate, loadStatistics]);

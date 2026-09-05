@@ -1,7 +1,8 @@
-import { ReactNode, useState, useEffect, useCallback } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { studentNav } from "@/config/studentNav";
+import { useAuth } from "@/hooks/useAuth";
+import { hasActiveSubscription } from "@/lib/subscription";
 import { Home, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -83,33 +84,23 @@ const StudentLayout = ({
 }: StudentLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
 
-  const checkSubscription = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const oneYearAgo = new Date();
-    oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-    const { data } = await (supabase
-      .from("purchases" as any)
-      .select("id")
-      .eq("user_id", session.user.id)
-      .eq("content_type", "subscription")
-      .eq("status", "completed")
-      .gt("created_at", oneYearAgo.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle() as any);
-
-    setHasSubscription(!!data);
-  }, [supabase]);
-
   useEffect(() => {
-    checkSubscription();
-  }, [location.pathname, checkSubscription]);
+    if (!user) {
+      setHasSubscription(false);
+      return;
+    }
+    let cancelled = false;
+    hasActiveSubscription(user.id).then((active) => {
+      if (!cancelled) setHasSubscription(active);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, location.pathname]);
 
   const goToHome = () => {
     navigate("/");

@@ -19,6 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import StudentLayout from "@/components/student/StudentLayout";
+import { useAuth } from "@/hooks/useAuth";
+import { hasActiveSubscription } from "@/lib/subscription";
 
 interface Exam {
   id: string;
@@ -58,31 +60,19 @@ interface TestAttemptInfo {
 const StudentExams = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
 
   useEffect(() => {
-    const checkSubscription = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const oneYearAgo = new Date();
-      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-      const { data } = await (supabase
-        .from("purchases" as any)
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("content_type", "subscription")
-        .eq("status", "completed")
-        .gt("created_at", oneYearAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle() as any);
-
-      setHasSubscription(!!data);
+    if (!user) return;
+    let cancelled = false;
+    hasActiveSubscription(user.id).then((active) => {
+      if (!cancelled) setHasSubscription(active);
+    });
+    return () => {
+      cancelled = true;
     };
-    checkSubscription();
-  }, []);
+  }, [user]);
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [exams, setExams] = useState<Exam[]>([]);

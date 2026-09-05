@@ -12,6 +12,7 @@ import StudentLayout from "@/components/student/StudentLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { initRazorpayPayment } from "@/utils/payment";
+import { getYearlySubscriptionFee, hasActiveSubscription } from "@/lib/subscription";
 
 // ================= TYPES =================
 interface Note {
@@ -264,22 +265,7 @@ const ArticleReader = ({
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-
-    const oneYearAgo = new Date();
-    oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-    const { data: purchaseData } = await (supabase
-      .from("purchases" as any)
-      .select("id")
-      .eq("user_id", session.user.id)
-      .eq("content_type", "subscription")
-      .eq("status", "completed")
-      .gt("created_at", oneYearAgo.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle() as any);
-
-    setIsPurchased(!!purchaseData);
+    setIsPurchased(await hasActiveSubscription(session.user.id));
   }, [selectedNote, setIsPurchased]);
 
   useEffect(() => {
@@ -432,15 +418,7 @@ const StudentNotes = () => {
   const [subscriptionFee, setSubscriptionFee] = useState<number>(0);
 
   useEffect(() => {
-    const fetchSubscriptionFee = async () => {
-      const { data } = await (supabase
-        .from("site_settings" as any)
-        .select("value")
-        .eq("key", "yearly_subscription_fee")
-        .maybeSingle() as any);
-      if (data) setSubscriptionFee(parseFloat(data.value) || 0);
-    };
-    fetchSubscriptionFee();
+    getYearlySubscriptionFee().then(setSubscriptionFee);
   }, []);
 
   useEffect(() => {

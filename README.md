@@ -1,73 +1,55 @@
-# Welcome to your Lovable project
+# PracticeKoro
 
-## Project info
+Exam-prep web app: mock tests, notes, blogs, and separate student / admin panels.
 
-**URL**: https://lovable.dev/projects/cbd62e16-fbd9-44ac-bac6-555d418e378c
+**Stack:** Vite, React, TypeScript, Tailwind, shadcn/ui, Supabase, Razorpay.
 
-## How can I edit this code?
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for module boundaries and auth rules.
 
-There are several ways of editing your application.
+## Local setup
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/cbd62e16-fbd9-44ac-bac6-555d418e378c) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+1. Install Node.js 20+ and npm.
+2. Clone the repo and install dependencies:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. Copy public env vars (never commit real values):
 
-# Step 3: Install the necessary dependencies.
-npm i
+```sh
+cp .env.example .env
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Required **public** variables (all must be prefixed `VITE_` so Vite can expose them to the client):
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Anon / publishable key only |
+| `VITE_SUPABASE_PROJECT_ID` | Optional project id |
+| `VITE_RAZORPAY_KEY` | Razorpay **public** key |
+
+Do **not** put the Supabase `service_role` key (or any server secret) in `.env` or client code. Access control is enforced by Postgres RLS.
+
+4. Start the app:
+
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Scripts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production bundle |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run preview` | Preview the production build |
 
-**Use GitHub Codespaces**
+One-off database inspection scripts live in [`scripts/`](./scripts) and are not part of the app runtime.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Deploy
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/cbd62e16-fbd9-44ac-bac6-555d418e378c) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+GitHub Actions (`.github/workflows/deploy.yml`) FTPs `public/` to Hostinger on push to `main`. The Vite build output is `dist/` — keep that out of git unless you have an explicit static-host workflow that needs it.
