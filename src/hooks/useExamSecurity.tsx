@@ -14,11 +14,12 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
   const [tabViolations, setTabViolations] = useState(0);
   const [fullscreenViolations, setFullscreenViolations] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const maxTabViolations = config.maxTabViolations || 3;
-  const maxFullscreenViolations = config.maxFullscreenViolations || 3;
+  const tabViolationsRef = useRef(0);
+  const fullscreenViolationsRef = useRef(0);
+  const configRef = useRef(config);
+  configRef.current = config;
 
   useEffect(() => {
-    // Disable right-click
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       toast({
@@ -28,7 +29,6 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
       });
     };
 
-    // Disable copy, cut, paste
     const handleCopyCutPaste = (e: ClipboardEvent) => {
       e.preventDefault();
       toast({
@@ -38,9 +38,7 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
       });
     };
 
-    // Disable keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
       if (
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
@@ -54,21 +52,22 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
         });
       }
 
-      // Disable Ctrl+C, Ctrl+V, Ctrl+X
       if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
         e.preventDefault();
       }
     };
 
-    // Tab visibility detection
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        const newViolations = tabViolations + 1;
+        tabViolationsRef.current += 1;
+        const newViolations = tabViolationsRef.current;
         setTabViolations(newViolations);
-        config.onTabSwitch?.(newViolations);
+        const cfg = configRef.current;
+        const maxTab = cfg.maxTabViolations || 3;
+        cfg.onTabSwitch?.(newViolations);
 
-        if (newViolations >= maxTabViolations) {
-          config.onMaxViolations?.();
+        if (newViolations >= maxTab) {
+          cfg.onMaxViolations?.();
           toast({
             title: "Test Auto-Submitted",
             description: "Maximum tab switching violations reached. Your test has been submitted.",
@@ -77,25 +76,27 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
         } else {
           toast({
             title: "Warning: Tab Switch Detected",
-            description: `Violation ${newViolations}/${maxTabViolations}. ${maxTabViolations - newViolations} remaining before auto-submit.`,
+            description: `Violation ${newViolations}/${maxTab}. ${maxTab - newViolations} remaining before auto-submit.`,
             variant: "destructive",
           });
         }
       }
     };
 
-    // Fullscreen detection
     const handleFullscreenChange = () => {
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isCurrentlyFullscreen);
+      const cfg = configRef.current;
+      const maxFullscreen = cfg.maxFullscreenViolations || 3;
 
-      if (!isCurrentlyFullscreen && fullscreenViolations < maxFullscreenViolations) {
-        const newViolations = fullscreenViolations + 1;
+      if (!isCurrentlyFullscreen && fullscreenViolationsRef.current < maxFullscreen) {
+        fullscreenViolationsRef.current += 1;
+        const newViolations = fullscreenViolationsRef.current;
         setFullscreenViolations(newViolations);
-        config.onFullscreenExit?.(newViolations);
+        cfg.onFullscreenExit?.(newViolations);
 
-        if (newViolations >= maxFullscreenViolations) {
-          config.onMaxViolations?.();
+        if (newViolations >= maxFullscreen) {
+          cfg.onMaxViolations?.();
           toast({
             title: "Test Auto-Submitted",
             description: "Maximum fullscreen exit violations reached. Your test has been submitted.",
@@ -104,13 +105,12 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
         } else {
           toast({
             title: "Warning: Fullscreen Exited",
-            description: `Violation ${newViolations}/${maxFullscreenViolations}. Please return to fullscreen mode.`,
+            description: `Violation ${newViolations}/${maxFullscreen}. Please return to fullscreen mode.`,
             variant: "destructive",
           });
 
-          // Auto re-enter fullscreen after 2 seconds
           setTimeout(() => {
-            document.documentElement.requestFullscreen();
+            document.documentElement.requestFullscreen().catch(() => undefined);
           }, 2000);
         }
       }
@@ -133,7 +133,7 @@ export const useExamSecurity = (config: ExamSecurityConfig) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [tabViolations, fullscreenViolations, maxTabViolations, maxFullscreenViolations, config, toast]);
+  }, [toast]);
 
   const enterFullscreen = async () => {
     try {

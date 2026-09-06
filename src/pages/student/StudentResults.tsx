@@ -48,6 +48,10 @@ const StudentResults = () => {
       .eq("is_active", false)
       .order("completed_at", { ascending: false });
 
+    if (error) {
+      console.error("Failed to load results:", error);
+    }
+
     if (data) {
       const formattedAttempts = data.map((a: any) => ({
         id: a.id,

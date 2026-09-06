@@ -213,7 +213,7 @@ const MockTestCreation = () => {
       navigate("/admin/login");
       return;
     }
-    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
     if (!roleData) {
       setLoading(false);
       await supabase.auth.signOut();
@@ -565,12 +565,15 @@ const MockTestCreation = () => {
       return;
     }
 
-    // Update total_marks in mock_tests
     const totalMarks = selectedQuestions.length * formData.marks_per_question;
-    await supabase.from("mock_tests").update({
-      total_marks: totalMarks,
-      total_questions: selectedQuestions.length
+    const { error: marksError } = await supabase.from("mock_tests").update({
+      total_marks: totalMarks
     }).eq("id", editingTest.id);
+    if (marksError) {
+      console.error("Error updating total marks:", marksError);
+      toast({ title: "Error", description: "Questions saved but total marks failed to update", variant: "destructive" });
+      return;
+    }
 
     toast({ title: "Success", description: `Updated ${selectedQuestions.length} questions` });
     setQuestionDialogOpen(false);

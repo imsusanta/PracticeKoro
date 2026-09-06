@@ -102,7 +102,7 @@ const QuestionBank = () => {
       navigate("/admin/login");
       return;
     }
-    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
     if (!roleData) {
       setLoading(false);
       await supabase.auth.signOut();
@@ -168,6 +168,9 @@ const QuestionBank = () => {
         (q.subject || "").toLowerCase().includes(query) ||
         (q.topic || "").toLowerCase().includes(query)
       );
+    }
+    if (filterExam !== "all") {
+      filtered = filtered.filter((q) => q.exam_id === filterExam);
     }
     if (filterSubject !== "all") {
       // Match against text-based subject field
@@ -532,6 +535,17 @@ const QuestionBank = () => {
             />
           </div>
           <div className="grid grid-cols-2 lg:flex gap-2">
+            <Select value={filterExam} onValueChange={setFilterExam}>
+              <SelectTrigger className="h-12 rounded-xl flex-1 lg:w-[140px]">
+                <SelectValue placeholder="Exam" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Exams</SelectItem>
+                {exams.map((exam) => (
+                  <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={filterSubject} onValueChange={setFilterSubject}>
               <SelectTrigger className="h-12 rounded-xl flex-1 lg:w-[140px]">
                 <SelectValue placeholder="Subject" />

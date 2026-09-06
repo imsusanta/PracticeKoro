@@ -87,6 +87,19 @@ const TakeTest = () => {
   const [subscriptionFee, setSubscriptionFee] = useState<number>(0);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveRef = useRef<Date>(new Date());
+  const submitLockRef = useRef(false);
+  const answersRef = useRef(answers);
+  const markedForReviewRef = useRef(markedForReview);
+  const questionsRef = useRef(questions);
+  const testRef = useRef(test);
+  const startTimeRef = useRef(startTime);
+  const autoSavingRef = useRef(false);
+
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { markedForReviewRef.current = markedForReview; }, [markedForReview]);
+  useEffect(() => { questionsRef.current = questions; }, [questions]);
+  useEffect(() => { testRef.current = test; }, [test]);
+  useEffect(() => { startTimeRef.current = startTime; }, [startTime]);
 
   // Anti-cheating security
   const {
@@ -103,19 +116,33 @@ const TakeTest = () => {
   });
 
   const handleSubmitTest = useCallback(async () => {
-    if (!test || !testId || !startTime) return;
-    setSubmitting(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (submitLockRef.current) return;
+    const currentTest = testRef.current;
+    const currentStartTime = startTimeRef.current;
+    const currentQuestions = questionsRef.current;
+    const currentAnswers = answersRef.current;
+    if (!currentTest || !testId || !currentStartTime) return;
 
-    const answeredQuestions = Object.keys(answers).filter(qId => answers[qId]);
-    const unansweredCount = questions.length - answeredQuestions.length;
+    submitLockRef.current = true;
+    setSubmitting(true);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({ title: "Session expired", description: "Please log in again to submit your test.", variant: "destructive" });
+      submitLockRef.current = false;
+      setSubmitting(false);
+      return;
+    }
+
+    const answeredQuestions = Object.keys(currentAnswers).filter(qId => currentAnswers[qId]);
+    const unansweredCount = currentQuestions.length - answeredQuestions.length;
     let correctCount = 0, wrongCount = 0, totalScore = 0;
     const answerRecords: any[] = [];
 
-    questions.forEach(tq => {
-      const selectedAnswer = answers[tq.question_id];
-      const isCorrect = selectedAnswer === tq.questions.correct_answer;
+    currentQuestions.forEach(tq => {
+      const selectedAnswer = currentAnswers[tq.question_id];
+      const correctAnswer = tq.questions?.correct_answer;
+      const isCorrect = !!selectedAnswer && !!correctAnswer && selectedAnswer === correctAnswer;
       const marksObtained = isCorrect ? tq.marks : 0;
       if (selectedAnswer) {
         isCorrect ? correctCount++ : wrongCount++;
@@ -127,61 +154,79 @@ const TakeTest = () => {
       });
     });
 
-    const percentage = Math.round((totalScore / test.total_marks) * 100);
-    const passed = totalScore >= test.passing_marks;
-    const timeTakenSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
+    const totalMarks = currentTest.total_marks || 0;
+    const percentage = totalMarks > 0 ? Math.round((totalScore / totalMarks) * 100) : 0;
+    const passed = totalScore >= currentTest.passing_marks;
+    const timeTakenSeconds = Math.floor((Date.now() - currentStartTime.getTime()) / 1000);
 
     const { data: attemptData, error: attemptError } = await supabase.from("test_attempts").insert({
       test_id: testId, user_id: session.user.id, score: totalScore,
-      total_marks: test.total_marks, percentage, passed,
-      started_at: startTime.toISOString(), completed_at: new Date().toISOString(),
+      total_marks: totalMarks, percentage, passed,
+      started_at: currentStartTime.toISOString(), completed_at: new Date().toISOString(),
       time_taken_seconds: timeTakenSeconds, unanswered_count: unansweredCount,
       correct_count: correctCount, wrong_count: wrongCount, is_active: false,
       tab_violations: tabViolations, fullscreen_violations: fullscreenViolations
     }).select().single();
 
-    if (attemptError) {
+    if (attemptError || !attemptData) {
       toast({ title: "Error", description: "Failed to submit test", variant: "destructive" });
+      submitLockRef.current = false;
       setSubmitting(false);
       return;
     }
 
-    await supabase.from("test_answers").insert(answerRecords.map(ans => ({ ...ans, attempt_id: attemptData.id })));
+    const { error: answersError } = await supabase.from("test_answers").insert(answerRecords.map(ans => ({ ...ans, attempt_id: attemptData.id })));
+    if (answersError) {
+      toast({ title: "Error", description: "Test recorded but answers failed to save. Please contact support with your attempt ID.", variant: "destructive" });
+      submitLockRef.current = false;
+      setSubmitting(false);
+      return;
+    }
+
     await supabase.from("test_answer_drafts").delete().eq("test_id", testId).eq("user_id", session.user.id);
     await supabase.from("test_timers").delete().eq("test_id", testId).eq("user_id", session.user.id);
 
-    sonnerToast.success("Test Submitted!", { description: `You scored ${totalScore}/${test.total_marks} (${percentage}%)` });
+    sonnerToast.success("Test Submitted!", { description: `You scored ${totalScore}/${totalMarks} (${percentage}%)` });
     navigate(`/student/test-review/${attemptData.id}`);
-  }, [test, testId, startTime, questions, answers, tabViolations, fullscreenViolations, navigate, toast]);
+  }, [testId, tabViolations, fullscreenViolations, navigate, toast]);
 
   const handleAutoSubmit = useCallback(() => {
+    if (submitLockRef.current) return;
     sonnerToast.error("⏰ Time's Up!", { description: "Submitting your test automatically...", duration: 5000 });
     handleSubmitTest();
   }, [handleSubmitTest]);
 
-  const autoSaveAnswers = useCallback(async () => {
-    if (!testId || autoSaving) return;
+  const autoSaveAnswers = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!testId || autoSavingRef.current) return;
+    const currentQuestions = questionsRef.current;
+    if (currentQuestions.length === 0) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    autoSavingRef.current = true;
     setAutoSaving(true);
     try {
-      const drafts = questions.map(q => ({
+      const currentAnswers = answersRef.current;
+      const currentMarked = markedForReviewRef.current;
+      const drafts = currentQuestions.map(q => ({
         test_id: testId, user_id: session.user.id, question_id: q.question_id,
-        selected_answer: answers[q.question_id] || null,
-        marked_for_review: markedForReview.has(q.question_id),
+        selected_answer: currentAnswers[q.question_id] || null,
+        marked_for_review: currentMarked.has(q.question_id),
         last_saved_at: new Date().toISOString()
       }));
       const { error } = await supabase.from("test_answer_drafts").upsert(drafts, { onConflict: "test_id,user_id,question_id" });
       if (!error) {
         lastSaveRef.current = new Date();
-        sonnerToast.success("Progress saved", { duration: 2000 });
+        if (!opts?.silent) {
+          sonnerToast.success("Progress saved", { duration: 2000 });
+        }
       }
     } catch (error) {
       console.error("Auto-save error:", error);
     } finally {
+      autoSavingRef.current = false;
       setAutoSaving(false);
     }
-  }, [testId, autoSaving, questions, answers, markedForReview]);
+  }, [testId]);
 
   const loadTest = useCallback(async () => {
     if (!testId) return;
@@ -196,6 +241,7 @@ const TakeTest = () => {
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
+      setLoading(false);
       navigate("/login");
       return;
     }
@@ -211,6 +257,7 @@ const TakeTest = () => {
     const { data: activeAttempt } = await supabase.from("test_attempts").select("id").eq("test_id", testId).eq("user_id", session.user.id).eq("is_active", true).maybeSingle();
     if (activeAttempt) {
       toast({ title: "Test Already in Progress", description: "Complete or abandon your active attempt first.", variant: "destructive" });
+      setLoading(false);
       navigate("/student/exams");
       return;
     }
@@ -218,6 +265,7 @@ const TakeTest = () => {
     const { data: testData, error: testError } = await supabase.from("mock_tests").select("*").eq("id", testId).single();
     if (testError || !testData) {
       toast({ title: "Error", description: "Test not found", variant: "destructive" });
+      setLoading(false);
       navigate("/student/exams");
       return;
     }
@@ -257,20 +305,15 @@ const TakeTest = () => {
       .order("created_at", { ascending: true });
     if (questionsError) {
       toast({ title: "Error", description: "Failed to load questions", variant: "destructive" });
+      setLoading(false);
+      navigate("/student/exams");
       return;
     }
 
     const processedQuestions = questionsData as any[];
     // Shuffling disabled as per user request to maintain upload order
 
-    const { data: existingTimer } = await supabase.from("test_timers").select("*").eq("test_id", testId).eq("user_id", session.user.id).maybeSingle();
-    let initialTime: number;
-    let startDateTime: Date;
-
-    if (existingTimer) {
-      const endsAt = new Date(existingTimer.ends_at);
-      initialTime = Math.max(0, Math.floor((endsAt.getTime() - Date.now()) / 1000));
-      startDateTime = new Date(existingTimer.started_at);
+    const restoreDrafts = async () => {
       const { data: savedAnswers } = await supabase.from("test_answer_drafts").select("*").eq("test_id", testId).eq("user_id", session.user.id);
       if (savedAnswers) {
         const answersMap: { [key: string]: string } = {};
@@ -282,16 +325,37 @@ const TakeTest = () => {
         setAnswers(answersMap);
         setMarkedForReview(reviewSet);
       }
+    };
+
+    const { data: existingTimer } = await supabase.from("test_timers").select("*").eq("test_id", testId).eq("user_id", session.user.id).maybeSingle();
+    let initialTime: number;
+    let startDateTime: Date;
+
+    if (existingTimer) {
+      const endsAt = new Date(existingTimer.ends_at);
+      initialTime = Math.max(0, Math.floor((endsAt.getTime() - Date.now()) / 1000));
+      startDateTime = new Date(existingTimer.started_at);
+      await restoreDrafts();
       sonnerToast.success("Test resumed", { description: "Your progress has been restored." });
     } else {
       initialTime = testData.duration_minutes * 60;
       startDateTime = new Date();
       const endsAt = new Date(startDateTime.getTime() + initialTime * 1000);
-      await supabase.from("test_timers").insert({
+      const { error: timerInsertError } = await supabase.from("test_timers").insert({
         test_id: testId, user_id: session.user.id,
         started_at: startDateTime.toISOString(), duration_minutes: testData.duration_minutes,
         ends_at: endsAt.toISOString()
       });
+      // Concurrent tab: reuse the timer that won the unique (test_id, user_id) insert
+      if (timerInsertError) {
+        const { data: racedTimer } = await supabase.from("test_timers").select("*").eq("test_id", testId).eq("user_id", session.user.id).maybeSingle();
+        if (racedTimer) {
+          const racedEndsAt = new Date(racedTimer.ends_at);
+          initialTime = Math.max(0, Math.floor((racedEndsAt.getTime() - Date.now()) / 1000));
+          startDateTime = new Date(racedTimer.started_at);
+          await restoreDrafts();
+        }
+      }
     }
 
     setTest(testData);
@@ -308,35 +372,57 @@ const TakeTest = () => {
     };
   }, [loadTest]);
 
+  const handleAutoSubmitRef = useRef(handleAutoSubmit);
+  handleAutoSubmitRef.current = handleAutoSubmit;
+  const timeExpired = !loading && !!startTime && timeRemaining <= 0;
+
+  // Countdown is independent of answer changes so the interval is not torn down every keystroke.
   useEffect(() => {
-    if (timeRemaining <= 0) return;
+    if (loading || !startTime) return;
+    if (timeExpired) {
+      handleAutoSubmitRef.current();
+      return;
+    }
     const timer = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleAutoSubmit();
-          return 0;
-        }
-        if (prev === 300 && !fiveMinuteWarningShown) {
-          setFiveMinuteWarningShown(true);
-          sonnerToast.warning("⏰ 5 minutes remaining!", {
-            description: "Review your answers and submit soon.",
-            duration: 10000
-          });
-        }
-        return prev - 1;
-      });
+      setTimeRemaining(prev => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeRemaining, fiveMinuteWarningShown, handleAutoSubmit]);
+  }, [loading, startTime, timeExpired]);
+
+  useEffect(() => {
+    if (timeRemaining === 300 && !fiveMinuteWarningShown && startTime) {
+      setFiveMinuteWarningShown(true);
+      sonnerToast.warning("⏰ 5 minutes remaining!", {
+        description: "Review your answers and submit soon.",
+        duration: 10000
+      });
+    }
+  }, [timeRemaining, fiveMinuteWarningShown, startTime]);
 
   useEffect(() => {
     if (!test || !testId) return;
-    autoSaveTimerRef.current = setInterval(() => autoSaveAnswers(), 30000);
+    autoSaveTimerRef.current = setInterval(() => autoSaveAnswers({ silent: true }), 30000);
     return () => {
       if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
     };
+  }, [test, testId, autoSaveAnswers]);
+
+  // Debounced save so a refresh shortly after answering does not lose work
+  useEffect(() => {
+    if (!test || !testId) return;
+    const timeout = setTimeout(() => autoSaveAnswers({ silent: true }), 2000);
+    return () => clearTimeout(timeout);
   }, [answers, markedForReview, test, testId, autoSaveAnswers]);
+
+  useEffect(() => {
+    const flush = () => { void autoSaveAnswers({ silent: true }); };
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+    };
+  }, [autoSaveAnswers]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -431,6 +517,7 @@ const TakeTest = () => {
                     });
                     sonnerToast.success("Subscription Active", { description: "You now have full access to all premium content!" });
                     setIsPurchased(true);
+                    setLoading(true);
                     loadTest();
                   } catch (err: any) {
                     toast({ title: "Payment Failed", description: err.message, variant: "destructive" });

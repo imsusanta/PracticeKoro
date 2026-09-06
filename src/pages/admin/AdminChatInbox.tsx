@@ -87,7 +87,7 @@ const AdminChatInbox = () => {
             return;
         }
         setAdminId(session.user.id);
-        const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+        const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
         if (!roleData) {
             await supabase.auth.signOut();
             navigate("/admin/login");
