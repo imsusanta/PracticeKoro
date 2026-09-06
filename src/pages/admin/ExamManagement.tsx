@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff, Search } from "lucide-react";
+import { logAdminAction } from "@/lib/adminAudit";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,8 @@ interface Exam {
   created_at: string;
   created_by: string;
   order_index?: number;
+  test_count?: number;
+  question_count?: number;
 }
 
 const SortableExamRow = ({
@@ -111,6 +114,9 @@ const SortableExamRow = ({
         {/* Description */}
         <div className="min-w-0">
           <p className="text-sm text-gray-500 truncate">{exam.description || "—"}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {exam.test_count ?? 0} tests · {exam.question_count ?? 0} questions
+          </p>
         </div>
 
         {/* Status */}
@@ -284,6 +290,8 @@ const ExamManagement = () => {
   const [landingVisibility, setLandingVisibility] = useState<{ [key: string]: boolean }>({});
   const [examToDelete, setExamToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   // Refresh landing visibility state
   const refreshLandingVisibility = () => {
@@ -419,7 +427,31 @@ const ExamManagement = () => {
         }
       }
 
-      setExams((data as any) || []);
+      const loaded = (data as Exam[]) || [];
+      const ids = loaded.map((exam) => exam.id);
+      let testCounts = new Map<string, number>();
+      let questionCounts = new Map<string, number>();
+
+      if (ids.length > 0) {
+        const [testsResult, questionsResult] = await Promise.all([
+          supabase.from("mock_tests").select("exam_id"),
+          supabase.from("questions").select("exam_id"),
+        ]);
+        (testsResult.data || []).forEach((row) => {
+          if (!row.exam_id) return;
+          testCounts.set(row.exam_id, (testCounts.get(row.exam_id) || 0) + 1);
+        });
+        (questionsResult.data || []).forEach((row) => {
+          if (!row.exam_id) return;
+          questionCounts.set(row.exam_id, (questionCounts.get(row.exam_id) || 0) + 1);
+        });
+      }
+
+      setExams(loaded.map((exam) => ({
+        ...exam,
+        test_count: testCounts.get(exam.id) || 0,
+        question_count: questionCounts.get(exam.id) || 0,
+      })));
     } catch (error) {
       console.error("Error loading exams:", error);
       toast({
@@ -518,6 +550,13 @@ const ExamManagement = () => {
     try {
       const { error } = await supabase.from("exams").delete().eq("id", examToDelete);
       if (error) throw error;
+      const deleted = exams.find((exam) => exam.id === examToDelete);
+      await logAdminAction({
+        action: "delete_exam",
+        tableName: "exams",
+        recordId: examToDelete,
+        oldData: { name: deleted?.name, tests: deleted?.test_count, questions: deleted?.question_count },
+      });
       toast({ title: "Success", description: "Exam deleted successfully" });
       await loadExams();
     } catch (error) {
@@ -540,6 +579,12 @@ const ExamManagement = () => {
       return;
     }
 
+    await logAdminAction({
+      action: exam.is_active ? "deactivate_exam" : "activate_exam",
+      tableName: "exams",
+      recordId: exam.id,
+      newData: { is_active: !exam.is_active },
+    });
     toast({ title: "Success", description: exam.is_active ? "Exam deactivated" : "Exam activated" });
     await loadExams();
   };
@@ -561,6 +606,16 @@ const ExamManagement = () => {
     setFormData({ name: "", description: "", is_active: true, is_paid: false, price: 0 });
     setDialogOpen(true);
   };
+
+  const filteredExams = exams.filter((exam) => {
+    const matchesSearch = !searchQuery ||
+      exam.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (exam.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "active" && exam.is_active) ||
+      (statusFilter === "inactive" && !exam.is_active);
+    return matchesSearch && matchesStatus;
+  });
 
   const CreateButton = (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -671,15 +726,38 @@ const ExamManagement = () => {
     <AdminLayout title="Exam Management" subtitle="Manage exam categories" headerActions={CreateButton}>
       <div className="space-y-4">
         {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm">
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`bg-white rounded-2xl p-4 border shadow-sm text-left ${statusFilter === "all" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-emerald-100"}`}
+          >
             <p className="text-2xl font-bold text-gray-900">{exams.length}</p>
             <p className="text-xs text-gray-500">Total Exams</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm">
+          </button>
+          <button
+            onClick={() => setStatusFilter("active")}
+            className={`bg-white rounded-2xl p-4 border shadow-sm text-left ${statusFilter === "active" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-emerald-100"}`}
+          >
             <p className="text-2xl font-bold text-emerald-600">{exams.filter(e => e.is_active).length}</p>
-            <p className="text-xs text-gray-500">Active Exams</p>
-          </div>
+            <p className="text-xs text-gray-500">Active</p>
+          </button>
+          <button
+            onClick={() => setStatusFilter("inactive")}
+            className={`bg-white rounded-2xl p-4 border shadow-sm text-left ${statusFilter === "inactive" ? "border-amber-500 ring-2 ring-amber-200" : "border-emerald-100"}`}
+          >
+            <p className="text-2xl font-bold text-amber-600">{exams.filter(e => !e.is_active).length}</p>
+            <p className="text-xs text-gray-500">Inactive</p>
+          </button>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search exams..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 rounded-xl bg-white border-gray-200"
+          />
         </div>
 
         {/* Exams List - Row Based */}
@@ -694,6 +772,16 @@ const ExamManagement = () => {
               <Button onClick={openCreateDialog} className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Exam
+              </Button>
+            </CardContent>
+          </Card>
+        ) : filteredExams.length === 0 ? (
+          <Card className="border-0 bg-white rounded-2xl">
+            <CardContent className="p-8 text-center">
+              <h3 className="text-lg font-semibold mb-2">No exams match</h3>
+              <p className="text-gray-500 text-sm mb-4">Try a different search or status filter</p>
+              <Button variant="outline" onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="rounded-xl">
+                Clear filters
               </Button>
             </CardContent>
           </Card>
@@ -716,10 +804,10 @@ const ExamManagement = () => {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={exams.map(e => e.id)}
+                  items={filteredExams.map(e => e.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {exams.map(exam => (
+                  {filteredExams.map(exam => (
                     <SortableExamRow
                       key={exam.id}
                       exam={exam}
@@ -740,7 +828,22 @@ const ExamManagement = () => {
         isOpen={!!examToDelete}
         onClose={() => setExamToDelete(null)}
         onConfirm={confirmDelete}
-        itemName={exams.find(e => e.id === examToDelete)?.name}
+        title="Delete exam"
+        description={(() => {
+          const exam = exams.find(e => e.id === examToDelete);
+          const tests = exam?.test_count ?? 0;
+          const questions = exam?.question_count ?? 0;
+          return (
+            <>
+              Delete <span className="font-bold text-slate-900">{exam?.name}</span>? This exam is linked to{" "}
+              <span className="font-bold text-slate-900">{tests} mock test{tests === 1 ? "" : "s"}</span> and{" "}
+              <span className="font-bold text-slate-900">{questions} question{questions === 1 ? "" : "s"}</span>.
+              {(tests > 0 || questions > 0)
+                ? " Linked records may fail to delete or become orphaned."
+                : " This cannot be undone."}
+            </>
+          );
+        })()}
         isDeleting={isDeleting}
       />
     </AdminLayout>

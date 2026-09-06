@@ -20,6 +20,7 @@ interface DeleteAlertDialogProps {
     confirmText?: string;
     isDeleting?: boolean;
     itemName?: string;
+    variant?: "danger" | "primary";
 }
 
 export const DeleteAlertDialog: React.FC<DeleteAlertDialogProps> = ({
@@ -31,12 +32,14 @@ export const DeleteAlertDialog: React.FC<DeleteAlertDialogProps> = ({
     confirmText = "Delete",
     isDeleting = false,
     itemName,
+    variant = "danger",
 }) => {
+    const isPrimary = variant === "primary";
     return (
         <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <AlertDialogContent className="rounded-3xl border-0 shadow-2xl p-0 overflow-hidden max-w-md">
-                <div className="bg-gradient-to-br from-red-500/10 to-orange-500/10 p-8 flex flex-col items-center text-center">
-                    <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-4 text-red-600">
+                <div className={`p-8 flex flex-col items-center text-center ${isPrimary ? "bg-gradient-to-br from-indigo-500/10 to-violet-500/10" : "bg-gradient-to-br from-red-500/10 to-orange-500/10"}`}>
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${isPrimary ? "bg-indigo-100 text-indigo-600" : "bg-red-100 text-red-600"}`}>
                         <AlertCircle className="w-10 h-10" />
                     </div>
                     <AlertDialogHeader className="space-y-2">
@@ -64,7 +67,7 @@ export const DeleteAlertDialog: React.FC<DeleteAlertDialogProps> = ({
                             onConfirm();
                         }}
                         disabled={isDeleting}
-                        className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg shadow-red-200 transition-all active:scale-95"
+                        className={`flex-1 h-12 rounded-xl text-white font-semibold shadow-lg transition-all active:scale-95 ${isPrimary ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200" : "bg-red-600 hover:bg-red-700 shadow-red-200"}`}
                     >
                         {isDeleting ? (
                             <>

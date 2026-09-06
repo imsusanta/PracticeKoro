@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, FileQuestion, Clock, TrendingUp, ArrowUpRight, CheckCircle, XCircle, Activity, Calendar, Sparkles, BarChart3, Zap, Shield } from "lucide-react";
+import { Users, Clock, ArrowUpRight, CheckCircle, XCircle, Activity, Calendar, Sparkles, BarChart3, Zap, Shield, Download, Crown, MessageCircle, ScrollText, AlertTriangle, TestTube2 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { motion } from "framer-motion";
+import { downloadCsv, stampFilename } from "@/lib/csv";
+import { fetchRecentAuditLogs, type AuditLogRow } from "@/lib/adminAudit";
 
 interface RecentActivity {
   id: string;
@@ -35,8 +37,16 @@ const AdminDashboard = () => {
     pendingApprovals: 0,
     totalQuestions: 0,
     totalTests: 0,
+    publishedTests: 0,
+    draftTests: 0,
     testsToday: 0,
+    premiumSubscribers: 0,
+    revenue30d: 0,
+    unreadChats: 0,
   });
+  const [adminRole, setAdminRole] = useState<"admin" | "super_admin" | "">("");
+  const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
+  const [exporting, setExporting] = useState<string | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [todayActivity, setTodayActivity] = useState<TodayActivity[]>([]);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -68,6 +78,8 @@ const AdminDashboard = () => {
         ]);
 
         const isAdmin = adminRoleResult.data === true || superAdminRoleResult.data === true;
+        if (superAdminRoleResult.data === true) setAdminRole("super_admin");
+        else if (adminRoleResult.data === true) setAdminRole("admin");
 
         if (!isAdmin) {
           console.error("Dashboard: Role check failed - user is not an admin:", {
@@ -102,22 +114,139 @@ const AdminDashboard = () => {
   const loadStats = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const yearAgo = new Date();
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
 
-    const [studentsResult, approvalsResult, questionsResult, testsResult, testsTodayResult] = await Promise.all([
-      // Count only students (not admins) by filtering with user_roles
+    const [
+      studentsResult,
+      approvalsResult,
+      questionsResult,
+      testsResult,
+      publishedResult,
+      draftResult,
+      testsTodayResult,
+      premiumResult,
+      revenueResult,
+      unreadChatsResult,
+      auditResult,
+    ] = await Promise.all([
       supabase.from("profiles").select("id, user_roles!inner(role)", { count: "exact", head: true }).eq("user_roles.role", "student"),
       supabase.from("approval_status").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("questions").select("id", { count: "exact", head: true }),
       supabase.from("mock_tests").select("id", { count: "exact", head: true }),
+      supabase.from("mock_tests").select("id", { count: "exact", head: true }).eq("is_published", true),
+      supabase.from("mock_tests").select("id", { count: "exact", head: true }).eq("is_published", false),
       supabase.from("test_attempts").select("id", { count: "exact", head: true }).gte("completed_at", today.toISOString()),
+      supabase.from("purchases").select("user_id").eq("content_type", "subscription").eq("status", "completed").gte("created_at", yearAgo.toISOString()),
+      supabase.from("purchases").select("amount").eq("status", "completed").gte("created_at", thirtyDaysAgo.toISOString()),
+      supabase.from("chat_messages").select("id", { count: "exact", head: true }).eq("sender_role", "student").eq("is_read", false),
+      fetchRecentAuditLogs(12),
     ]);
+
+    const premiumIds = new Set((premiumResult.data || []).map((row) => row.user_id));
+    const revenue30d = (revenueResult.data || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
     setStats({
       totalStudents: studentsResult.count || 0,
       pendingApprovals: approvalsResult.count || 0,
       totalQuestions: questionsResult.count || 0,
       totalTests: testsResult.count || 0,
+      publishedTests: publishedResult.count || 0,
+      draftTests: draftResult.count || 0,
       testsToday: testsTodayResult.count || 0,
+      premiumSubscribers: premiumIds.size,
+      revenue30d,
+      unreadChats: unreadChatsResult.count || 0,
+    });
+    setAuditLogs(auditResult);
+  };
+
+  const handleExportDailyActivity = () => {
+    const ok = downloadCsv(
+      stampFilename(`daily-attempts-${selectedDate}`),
+      todayActivity.map((row) => ({
+        student: row.student_name,
+        whatsapp: row.whatsapp_number || "",
+        test: row.test_title,
+        score: row.score,
+        total_marks: row.total_marks,
+        percentage: row.percentage,
+        passed: row.passed ? "passed" : "failed",
+        completed_at: row.completed_at,
+      }))
+    );
+    toast({
+      title: ok ? "Exported" : "Nothing to export",
+      description: ok ? `Saved attempts for ${selectedDate}` : "No tests on this date",
+    });
+  };
+
+  const handleExportStudents = async () => {
+    setExporting("students");
+    try {
+      const { data: roles, error: rolesError } = await supabase.from("user_roles").select("user_id").eq("role", "student");
+      if (rolesError) throw rolesError;
+      const ids = (roles || []).map((row) => row.user_id);
+      if (ids.length === 0) {
+        toast({ title: "Nothing to export", description: "No student accounts found" });
+        return;
+      }
+
+      const [profilesResult, approvalsResult, purchasesResult] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email, whatsapp_number, created_at").in("id", ids),
+        supabase.from("approval_status").select("user_id, status, expires_at").in("user_id", ids),
+        supabase.from("purchases").select("user_id, created_at, amount, status").eq("content_type", "subscription").eq("status", "completed"),
+      ]);
+
+      const approvalMap = new Map((approvalsResult.data || []).map((row) => [row.user_id, row]));
+      const yearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+      const premiumSet = new Set(
+        (purchasesResult.data || [])
+          .filter((row) => new Date(row.created_at).getTime() >= yearAgo)
+          .map((row) => row.user_id)
+      );
+
+      const rows = (profilesResult.data || []).map((profile) => {
+        const approval = approvalMap.get(profile.id);
+        return {
+          name: profile.full_name || "",
+          email: profile.email || "",
+          whatsapp: profile.whatsapp_number || "",
+          approval_status: approval?.status || "unknown",
+          expires_at: approval?.expires_at || "",
+          premium: premiumSet.has(profile.id) ? "yes" : "no",
+          registered_at: profile.created_at,
+        };
+      });
+
+      downloadCsv(stampFilename("students"), rows);
+      toast({ title: "Exported", description: `${rows.length} students saved as CSV` });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to export students";
+      toast({ title: "Export failed", description: message, variant: "destructive" });
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportRecentAttempts = () => {
+    const ok = downloadCsv(
+      stampFilename("recent-attempts"),
+      recentActivity.map((row) => ({
+        student: row.student_name,
+        test: row.test_title,
+        score: row.score,
+        total_marks: row.total_marks,
+        percentage: row.percentage,
+        passed: row.passed ? "passed" : "failed",
+        completed_at: row.completed_at,
+      }))
+    );
+    toast({
+      title: ok ? "Exported" : "Nothing to export",
+      description: ok ? "Saved the latest 10 attempts" : "No recent attempts yet",
     });
   };
 
@@ -257,40 +386,64 @@ const AdminDashboard = () => {
     );
   }
 
+  const roleLabel = adminRole === "super_admin" ? "Super Admin" : adminRole === "admin" ? "Admin" : "Admin";
+
   const statCards = [
     {
       label: "Total Students",
       value: stats.totalStudents,
       icon: Users,
-      trend: "+12%",
+      hint: stats.premiumSubscribers > 0 ? `${stats.premiumSubscribers} premium` : "Registered students",
       color: "emerald",
-      gradient: "from-emerald-500 to-teal-500"
+      gradient: "from-emerald-500 to-teal-500",
+      href: "/admin/students",
     },
     {
       label: "Pending Approvals",
       value: stats.pendingApprovals,
       icon: Clock,
-      trend: stats.pendingApprovals > 0 ? "Action needed" : "All clear",
+      hint: stats.pendingApprovals > 0 ? "Needs review" : "Queue is clear",
       color: stats.pendingApprovals > 0 ? "amber" : "emerald",
-      gradient: stats.pendingApprovals > 0 ? "from-amber-500 to-orange-500" : "from-emerald-500 to-teal-500"
+      gradient: stats.pendingApprovals > 0 ? "from-amber-500 to-orange-500" : "from-emerald-500 to-teal-500",
+      href: "/admin/students",
     },
     {
-      label: "Total Questions",
-      value: stats.totalQuestions,
-      icon: FileQuestion,
-      trend: "+8%",
+      label: "Published Tests",
+      value: stats.publishedTests,
+      icon: TestTube2,
+      hint: `${stats.draftTests} draft${stats.draftTests === 1 ? "" : "s"}`,
       color: "blue",
-      gradient: "from-blue-500 to-cyan-500"
+      gradient: "from-blue-500 to-cyan-500",
+      href: "/admin/tests",
     },
     {
       label: "Tests Today",
       value: stats.testsToday,
       icon: Activity,
-      trend: "Live",
+      hint: "Completed attempts",
       color: "purple",
-      gradient: "from-purple-500 to-pink-500"
+      gradient: "from-purple-500 to-pink-500",
+      href: undefined,
     },
   ];
+
+  const attentionItems = [
+    stats.pendingApprovals > 0 && {
+      label: `${stats.pendingApprovals} student${stats.pendingApprovals === 1 ? "" : "s"} waiting for approval`,
+      href: "/admin/students",
+      icon: Clock,
+    },
+    stats.draftTests > 0 && {
+      label: `${stats.draftTests} mock test${stats.draftTests === 1 ? "" : "s"} still in draft`,
+      href: "/admin/tests",
+      icon: TestTube2,
+    },
+    stats.unreadChats > 0 && {
+      label: `${stats.unreadChats} unread student chat message${stats.unreadChats === 1 ? "" : "s"}`,
+      href: "/admin/chat",
+      icon: MessageCircle,
+    },
+  ].filter(Boolean) as { label: string; href: string; icon: typeof Clock }[];
 
   return (
     <AdminLayout title="Dashboard" subtitle="Welcome back, Admin">
@@ -313,19 +466,25 @@ const AdminDashboard = () => {
                   <Shield className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold">Welcome back, Admin!</h1>
-                  <p className="text-emerald-100 text-sm md:text-base">Manage your platform with ease</p>
+                  <h1 className="text-2xl md:text-3xl font-bold">Welcome back, {roleLabel}</h1>
+                  <p className="text-emerald-100 text-sm md:text-base">
+                    {stats.pendingApprovals > 0
+                      ? `${stats.pendingApprovals} approval${stats.pendingApprovals === 1 ? "" : "s"} waiting`
+                      : "No pending student approvals"}
+                    {stats.unreadChats > 0 ? ` · ${stats.unreadChats} unread chat${stats.unreadChats === 1 ? "" : "s"}` : ""}
+                  </p>
                 </div>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="secondary"
-                onClick={() => navigate("/admin/students")}
+                onClick={handleExportStudents}
+                disabled={exporting === "students"}
                 className="w-full sm:w-auto bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm rounded-xl font-medium"
               >
-                <Users className="w-4 h-4 mr-2" />
-                View Students
+                <Download className="w-4 h-4 mr-2" />
+                {exporting === "students" ? "Exporting..." : "Export Students"}
               </Button>
               <Button
                 variant="secondary"
@@ -348,7 +507,10 @@ const AdminDashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.1 }}
             >
-              <Card className="border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-150 rounded-2xl overflow-hidden group">
+              <Card
+                className={`border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-150 rounded-2xl overflow-hidden group ${stat.href ? "cursor-pointer" : ""}`}
+                onClick={() => stat.href && navigate(stat.href)}
+              >
                 <CardContent className="p-4 md:p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1 md:space-y-2">
@@ -359,8 +521,7 @@ const AdminDashboard = () => {
                           stat.color === "purple" ? "text-purple-600" :
                             "text-emerald-600"
                         }`}>
-                        <TrendingUp className="w-3 h-3" />
-                        <span>{stat.trend}</span>
+                        <span>{stat.hint}</span>
                       </div>
                     </div>
                     <div className={`w-11 h-11 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-150`}>
@@ -371,6 +532,54 @@ const AdminDashboard = () => {
               </Card>
             </motion.div>
           ))}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                Needs attention
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-2">
+              {attentionItems.length === 0 ? (
+                <p className="text-sm text-gray-500 py-2">Nothing waiting — queue is clear.</p>
+              ) : (
+                attentionItems.map((item) => (
+                  <button
+                    key={item.href + item.label}
+                    onClick={() => navigate(item.href)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100 text-left hover:bg-amber-100/70 transition-colors"
+                  >
+                    <item.icon className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-sm font-medium text-amber-900">{item.label}</span>
+                    <ArrowUpRight className="w-4 h-4 text-amber-500 ml-auto" />
+                  </button>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <Crown className="w-4 h-4 text-violet-600" />
+                Premium & revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-violet-50 border border-violet-100">
+                <span className="text-sm text-gray-600 font-medium">Active premium (12 mo)</span>
+                <span className="font-bold text-violet-700 text-lg">{stats.premiumSubscribers}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                <span className="text-sm text-gray-600 font-medium">Completed payments (30d)</span>
+                <span className="font-bold text-emerald-700 text-lg">₹{Math.round(stats.revenue30d)}</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Revenue is the sum of completed payments in the last 30 days. Manual ₹0 upgrades count as premium, not revenue.</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Today's Student Tests - NEW SECTION */}
@@ -399,9 +608,21 @@ const AdminDashboard = () => {
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white w-full sm:w-auto"
                 />
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 rounded-full px-3 py-1 text-xs font-semibold shadow-md whitespace-nowrap self-start sm:self-auto">
-                  {todayActivity.length} tests
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportDailyActivity}
+                    disabled={todayActivity.length === 0}
+                    className="rounded-xl h-9"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    CSV
+                  </Button>
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 rounded-full px-3 py-1 text-xs font-semibold shadow-md whitespace-nowrap">
+                    {todayActivity.length} tests
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-4">
@@ -534,9 +755,21 @@ const AdminDashboard = () => {
                   </CardTitle>
                   <p className="text-xs text-gray-500 mt-1 ml-10">Latest test submissions</p>
                 </div>
-                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 rounded-full px-3 py-1 text-xs font-semibold shadow-md">
-                  {stats.testsToday} today
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExportRecentAttempts}
+                    disabled={recentActivity.length === 0}
+                    className="h-8 px-2 text-xs text-emerald-700"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1" />
+                    CSV
+                  </Button>
+                  <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 rounded-full px-3 py-1 text-xs font-semibold shadow-md">
+                    {stats.testsToday} today
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent className="p-4">
                 {recentActivity.length === 0 ? (
@@ -618,15 +851,15 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                  <span className="text-sm text-gray-600 font-medium">Total Tests</span>
+                  <span className="text-sm text-gray-600 font-medium">All mock tests</span>
                   <span className="font-bold text-emerald-700 text-lg">{stats.totalTests}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100">
-                  <span className="text-sm text-gray-600 font-medium">Total Questions</span>
+                  <span className="text-sm text-gray-600 font-medium">Question bank</span>
                   <span className="font-bold text-blue-700 text-lg">{stats.totalQuestions}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
-                  <span className="text-sm text-gray-600 font-medium">Active Students</span>
+                  <span className="text-sm text-gray-600 font-medium">Students</span>
                   <span className="font-bold text-purple-700 text-lg">{stats.totalStudents}</span>
                 </div>
               </CardContent>
@@ -658,6 +891,15 @@ const AdminDashboard = () => {
                   <Button
                     variant="secondary"
                     className="w-full bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm rounded-xl font-medium justify-start"
+                    onClick={() => navigate("/admin/notifications")}
+                  >
+                    <Activity className="w-4 h-4 mr-3" />
+                    Send Notification
+                    <ArrowUpRight className="w-4 h-4 ml-auto" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="w-full bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm rounded-xl font-medium justify-start"
                     onClick={() => navigate("/admin/ai-generator")}
                   >
                     <Sparkles className="w-4 h-4 mr-3" />
@@ -669,6 +911,46 @@ const AdminDashboard = () => {
             </Card>
           </motion.div>
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.55 }}
+        >
+          <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100">
+              <CardTitle className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
+                <ScrollText className="w-5 h-5 text-slate-600" />
+                Recent admin actions
+              </CardTitle>
+              <p className="text-xs text-gray-500 ml-7">Publish, delete, notify, and settings writes from this admin panel</p>
+            </CardHeader>
+            <CardContent className="p-4">
+              {auditLogs.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4">
+                  No logged actions yet. Destructive and publish actions from this upgrade will appear here.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="flex items-start justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{log.action}</p>
+                        <p className="text-xs text-gray-500">
+                          {log.table_name || "system"}
+                          {log.record_id ? ` · ${log.record_id.slice(0, 8)}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-gray-400 shrink-0">
+                        {log.created_at ? formatTimeAgo(log.created_at) : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </AdminLayout>
   );
