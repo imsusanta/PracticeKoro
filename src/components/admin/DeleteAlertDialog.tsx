@@ -72,7 +72,7 @@ export const DeleteAlertDialog: React.FC<DeleteAlertDialogProps> = ({
                         {isDeleting ? (
                             <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Deleting...
+                                {confirmText}
                             </>
                         ) : (
                             confirmText

@@ -194,11 +194,28 @@ const AdminDashboard = () => {
         return;
       }
 
-      const [profilesResult, approvalsResult, purchasesResult] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email, whatsapp_number, created_at").in("id", ids),
-        supabase.from("approval_status").select("user_id, status, expires_at").in("user_id", ids),
+      const chunkSize = 200;
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        chunks.push(ids.slice(i, i + chunkSize));
+      }
+
+      const [profileChunks, approvalChunks, purchasesResult] = await Promise.all([
+        Promise.all(chunks.map((chunk) =>
+          supabase.from("profiles").select("id, full_name, email, whatsapp_number, created_at").in("id", chunk)
+        )),
+        Promise.all(chunks.map((chunk) =>
+          supabase.from("approval_status").select("user_id, status, expires_at").in("user_id", chunk)
+        )),
         supabase.from("purchases").select("user_id, created_at, amount, status").eq("content_type", "subscription").eq("status", "completed"),
       ]);
+
+      const profilesResult = { data: profileChunks.flatMap((result) => result.data || []) };
+      const approvalsResult = { data: approvalChunks.flatMap((result) => result.data || []) };
+      const profileError = profileChunks.find((result) => result.error)?.error;
+      const approvalError = approvalChunks.find((result) => result.error)?.error;
+      if (profileError) throw profileError;
+      if (approvalError) throw approvalError;
 
       const approvalMap = new Map((approvalsResult.data || []).map((row) => [row.user_id, row]));
       const yearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
