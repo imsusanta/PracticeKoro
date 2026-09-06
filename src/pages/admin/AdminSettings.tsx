@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Save, Loader2, UserCheck, Shield, UserPlus, Check, X, Clock } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
+import { logAdminAction } from "@/lib/adminAudit";
 
 interface AdminRequest {
     id: string;
@@ -33,6 +35,7 @@ const AdminSettings = () => {
         auto_approve_students: false,
         yearly_subscription_fee: 0,
     });
+    const [requestToReject, setRequestToReject] = useState<AdminRequest | null>(null);
 
     const fetchSettings = useCallback(async () => {
         try {
@@ -137,6 +140,12 @@ const AdminSettings = () => {
                 .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
                 .eq("id", request.id) as any);
 
+            await logAdminAction({
+                action: "approve_admin_request",
+                tableName: "admin_requests",
+                recordId: request.id,
+                newData: { email: request.email },
+            });
             toast({
                 title: "Request Approved",
                 description: `${request.email} has been granted admin access.`,
@@ -157,6 +166,7 @@ const AdminSettings = () => {
     };
 
     const handleRejectRequest = async (request: AdminRequest) => {
+        setRequestToReject(null);
         setProcessingRequest(request.id);
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -166,6 +176,12 @@ const AdminSettings = () => {
                 .update({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
                 .eq("id", request.id) as any);
 
+            await logAdminAction({
+                action: "reject_admin_request",
+                tableName: "admin_requests",
+                recordId: request.id,
+                newData: { email: request.email },
+            });
             toast({
                 title: "Request Rejected",
                 description: `${request.email}'s request has been rejected.`,
@@ -196,6 +212,11 @@ const AdminSettings = () => {
 
             if (error) throw error;
 
+            await logAdminAction({
+                action: "update_site_settings",
+                tableName: "site_settings",
+                newData: { ...settings },
+            });
             toast({
                 title: "Success",
                 description: "Settings saved successfully",
@@ -267,7 +288,9 @@ const AdminSettings = () => {
                                     {adminProfile.role.replace('_', ' ')}
                                 </span>
                                 <span className="text-indigo-200 text-xs">
-                                    • Full administrative access
+                                    {adminProfile.role === "super_admin"
+                                        ? "· Super admin can manage settings, admin requests, and all content"
+                                        : "· Admin can manage students, content, notifications, and settings"}
                                 </span>
                             </div>
                         </CardContent>
@@ -318,7 +341,7 @@ const AdminSettings = () => {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => handleRejectRequest(request)}
+                                                onClick={() => setRequestToReject(request)}
                                                 disabled={processingRequest === request.id}
                                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                             >
@@ -469,6 +492,19 @@ const AdminSettings = () => {
                     </CardContent>
                 </Card>
             </div>
+            <DeleteAlertDialog
+                isOpen={!!requestToReject}
+                onClose={() => setRequestToReject(null)}
+                onConfirm={() => requestToReject && handleRejectRequest(requestToReject)}
+                title="Reject admin request"
+                description={
+                    <>
+                        Reject <span className="font-bold text-slate-900">{requestToReject?.email}</span>? They will not receive admin access.
+                    </>
+                }
+                confirmText="Reject request"
+                isDeleting={!!requestToReject && processingRequest === requestToReject.id}
+            />
         </AdminLayout>
     );
 };

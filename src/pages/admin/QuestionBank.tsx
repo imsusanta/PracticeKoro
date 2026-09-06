@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileQuestion, Search, Pencil, Trash2, Eye, ChevronLeft, ChevronRight, CheckSquare, Square, MoreVertical, Plus, Loader2 } from "lucide-react";
+import { FileQuestion, Search, Pencil, Trash2, Eye, ChevronLeft, ChevronRight, CheckSquare, Square, MoreVertical, Plus, Loader2, Download } from "lucide-react";
+import { downloadCsv, stampFilename } from "@/lib/csv";
+import { logAdminAction } from "@/lib/adminAudit";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -397,6 +399,33 @@ const QuestionBank = () => {
     setRangeEnd("");
   };
 
+  const handleExportQuestions = () => {
+    const source = selectedQuestions.length > 0
+      ? filteredQuestions.filter((question) => selectedQuestions.includes(question.id))
+      : filteredQuestions;
+    const ok = downloadCsv(
+      stampFilename(selectedQuestions.length > 0 ? "questions-selected" : "questions"),
+      source.map((question) => ({
+        question: question.question_text,
+        option_a: question.option_a,
+        option_b: question.option_b,
+        option_c: question.option_c,
+        option_d: question.option_d,
+        correct_answer: question.correct_answer,
+        subject: question.subjects?.name || question.subject || "",
+        topic: question.topics?.name || question.topic || "",
+        exam: question.exams?.name || "",
+        explanation: question.explanation || "",
+      }))
+    );
+    toast({
+      title: ok ? "Exported" : "Nothing to export",
+      description: ok
+        ? `${source.length} question${source.length === 1 ? "" : "s"} saved as CSV`
+        : "No questions match the current filters",
+    });
+  };
+
   const handleBulkDelete = async () => {
     if (selectedQuestions.length === 0) return;
     setBulkDeleteOpen(true);
@@ -408,6 +437,11 @@ const QuestionBank = () => {
     try {
       const { error } = await supabase.from("questions").delete().in("id", selectedQuestions);
       if (error) throw error;
+      await logAdminAction({
+        action: "bulk_delete_questions",
+        tableName: "questions",
+        newData: { count: selectedQuestions.length },
+      });
       toast({ title: "Success", description: `Deleted ${selectedQuestions.length} questions` });
       setBulkDeleteOpen(false);
       setSelectedQuestions([]);
@@ -568,6 +602,15 @@ const QuestionBank = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={handleExportQuestions}
+              disabled={filteredQuestions.length === 0}
+              className="h-12 rounded-xl gap-2 col-span-2 lg:col-span-1"
+            >
+              <Download className="w-4 h-4" />
+              {selectedQuestions.length > 0 ? `Export ${selectedQuestions.length}` : "Export CSV"}
+            </Button>
           </div>
 
         </div>
@@ -684,9 +727,10 @@ const QuestionBank = () => {
         ) : (
           <Card className="border-0 bg-white rounded-2xl overflow-hidden">
             {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[40px_2.5fr_1fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="hidden md:grid md:grid-cols-[40px_2.2fr_1fr_1fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <span></span>
               <span>Question</span>
+              <span>Exam</span>
               <span>Subject</span>
               <span>Topic</span>
               <span className="text-center">Actions</span>
@@ -698,7 +742,7 @@ const QuestionBank = () => {
                 return (
                   <div key={question.id} className={`transition-colors ${isSelected ? "bg-emerald-50" : "hover:bg-gray-50/50"}`}>
                     {/* Desktop Row */}
-                    <div className="hidden md:grid md:grid-cols-[40px_2.5fr_1fr_1fr_80px] gap-4 px-4 py-3 items-start">
+                    <div className="hidden md:grid md:grid-cols-[40px_2.2fr_1fr_1fr_1fr_80px] gap-4 px-4 py-3 items-start">
                       {/* Checkbox */}
                       <div className="flex items-center pt-0.5">
                         <Checkbox
@@ -713,6 +757,16 @@ const QuestionBank = () => {
                           <span className="text-xs font-medium text-gray-400">Q{indexOfFirstQuestion + index + 1}</span>
                         </div>
                         <p className="text-sm text-gray-800 line-clamp-2">{question.question_text}</p>
+                      </div>
+
+                      <div className="min-w-0">
+                        {question.exams?.name ? (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 w-fit max-w-full truncate">
+                            {question.exams.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-gray-300">-</span>
+                        )}
                       </div>
 
                       {/* Subject */}
