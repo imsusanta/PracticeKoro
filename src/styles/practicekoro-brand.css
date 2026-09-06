@@ -1,0 +1,51 @@
+/* PracticeKoro Official Brand Tokens
+ * Primary: #026BFC
+ * Secondary: #028EFD
+ * Navy: #051A43
+ * Background: #F8FAFC
+ * Card: #FFFFFF
+ * Light Blue: #D5E4F7
+ * Border: #E2E8F0
+ * Secondary Text: #64748B
+ */
+
+:root {
+  --pk-primary: #026BFC;
+  --pk-secondary: #028EFD;
+  --pk-navy: #051A43;
+  --pk-background: #F8FAFC;
+  --pk-card: #FFFFFF;
+  --pk-light-blue: #D5E4F7;
+  --pk-border: #E2E8F0;
+  --pk-text-secondary: #64748B;
+  --pk-white: #FFFFFF;
+
+  /* Semantic aliases for components */
+  --pk-primary-hover: #005FE6;
+  --pk-surface-muted: #EEF6FF;
+}
+
+/* Safe, explicit utility classes for new components */
+.pk-text-primary { color: var(--pk-primary); }
+.pk-text-secondary { color: var(--pk-secondary); }
+.pk-text-navy { color: var(--pk-navy); }
+.pk-text-muted { color: var(--pk-text-secondary); }
+.pk-bg-primary { background-color: var(--pk-primary); }
+.pk-bg-secondary { background-color: var(--pk-secondary); }
+.pk-bg-navy { background-color: var(--pk-navy); }
+.pk-bg-page { background-color: var(--pk-background); }
+.pk-bg-card { background-color: var(--pk-card); }
+.pk-bg-light-blue { background-color: var(--pk-light-blue); }
+.pk-border { border-color: var(--pk-border); }
+
+.pk-gradient {
+  background: linear-gradient(135deg, var(--pk-primary) 0%, var(--pk-secondary) 100%);
+}
+
+.pk-gradient-dark {
+  background: linear-gradient(135deg, var(--pk-navy) 0%, var(--pk-primary) 55%, var(--pk-secondary) 100%);
+}
+
+.pk-glow {
+  box-shadow: 0 10px 30px rgba(2, 107, 252, 0.22);
+}
