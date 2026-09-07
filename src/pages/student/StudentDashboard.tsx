@@ -25,6 +25,8 @@ import {
 import StudentLayout from "@/components/student/StudentLayout";
 import { motion } from "framer-motion";
 import { initRazorpayPayment } from "@/utils/payment";
+import { useAuth } from "@/hooks/useAuth";
+import { useHasActiveSubscription, useYearlySubscriptionFee } from "@/hooks/useSubscription";
 
 interface Statistics {
   totalTestsTaken: number;
@@ -61,6 +63,9 @@ const quotes = [
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, status: authStatus } = useAuth();
+  const { hasSubscription } = useHasActiveSubscription();
+  const { data: yearlyFee = 0 } = useYearlySubscriptionFee();
   const [authChecked, setAuthChecked] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
@@ -81,58 +86,26 @@ const StudentDashboard = () => {
     passed: boolean;
     date: string;
   }>>([]);
-  const [subscriptionFee, setSubscriptionFee] = useState<number>(0);
-  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
 
-  const loadDashboardData = useCallback(async () => {
+  const subscriptionFee = yearlyFee;
+
+  const loadDashboardData = useCallback(async (userId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/login"); return; }
-
-      const [roleResult, profileResult, approvalResult, examsResult, attemptsResult, recentAttemptsResult, settingsResult] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "student").maybeSingle(),
-        supabase.from("profiles").select("*").eq("id", session.user.id).single(),
-        supabase.from("approval_status").select("status").eq("user_id", session.user.id).single(),
+      const [profileResult, approvalResult, examsResult, attemptsResult, recentAttemptsResult] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", userId).single(),
+        supabase.from("approval_status").select("status").eq("user_id", userId).single(),
         supabase.from("exams").select("id, name").order("created_at", { ascending: true }),  // Removed is_active filter
-        supabase.from("test_attempts").select("percentage, passed, created_at").eq("user_id", session.user.id),
+        supabase.from("test_attempts").select("percentage, passed, created_at").eq("user_id", userId),
         supabase.from("test_attempts")
           .select("id, percentage, passed, created_at, test_id, mock_tests(title)")
-          .eq("user_id", session.user.id)
+          .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(5),
-        supabase.from("site_settings").select("*")
       ]);
-
-      if (!roleResult.data) {
-        // Redirection only, no signOut() to avoid transient logout issues
-        navigate("/login");
-        return;
-      }
 
       setProfile(profileResult.data);
 
-      const yearlyFee = (settingsResult.data as any[])?.find(s => s.key === "yearly_subscription_fee")?.value;
-      if (yearlyFee) setSubscriptionFee(Number(yearlyFee));
-
-      // Check for active subscription
-      const oneYearAgo = new Date();
-      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-      const { data: purchaseData } = await (supabase
-        .from("purchases" as any)
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("content_type", "subscription")
-        .eq("status", "completed")
-        .gt("created_at", oneYearAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle() as any);
-
-      const userHasSubscription = !!purchaseData;
-      setHasSubscription(userHasSubscription);
-
-      // If they have an active subscription, we treat them as approved regardless of manual status
-      setApprovalStatus(userHasSubscription ? "approved" : (approvalResult.data?.status || "pending"));
+      setApprovalStatus(approvalResult.data?.status || "pending");
       setExams((examsResult.data as any) || []);
 
       const attempts = attemptsResult.data || [];
@@ -195,11 +168,17 @@ const StudentDashboard = () => {
     } finally {
       setAuthChecked(true); // Always set to true to exit loading state
     }
-  }, [navigate, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    if (authStatus === "loading") return;
+    if (!user) return;
+    loadDashboardData(user.id);
+  }, [authStatus, user, loadDashboardData]);
+
+  useEffect(() => {
+    if (hasSubscription) setApprovalStatus("approved");
+  }, [hasSubscription]);
 
   const handleLogout = async () => {
     try {
@@ -207,7 +186,6 @@ const StudentDashboard = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-    localStorage.clear();
     navigate("/");
   };
 

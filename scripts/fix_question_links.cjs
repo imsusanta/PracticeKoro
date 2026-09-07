@@ -1,10 +1,6 @@
-const { createClient } = require('@supabase/supabase-js');
+const { createScriptClient } = require("./loadEnv.cjs");
 
-// Load from .env if possible or hardcode for this one-time fix
-const supabaseUrl = "https://tbxqueyivslrmapwmsvx.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieHF1ZXlpdnNscm1hcHdtc3Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1Mzg1MzAsImV4cCI6MjA4MDExNDUzMH0.9xcJOm6iG8iOZkvZv5NS0plGNKsmjBPbf44__lpdC1Q";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createScriptClient();
 
 async function fixLinks() {
     console.log("Starting fix...");

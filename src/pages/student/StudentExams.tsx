@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,6 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import StudentLayout from "@/components/student/StudentLayout";
+import { useAuth } from "@/hooks/useAuth";
+import { useHasActiveSubscription } from "@/hooks/useSubscription";
 
 interface Exam {
   id: string;
@@ -57,32 +59,11 @@ interface TestAttemptInfo {
 
 const StudentExams = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
-
-  useEffect(() => {
-    const checkSubscription = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const oneYearAgo = new Date();
-      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-      const { data } = await (supabase
-        .from("purchases" as any)
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("content_type", "subscription")
-        .eq("status", "completed")
-        .gt("created_at", oneYearAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle() as any);
-
-      setHasSubscription(!!data);
-    };
-    checkSubscription();
-  }, []);
+  const { user } = useAuth();
+  const { hasSubscription } = useHasActiveSubscription();
+  const isPracticeHub = location.pathname === "/student/practice";
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [exams, setExams] = useState<Exam[]>([]);
@@ -95,17 +76,16 @@ const StudentExams = () => {
 
   const urlType = searchParams.get("type");
   const [filterType, setFilterType] = useState<"all" | "full_mock" | "topic_wise">(
-    urlType === "full_mock" || urlType === "topic_wise" ? urlType : "all"
+    isPracticeHub ? "topic_wise" : urlType === "full_mock" || urlType === "topic_wise" ? urlType : "all"
   );
 
   const checkAuthAndLoadData = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/login"); return; }
+      if (!user) return;
 
-      const approvalResult = await supabase.from("approval_status").select("status").eq("user_id", session.user.id).single();
+      const approvalResult = await supabase.from("approval_status").select("status").eq("user_id", user.id).single();
       setApprovalStatus(approvalResult.data?.status || "pending");
-      await Promise.all([loadExamsAndTests(), loadTestAttempts(session.user.id)]);
+      await Promise.all([loadExamsAndTests(), loadTestAttempts(user.id)]);
     } catch (error) {
       console.error("Error loading exams:", error);
       toast({
@@ -116,11 +96,17 @@ const StudentExams = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, toast]);
+  }, [user, toast]);
 
   useEffect(() => {
     checkAuthAndLoadData();
   }, [checkAuthAndLoadData]);
+
+  useEffect(() => {
+    if (isPracticeHub) {
+      setFilterType("topic_wise");
+    }
+  }, [isPracticeHub]);
 
   const loadExamsAndTests = async () => {
     // Try fetching with order_index first
@@ -263,7 +249,7 @@ const StudentExams = () => {
 
   if (loading) {
     return (
-      <StudentLayout title="Mock Tests" subtitle="Practice & improve">
+      <StudentLayout title={isPracticeHub ? "Practice" : "Mock Tests"} subtitle={isPracticeHub ? "Topic-wise drills" : "Practice & improve"}>
         <div className="w-full md:max-w-5xl md:mx-auto flex items-center justify-center min-h-[50vh]">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center animate-pulse">
@@ -278,7 +264,7 @@ const StudentExams = () => {
 
 
   return (
-    <StudentLayout title="Mock Tests" subtitle="Practice & improve">
+    <StudentLayout title={isPracticeHub ? "Practice" : "Mock Tests"} subtitle={isPracticeHub ? "Topic-wise drills" : "Practice & improve"}>
       <div className="w-full mx-auto space-y-3 pb-12 overflow-x-hidden px-1">
 
         {/* ═══════════════════════════════════════════════════════════════

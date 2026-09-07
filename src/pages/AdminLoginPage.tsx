@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getAccessFlags } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Eye, EyeOff, Lock, Mail, Loader2, Shield, Zap, LayoutDashboard, Users, FileEdit, BarChart3, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,22 +27,8 @@ const AdminLoginPage = () => {
   const checkSession = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      // Check if user has admin role
-      const { data: hasAdminRole, error: adminRoleError } = await supabase
-        .rpc('has_role', { _user_id: session.user.id, _role: 'admin' });
-      const { data: hasSuperAdminRole, error: superAdminRoleError } = await supabase
-        .rpc('has_role', { _user_id: session.user.id, _role: 'super_admin' });
-
-      if (adminRoleError && superAdminRoleError) {
-        toast({
-          title: "Could not verify admin access",
-          description: "Please try again. You were not signed out.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (hasAdminRole || hasSuperAdminRole) {
+      const flags = await getAccessFlags(session.user.id);
+      if (flags.isAdmin) {
         navigate("/admin/dashboard");
         return;
       }
@@ -122,42 +109,13 @@ const AdminLoginPage = () => {
       }
 
       if (authData.user) {
-        // Check if user is admin using RPC to bypass RLS
-        const { data: hasAdminRole, error: rpcError } = await supabase
-          .rpc('has_role', {
-            _user_id: authData.user.id,
-            _role: 'admin'
-          });
-
-        // Also check for super_admin
-        const { data: hasSuperAdminRole } = await supabase
-          .rpc('has_role', {
-            _user_id: authData.user.id,
-            _role: 'super_admin'
-          });
-
-        const isAdmin = hasAdminRole === true || hasSuperAdminRole === true;
-
-        if (rpcError) {
-          console.error("RPC role check error:", rpcError);
-        }
-
-        if (!isAdmin && rpcError) {
-          toast({
-            title: "Could not verify admin access",
-            description: "Please try again. You were not signed out.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
+        const flags = await getAccessFlags(authData.user.id);
+        const isAdmin = flags.isAdmin;
 
         if (!isAdmin) {
           console.error("Role check failed - user is not an admin:", {
             userId: authData.user.id,
-            hasAdminRole,
-            hasSuperAdminRole,
-            rpcError
+            roles: flags.roles,
           });
           await supabase.auth.signOut();
           toast({

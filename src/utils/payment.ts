@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { env } from "@/lib/env";
 
 interface PaymentDetails {
     amount: number;
@@ -33,7 +34,7 @@ export const initRazorpayPayment = async ({
 
     return new Promise((resolve, reject) => {
         const options = {
-            key: import.meta.env.VITE_RAZORPAY_KEY || "rzp_test_placeholder",
+            key: env.razorpayKey || "rzp_test_placeholder",
             amount: orderData.amount, // Amount in paise from order
             currency: "INR",
             name: "PracticeKoro",
