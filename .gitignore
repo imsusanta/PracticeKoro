@@ -12,15 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Secrets — never commit real env files
-.env
-.env.*
-!.env.example
-
-# Editor leftovers
-*.bak
-*.backup
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { getAccessFlags } from "@/lib/auth";
+import { checkIsAdmin } from "@/utils/adminAuth";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Eye, EyeOff, Lock, Mail, Loader2, Shield } from "lucide-react";
 import { motion } from "framer-motion";
@@ -29,9 +29,9 @@ const AdminLoginPage = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         // Check if user has admin role
-        const flags = await getAccessFlags(session.user.id);
+        const isAdmin = await checkIsAdmin(session.user.id);
 
-        if (flags.isAdmin) {
+        if (isAdmin) {
           navigate("/admin/dashboard", { replace: true });
           return;
         }
@@ -73,13 +73,6 @@ const AdminLoginPage = () => {
                 title: "Request Submitted!",
                 description: "Your admin access request has been submitted for approval.",
               });
-            } else {
-              console.error("Error creating admin request:", insertError);
-              toast({
-                title: "Error",
-                description: "Failed to submit admin request. Please try again.",
-                variant: "destructive",
-              });
             }
             await supabase.auth.signOut();
           }
@@ -118,14 +111,11 @@ const AdminLoginPage = () => {
       }
 
       if (authData.user) {
-        const flags = await getAccessFlags(authData.user.id);
-        const isAdmin = flags.isAdmin;
+        const isAdmin = await checkIsAdmin(authData.user.id);
+
 
         if (!isAdmin) {
-          console.error("Role check failed - user is not an admin:", {
-            userId: authData.user.id,
-            roles: flags.roles,
-          });
+          console.error("Role check failed - user is not an admin:", authData.user.id);
           await supabase.auth.signOut();
           toast({
             title: "Access Denied",

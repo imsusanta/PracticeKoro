@@ -43,7 +43,6 @@ import { differenceInDays } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import StudentChat from "@/components/StudentChat";
 import { getStudentUnreadCount } from "@/config/chat";
-import { getActiveSubscription, getYearlySubscriptionFee } from "@/lib/subscription";
 import { initRazorpayPayment } from "@/utils/payment";
 
 interface ProfileStatistics {
@@ -239,11 +238,19 @@ const StudentProfile = () => {
     }
     setUserEmail(session.user.email || null);
 
-    const [profileResult, approvalResult, subscription, fee] = await Promise.all([
+    const [profileResult, approvalResult, subscriptionResult, settingsResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", session.user.id).single(),
       supabase.from("approval_status").select("status").eq("user_id", session.user.id).single(),
-      getActiveSubscription(session.user.id),
-      getYearlySubscriptionFee(),
+      supabase
+        .from("purchases" as any)
+        .select("*")
+        .eq("user_id", session.user.id)
+        .eq("content_type", "subscription")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from("site_settings").select("*")
     ]);
 
     if (profileResult.data) {
@@ -259,8 +266,28 @@ const StudentProfile = () => {
     }
 
     setApprovalStatus(approvalResult.data?.status || "pending");
-    if (fee) setSubscriptionFee(fee);
-    if (subscription) setSubscription(subscription);
+
+    // Check site settings for subscription fee
+    if (settingsResult.data) {
+      const feeSetting = (settingsResult.data as any[]).find((s) => s.key === "yearly_subscription_fee");
+      if (feeSetting?.value) {
+        setSubscriptionFee(parseFloat(feeSetting.value) || 499);
+      }
+    }
+
+    const subscriptionData = (subscriptionResult as any).data;
+    if (subscriptionData) {
+      const createdAt = new Date(subscriptionData.created_at);
+      const expiryDate = new Date(createdAt);
+      expiryDate.setDate(expiryDate.getDate() + 365);
+
+      if (new Date() < expiryDate) {
+        setSubscription({
+          ...subscriptionData,
+          expiryDate: expiryDate
+        });
+      }
+    }
 
     await Promise.all([
       loadStatistics(session.user.id),
@@ -268,6 +295,7 @@ const StudentProfile = () => {
       loadNotificationsCount(session.user.id),
       loadChatCount(session.user.id)
     ]);
+
     setLoading(false);
   }, [navigate, loadStatistics, loadPurchases, loadNotificationsCount, loadChatCount]);
 

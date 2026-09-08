@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { dashboardPathFor, getAccessFlags } from "@/lib/auth";
+import { checkIsAdmin } from "@/utils/adminAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, Eye, EyeOff, Lock, Loader2, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
@@ -102,8 +102,15 @@ const Login = () => {
       title: "Welcome Back!",
       description: "Signed in successfully.",
     });
-    const flags = authData.user ? await getAccessFlags(authData.user.id) : { isAdmin: false, isStudent: true, roles: [] };
-    navigate(dashboardPathFor(flags));
+
+    if (authData.user) {
+      const isAdmin = await checkIsAdmin(authData.user.id);
+      if (isAdmin) {
+        navigate("/admin/dashboard");
+        return;
+      }
+    }
+    navigate("/student/dashboard");
   };
 
   const handleGoogleLogin = async () => {
@@ -111,7 +118,7 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/student/dashboard`,
       },
     });
 
@@ -159,8 +166,7 @@ const Login = () => {
       title: "Welcome Back!",
       description: "Signed in successfully.",
     });
-    const flags = authData.user ? await getAccessFlags(authData.user.id) : { isAdmin: false, isStudent: true, roles: [] };
-    navigate(dashboardPathFor(flags));
+    navigate("/student/dashboard");
   };
 
   return (

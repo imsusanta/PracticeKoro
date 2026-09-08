@@ -11,8 +11,6 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { motion } from "framer-motion";
 import { downloadCsv, stampFilename } from "@/lib/csv";
 import { fetchRecentAuditLogs, type AuditLogRow } from "@/lib/adminAudit";
-import { useAuth } from "@/hooks/useAuth";
-import { subscriptionCutoffIso } from "@/lib/subscription";
 
 interface RecentActivity {
   id: string;
@@ -33,7 +31,6 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user, status: authStatus, roles, isAdmin } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -65,23 +62,65 @@ const AdminDashboard = () => {
     return today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
   });
 
-  // Route guard already verified admin/super_admin. Load dashboard data once the session is ready.
+  // Fast auth check - verify role and load data safely
   useEffect(() => {
-    if (authStatus === "loading") return;
-    if (!user || !isAdmin) return;
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-    setAuthChecked(true);
-    if (roles.includes("super_admin")) setAdminRole("super_admin");
-    else if (roles.includes("admin")) setAdminRole("admin");
+        if (!session) {
+          navigate("/admin/login", { replace: true });
+          return;
+        }
 
-    Promise.all([loadStats(), loadRecentActivity()]).finally(() => setLoading(false));
-  }, [authStatus, user, isAdmin, roles]);
+        const isAdmin = await checkIsAdmin(session.user.id);
+        if (isAdmin) {
+          const { data: isSuper } = await supabase.rpc('has_role', { _user_id: session.user.id, _role: 'super_admin' });
+          if (isSuper === true) setAdminRole("super_admin");
+          else setAdminRole("admin");
+        }
+
+        if (!isAdmin) {
+          console.error("Dashboard: Role check failed - user is not an admin:", session.user.id);
+          toast({
+            title: "Access Denied",
+            description: "No administrative privileges found for this account.",
+            variant: "destructive",
+          });
+          navigate("/admin/login", { replace: true });
+          return;
+        }
+
+        setAuthChecked(true);
+
+        // Load stats and activity safely
+        Promise.all([
+          loadStats().catch((err) => console.error("Error loading stats:", err)),
+          loadRecentActivity().catch((err) => console.error("Error loading recent activity:", err)),
+        ]).finally(() => {
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("Error during admin auth check:", error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to verify admin access. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, [navigate, toast]);
 
   const loadStats = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const yearAgo = new Date();
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
 
     const [
       studentsResult,
@@ -115,7 +154,7 @@ const AdminDashboard = () => {
       (supabase.from("mock_tests") as any).select("id", { count: "exact", head: true }).eq("is_published", true),
       (supabase.from("mock_tests") as any).select("id", { count: "exact", head: true }).eq("is_published", false),
       (supabase.from("test_attempts") as any).select("id", { count: "exact", head: true }).gte("completed_at", today.toISOString()),
-      (supabase.from("purchases") as any).select("user_id").eq("content_type", "subscription").eq("status", "completed").gt("created_at", subscriptionCutoffIso()),
+      (supabase.from("purchases") as any).select("user_id").eq("content_type", "subscription").eq("status", "completed").gte("created_at", yearAgo.toISOString()),
       (supabase.from("purchases") as any).select("amount").eq("status", "completed").gte("created_at", thirtyDaysAgo.toISOString()),
       (supabase.from("chat_messages") as any).select("id", { count: "exact", head: true }).eq("sender_role", "student").eq("is_read", false),
       fetchRecentAuditLogs(12),

@@ -1,6 +1,9 @@
-const { createScriptClient } = require("./loadEnv.cjs");
+const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createScriptClient();
+const supabaseUrl = "https://tbxqueyivslrmapwmsvx.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieHF1ZXlpdnNscm1hcHdtc3Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1Mzg1MzAsImV4cCI6MjA4MDExNDUzMH0.9xcJOm6iG8iOZkvZv5NS0plGNKsmjBPbf44__lpdC1Q";
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debug() {
     const { data: subjects } = await supabase.from('subjects').select('id, name, category, exam_id');

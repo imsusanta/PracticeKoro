@@ -21,8 +21,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Check,
-  Target,
-  Zap
+  Target
 } from "lucide-react";
 import {
   Sidebar,
