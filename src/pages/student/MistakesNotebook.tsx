@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/contexts/StudentContext";
@@ -16,32 +16,33 @@ import {
   ChevronRight,
   Crown,
   Bell,
-  Bookmark
+  Bookmark,
+  Brain,
+  Zap,
+  Clock,
+  Dices,
+  Tag,
+  MessageSquareQuote,
+  Edit3,
+  TrendingUp,
+  Target,
+  Layers,
+  BarChart2,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
-
-interface MistakeItem {
-  id: string;
-  question_id: string;
-  selected_answer: string | null;
-  correct_answer: string;
-  is_mastered: boolean;
-  retry_count: number;
-  created_at: string;
-  questions: {
-    id: string;
-    question_text: string;
-    option_a: string;
-    option_b: string;
-    option_c: string;
-    option_d: string;
-    correct_answer: string;
-    explanation: string | null;
-    subject: string | null;
-    topic: string | null;
-  };
-}
+import { motion, AnimatePresence } from "framer-motion";
+import type { MistakeItem, ErrorType, MistakesAnalytics } from "@/types/mistakes";
+import { ERROR_TYPE_DEFINITIONS } from "@/types/mistakes";
+import {
+  fetchStudentMistakes,
+  computeMistakesAnalytics,
+  filterMistakes,
+  classifyStudentMistake,
+  toggleMistakeMastered,
+} from "@/services/mistakesService";
+import { MistakeClassificationModal } from "@/components/student/MistakeClassificationModal";
+import { RevisionDrillModal } from "@/components/student/RevisionDrillModal";
 
 export const MistakesNotebook = () => {
   const navigate = useNavigate();
@@ -50,11 +51,20 @@ export const MistakesNotebook = () => {
   const [mistakes, setMistakes] = useState<MistakeItem[]>([]);
   const [filterSubject, setFilterSubject] = useState<string>("all");
   const [filterMastered, setFilterMastered] = useState<"all" | "active" | "mastered">("active");
+  const [filterErrorType, setFilterErrorType] = useState<ErrorType | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [retryMode, setRetryMode] = useState(false);
-  const [activeRetryIndex, setActiveRetryIndex] = useState(0);
-  const [retryAnswers, setRetryAnswers] = useState<{ [qId: string]: string }>({});
-  const [showRetryResult, setShowRetryResult] = useState(false);
+
+  // Modals state
+  const [classifyingItem, setClassifyingItem] = useState<MistakeItem | null>(null);
+  const [drillModalConfig, setDrillModalConfig] = useState<{
+    isOpen: boolean;
+    items: MistakeItem[];
+    title: string;
+  }>({
+    isOpen: false,
+    items: [],
+    title: "Targeted Revision Drill",
+  });
 
   const loadMistakes = useCallback(async () => {
     try {
@@ -65,195 +75,8 @@ export const MistakesNotebook = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("student_mistakes")
-        .select(`
-          id,
-          question_id,
-          selected_answer,
-          correct_answer,
-          is_mastered,
-          retry_count,
-          created_at,
-          questions (
-            id,
-            question_text,
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-            correct_answer,
-            explanation,
-            subject,
-            topic
-          )
-        `)
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        const items = data.map((item: any) => ({
-          ...item,
-          questions: Array.isArray(item.questions) ? item.questions[0] : item.questions
-        })).filter(item => item.questions != null) as MistakeItem[];
-
-        setMistakes(items);
-        return;
-      }
-
-      const masteredLocal = JSON.parse(localStorage.getItem("pk_mastered_mistakes") || "[]");
-      const masteredSet = new Set(masteredLocal);
-
-      const { data: attemptsData } = await supabase
-        .from("test_attempts")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("is_active", false)
-        .limit(20);
-
-      if (attemptsData && attemptsData.length > 0) {
-        const attemptIds = attemptsData.map(a => a.id);
-        const { data: wrongAnswers } = await supabase
-          .from("test_answers")
-          .select(`
-            id,
-            question_id,
-            selected_answer,
-            created_at,
-            questions (
-              id,
-              question_text,
-              option_a,
-              option_b,
-              option_c,
-              option_d,
-              correct_answer,
-              explanation,
-              subject,
-              topic
-            )
-          `)
-          .in("attempt_id", attemptIds)
-          .eq("is_correct", false);
-
-        if (wrongAnswers && wrongAnswers.length > 0) {
-          const seen = new Set<string>();
-          const fallbackItems: MistakeItem[] = [];
-
-          wrongAnswers.forEach((wa: any) => {
-            if (!seen.has(wa.question_id) && wa.questions) {
-              seen.add(wa.question_id);
-              const qObj = Array.isArray(wa.questions) ? wa.questions[0] : wa.questions;
-              fallbackItems.push({
-                id: wa.id,
-                question_id: wa.question_id,
-                selected_answer: wa.selected_answer,
-                correct_answer: qObj.correct_answer,
-                is_mastered: masteredSet.has(wa.question_id),
-                retry_count: 1,
-                created_at: wa.created_at || new Date().toISOString(),
-                questions: qObj
-              });
-            }
-          });
-
-          setMistakes(fallbackItems);
-          return;
-        }
-      }
-
-      const localCached = JSON.parse(localStorage.getItem("pk_student_mistakes") || "[]");
-      if (localCached.length > 0) {
-        setMistakes(localCached);
-      } else {
-        // Fallback matching Screen 17 of blueprint
-        setMistakes([
-          {
-            id: "m-1",
-            question_id: "q-1",
-            selected_answer: "A",
-            correct_answer: "B",
-            is_mastered: false,
-            retry_count: 2,
-            created_at: new Date().toISOString(),
-            questions: {
-              id: "q-1",
-              question_text: "ভারতের সংবিধান কোন সালে কার্যকর হয়?",
-              option_a: "1947",
-              option_b: "1950",
-              option_c: "1952",
-              option_d: "1955",
-              correct_answer: "B",
-              explanation: "ভারতের সংবিধান ১৯৫০ সালের ২৬শে জানুয়ারি কার্যকর হয়।",
-              subject: "Indian Polity",
-              topic: "Constitution"
-            }
-          },
-          {
-            id: "m-2",
-            question_id: "q-2",
-            selected_answer: "C",
-            correct_answer: "A",
-            is_mastered: false,
-            retry_count: 3,
-            created_at: new Date().toISOString(),
-            questions: {
-              id: "q-2",
-              question_text: "পশ্চিমবঙ্গের সবচেয়ে বড় জেলা কোনটি?",
-              option_a: "দক্ষিণ ২৪ পরগনা",
-              option_b: "উত্তর ২৪ পরগনা",
-              option_c: "পশ্চিম মেদিনীপুর",
-              option_d: "মুর্শিদাবাদ",
-              correct_answer: "A",
-              explanation: "আয়তনের দিক থেকে পশ্চিমবঙ্গের বৃহত্তম জেলা দক্ষিণ ২৪ পরগনা।",
-              subject: "West Bengal GK",
-              topic: "Geography"
-            }
-          },
-          {
-            id: "m-3",
-            question_id: "q-3",
-            selected_answer: "A",
-            correct_answer: "B",
-            is_mastered: false,
-            retry_count: 1,
-            created_at: new Date().toISOString(),
-            questions: {
-              id: "q-3",
-              question_text: "ভারতের জাতীয় গান কোনটি?",
-              option_a: "জন গণ মন",
-              option_b: "বন্দে মাতরম্",
-              option_c: "সারে জাহাঁ সে আচ্ছা",
-              option_d: "আমার সোনার বাংলা",
-              correct_answer: "B",
-              explanation: "ভারতের জাতীয় গান হলো বঙ্কিমচন্দ্র চট্টোপাধ্যায় রচিত 'বন্দে মাতরম্' ।",
-              subject: "General Knowledge",
-              topic: "National Symbols"
-            }
-          },
-          {
-            id: "m-4",
-            question_id: "q-4",
-            selected_answer: "D",
-            correct_answer: "B",
-            is_mastered: false,
-            retry_count: 2,
-            created_at: new Date().toISOString(),
-            questions: {
-              id: "q-4",
-              question_text: "ভারতীয় সংবিধানের কোন অনুচ্ছেদ অনুযায়ী মৌলিক অধিকার সুরক্ষিত?",
-              option_a: "অনুচ্ছেদ ১৯",
-              option_b: "অনুচ্ছেদ ৩২",
-              option_c: "অনুচ্ছেদ ২১",
-              option_d: "অনুচ্ছেদ ৪৪",
-              correct_answer: "B",
-              explanation: "অনুচ্ছেদ ৩২ কে ড. বি. আর. আম্বেদকর সংবিধানের 'হৃদয় ও আত্মা' আখ্যা দিয়েছেন।",
-              subject: "Indian Polity",
-              topic: "Fundamental Rights"
-            }
-          }
-        ]);
-      }
+      const items = await fetchStudentMistakes(session.user.id);
+      setMistakes(items);
     } catch (err) {
       console.error("Error in loadMistakes:", err);
     } finally {
@@ -265,85 +88,69 @@ export const MistakesNotebook = () => {
     loadMistakes();
   }, [loadMistakes]);
 
-  const toggleMastered = async (mistakeId: string, currentStatus: boolean) => {
+  // Derived analytics
+  const analytics: MistakesAnalytics = useMemo(() => {
+    return computeMistakesAnalytics(mistakes);
+  }, [mistakes]);
+
+  // Derived filtered items
+  const filteredMistakes = useMemo(() => {
+    return filterMistakes(mistakes, {
+      status: filterMastered,
+      subject: filterSubject,
+      errorType: filterErrorType,
+      searchQuery,
+    });
+  }, [mistakes, filterMastered, filterSubject, filterErrorType, searchQuery]);
+
+  const availableSubjects = useMemo(() => {
+    return Array.from(
+      new Set(mistakes.map((m) => m.questions?.subject).filter(Boolean))
+    ) as string[];
+  }, [mistakes]);
+
+  // Handlers
+  const handleToggleMastered = async (mistakeId: string, currentStatus: boolean) => {
     const nextStatus = !currentStatus;
 
-    setMistakes(prev =>
-      prev.map(m => (m.id === mistakeId ? { ...m, is_mastered: nextStatus } : m))
+    setMistakes((prev) =>
+      prev.map((m) => (m.id === mistakeId ? { ...m, is_mastered: nextStatus } : m))
     );
 
-    try {
-      const targetMistake = mistakes.find(m => m.id === mistakeId);
-      const masteredLocal: string[] = JSON.parse(localStorage.getItem("pk_mastered_mistakes") || "[]");
-      if (targetMistake) {
-        if (nextStatus) {
-          if (!masteredLocal.includes(targetMistake.question_id)) masteredLocal.push(targetMistake.question_id);
-        } else {
-          const idx = masteredLocal.indexOf(targetMistake.question_id);
-          if (idx > -1) masteredLocal.splice(idx, 1);
-        }
-        localStorage.setItem("pk_mastered_mistakes", JSON.stringify(masteredLocal));
-      }
-    } catch (e) {
-      console.warn("Could not save to localStorage:", e);
-    }
-
-    try {
-      await supabase
-        .from("student_mistakes")
-        .update({ is_mastered: nextStatus, updated_at: new Date().toISOString() })
-        .eq("id", mistakeId);
-    } catch (err) {
-      // Quiet fallback
-    }
-
+    await toggleMistakeMastered(mistakeId, nextStatus);
     toast.success(nextStatus ? "Marked as Mastered! 🎉" : "Moved back to active mistakes");
   };
 
-  const handleRetrySelect = (ans: string) => {
-    const currentItem = filteredMistakes[activeRetryIndex];
-    setRetryAnswers(prev => ({ ...prev, [currentItem.question_id]: ans }));
-    setShowRetryResult(true);
+  const handleSaveClassification = async (errorType: ErrorType, notes: string) => {
+    if (!classifyingItem) return;
 
-    if (ans.toUpperCase() === currentItem.correct_answer.toUpperCase()) {
-      supabase
-        .from("student_mistakes")
-        .update({ is_mastered: true, updated_at: new Date().toISOString() })
-        .eq("id", currentItem.id)
-        .then();
-    }
+    setMistakes((prev) =>
+      prev.map((m) =>
+        m.id === classifyingItem.id
+          ? { ...m, error_type: errorType, student_notes: notes }
+          : m
+      )
+    );
+
+    await classifyStudentMistake(classifyingItem.id, errorType, notes);
   };
 
-  const nextRetryQuestion = () => {
-    if (activeRetryIndex < filteredMistakes.length - 1) {
-      setActiveRetryIndex(prev => prev + 1);
-      setShowRetryResult(false);
-    } else {
-      toast.success("Retry session completed! Outstanding practice!");
-      setRetryMode(false);
-      loadMistakes();
+  const handleLaunchDrill = (customItems?: MistakeItem[], title?: string) => {
+    const targetItems = customItems || filteredMistakes.filter((m) => !m.is_mastered);
+    if (targetItems.length === 0) {
+      toast.info("No active mistakes to drill in this category!");
+      return;
     }
+
+    setDrillModalConfig({
+      isOpen: true,
+      items: targetItems,
+      title: title || `Revision Drill (${targetItems.length} questions)`,
+    });
   };
-
-  const availableSubjects = Array.from(
-    new Set(mistakes.map(m => m.questions?.subject).filter(Boolean))
-  ) as string[];
-
-  const filteredMistakes = mistakes.filter(m => {
-    if (filterMastered === "active" && m.is_mastered) return false;
-    if (filterMastered === "mastered" && !m.is_mastered) return false;
-    if (filterSubject !== "all" && m.questions?.subject !== filterSubject) return false;
-    if (searchQuery.trim()) {
-      const text = (m.questions?.question_text || "").toLowerCase();
-      const sub = (m.questions?.subject || "").toLowerCase();
-      const search = searchQuery.toLowerCase();
-      return text.includes(search) || sub.includes(search);
-    }
-    return true;
-  });
 
   return (
-    <StudentLayout title="Mistakes Notebook" subtitle="Error Revision Vault">
+    <StudentLayout title="Mistakes Vault" subtitle="Personalized Error Revision">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
         {/* Top Brand Header */}
         <div className="flex items-center justify-between gap-2 pb-1">
@@ -357,7 +164,7 @@ export const MistakesNotebook = () => {
                   Practice<span className="text-blue-600">Koro</span>
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                  Mistakes
+                  Mistakes Vault
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">Automatic Error Notebook & Targeted Drills</p>
@@ -387,368 +194,502 @@ export const MistakesNotebook = () => {
           </div>
         </div>
 
-        {!retryMode ? (
-          <>
-            {/* Hero Header */}
-            <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-              <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-rose-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+        {/* Hero Header & Diagnostics Banner */}
+        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-rose-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-              <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div className="space-y-2.5 max-w-xl">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
-                    <AlertOctagon className="w-3.5 h-3.5" />
-                    Error Elimination Engine
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
-                    My Mistakes <span className="text-[#FBBF24]">Notebook</span>
-                  </h1>
-                  <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
-                    Every incorrect answer from your mock tests and practice sets is automatically cataloged here. Re-attempt them until you achieve 100% accuracy.
-                  </p>
-                </div>
-
-                {filteredMistakes.length > 0 && (
-                  <div className="shrink-0">
-                    <Button
-                      onClick={() => {
-                        setActiveRetryIndex(0);
-                        setShowRetryResult(false);
-                        setRetryMode(true);
-                      }}
-                      className="h-12 px-5 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center gap-2"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Retry Mistakes ({filteredMistakes.length})
-                    </Button>
-                  </div>
-                )}
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2.5 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
+                <AlertOctagon className="w-3.5 h-3.5" />
+                Error Elimination Engine
               </div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
+                Personalized <span className="text-[#FBBF24]">Mistakes Vault</span>
+              </h1>
+              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
+                Classify why you lost marks (conceptual, careless, time pressure, or guess) and drill your weak areas until you reach 100% mastery.
+              </p>
             </div>
 
-            {/* Filter & Search Card */}
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 sm:p-5 space-y-3.5">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search mistake questions or topics..."
-                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                />
-              </div>
-
-              {/* Screen 17 Filter Chips: All, Subject, Topic, Difficulty */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                {["All", "Subject", "Topic", "Difficulty"].map((chip) => (
-                  <button
-                    key={chip}
+            {/* Launch Drill Action */}
+            {analytics.activeMistakes > 0 && (
+              <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2.5">
+                <Button
+                  onClick={() => handleLaunchDrill()}
+                  className="h-12 px-6 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Launch Revision Drill ({analytics.activeMistakes})
+                </Button>
+                {analytics.weakestSubject && (
+                  <Button
+                    variant="outline"
                     onClick={() => {
-                      if (chip === "All") setFilterSubject("all");
+                      const subjectItems = mistakes.filter(
+                        (m) => !m.is_mastered && m.questions?.subject === analytics.weakestSubject
+                      );
+                      handleLaunchDrill(subjectItems, `Drill ${analytics.weakestSubject} (${subjectItems.length})`);
                     }}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                      (chip === "All" && filterSubject === "all") || (chip === "Subject" && filterSubject !== "all")
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
+                    className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5"
                   >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
-                {/* Status Toggle Pills */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setFilterMastered("active")}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                      filterMastered === "active"
-                        ? "bg-rose-500 text-white shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    Active Mistakes ({mistakes.filter(m => !m.is_mastered).length})
-                  </button>
-                  <button
-                    onClick={() => setFilterMastered("mastered")}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                      filterMastered === "mastered"
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    Mastered ({mistakes.filter(m => m.is_mastered).length})
-                  </button>
-                  <button
-                    onClick={() => setFilterMastered("all")}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                      filterMastered === "all"
-                        ? "bg-[#0F172A] text-white shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    All ({mistakes.length})
-                  </button>
-                </div>
-
-                {/* Subject Filter */}
-                {availableSubjects.length > 0 && (
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                    <button
-                      onClick={() => setFilterSubject("all")}
-                      className={`px-2.5 py-1 text-xs rounded-xl font-bold ${
-                        filterSubject === "all" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      All Subjects
-                    </button>
-                    {availableSubjects.map(sub => (
-                      <button
-                        key={sub}
-                        onClick={() => setFilterSubject(sub)}
-                        className={`px-2.5 py-1 text-xs rounded-xl font-bold whitespace-nowrap ${
-                          filterSubject === sub ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {sub}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Mistakes List */}
-            {loading ? (
-              <div className="py-12 space-y-4 animate-pulse">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-40 rounded-3xl bg-slate-100" />
-                ))}
-              </div>
-            ) : filteredMistakes.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center bg-white">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                <h3 className="text-base font-bold text-slate-900">
-                  {filterMastered === "active" ? "Zero Unresolved Mistakes! 🎉" : "No Questions Found"}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  {filterMastered === "active"
-                    ? "You have mastered all recorded errors or answered all test questions correctly. Keep up the high accuracy!"
-                    : "No questions match your current search and filters."}
-                </p>
-                <Button
-                  onClick={() => navigate("/student/exam")}
-                  className="mt-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
-                >
-                  Take a Mock Test
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredMistakes.map((item, idx) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-blue-200 transition-all space-y-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        {/* Letter Circle (A, B, C, D) matching Screen 17 */}
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
-                          ["bg-rose-100 text-rose-700 border border-rose-200", "bg-emerald-100 text-emerald-700 border border-emerald-200", "bg-purple-100 text-purple-700 border border-purple-200", "bg-amber-100 text-amber-700 border border-amber-200"][idx % 4]
-                        }`}>
-                          {String.fromCharCode(65 + (idx % 4))}
-                        </div>
-
-                        <div className="space-y-1.5 min-w-0">
-                          {/* Question Text */}
-                          <div className="text-slate-900 font-bold text-sm sm:text-base leading-snug font-bengali">
-                            <MathText text={item.questions.question_text} />
-                          </div>
-
-                          {/* Tags: Subject + Wrong X times red badge */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {item.questions.subject && (
-                              <span className="text-[11px] font-semibold text-slate-500">
-                                {item.questions.subject}
-                              </span>
-                            )}
-                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-                              Wrong {item.retry_count || 2} {item.retry_count === 1 ? "time" : "times"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Bookmark Icon matching Screen 17 */}
-                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs">
-                          <Bookmark className="w-4 h-4 fill-blue-600" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Options Breakdown */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {[
-                        { key: "A", text: item.questions.option_a },
-                        { key: "B", text: item.questions.option_b },
-                        { key: "C", text: item.questions.option_c },
-                        { key: "D", text: item.questions.option_d },
-                      ].map(opt => {
-                        const isCorrect = opt.key === item.correct_answer.toUpperCase();
-                        const isWrongSelected = opt.key === item.selected_answer?.toUpperCase() && !isCorrect;
-
-                        let style = "bg-slate-50/60 border-slate-200/80 text-slate-700";
-                        if (isCorrect) style = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-sm";
-                        if (isWrongSelected) style = "bg-rose-50 border-rose-400 text-rose-950 font-bold";
-
-                        return (
-                          <div
-                            key={opt.key}
-                            className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs sm:text-sm ${style}`}
-                          >
-                            <span
-                              className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                                isCorrect
-                                  ? "bg-emerald-600 text-white"
-                                  : isWrongSelected
-                                  ? "bg-rose-600 text-white"
-                                  : "bg-white border border-slate-200 text-slate-600"
-                              }`}
-                            >
-                              {opt.key}
-                            </span>
-                            <span className="flex-1 font-bengali">
-                              <MathText text={opt.text} />
-                            </span>
-                            {isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                            {isWrongSelected && <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Explanation */}
-                    {item.questions.explanation && (
-                      <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 leading-relaxed font-bengali border border-slate-200/80">
-                        <strong className="text-slate-900 block mb-0.5 font-bold">💡 Explanation (ব্যাখ্যা):</strong>
-                        <MathText text={item.questions.explanation} />
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          /* Interactive Practice / Retry Flow */
-          <div className="space-y-4 max-w-3xl mx-auto">
-            <div className="bg-white rounded-2xl p-4 border border-slate-100/90 shadow-sm flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
-                <RotateCcw className="w-4 h-4" /> Mistakes Drill Mode
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-600">
-                  Question {activeRetryIndex + 1} of {filteredMistakes.length}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setRetryMode(false)}
-                  className="text-xs h-8 rounded-xl font-bold"
-                >
-                  Exit Drill
-                </Button>
-              </div>
-            </div>
-
-            {filteredMistakes[activeRetryIndex] && (
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-5">
-                <div className="text-slate-900 font-bold text-base sm:text-lg leading-relaxed font-bengali">
-                  <MathText text={filteredMistakes[activeRetryIndex].questions.question_text} />
-                </div>
-
-                <div className="space-y-2.5">
-                  {[
-                    { key: "A", text: filteredMistakes[activeRetryIndex].questions.option_a },
-                    { key: "B", text: filteredMistakes[activeRetryIndex].questions.option_b },
-                    { key: "C", text: filteredMistakes[activeRetryIndex].questions.option_c },
-                    { key: "D", text: filteredMistakes[activeRetryIndex].questions.option_d },
-                  ].map(opt => {
-                    const selected = retryAnswers[filteredMistakes[activeRetryIndex].question_id] === opt.key;
-                    const isCorrect = opt.key === filteredMistakes[activeRetryIndex].correct_answer.toUpperCase();
-
-                    let style = "bg-slate-50/60 border-slate-200/80 text-slate-700 hover:bg-slate-100/70 hover:border-slate-300";
-                    if (showRetryResult) {
-                      if (isCorrect) style = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-sm";
-                      else if (selected) style = "bg-rose-50 border-rose-400 text-rose-950 font-bold";
-                    }
-
-                    return (
-                      <button
-                        key={opt.key}
-                        disabled={showRetryResult}
-                        onClick={() => handleRetrySelect(opt.key)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left text-xs sm:text-sm font-medium transition-all ${style}`}
-                      >
-                        <span
-                          className={`w-7 h-7 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 ${
-                            showRetryResult && isCorrect
-                              ? "bg-emerald-600 text-white"
-                              : showRetryResult && selected && !isCorrect
-                              ? "bg-rose-600 text-white"
-                              : "bg-white border border-slate-200 text-slate-700"
-                          }`}
-                        >
-                          {opt.key}
-                        </span>
-                        <span className="flex-1 font-bengali">
-                          <MathText text={opt.text} />
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {showRetryResult && (
-                  <div className="pt-4 border-t border-slate-100 space-y-3">
-                    <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm leading-relaxed font-bengali border border-slate-200/80">
-                      {(() => {
-                        const q = filteredMistakes[activeRetryIndex].questions;
-                        const ans = (filteredMistakes[activeRetryIndex].correct_answer || '').toUpperCase().trim();
-                        const correctText = ans === 'A' ? q.option_a : ans === 'B' ? q.option_b : ans === 'C' ? q.option_c : ans === 'D' ? q.option_d : null;
-                        return (
-                          <div className="font-bold text-emerald-800 mb-1.5 flex items-center flex-wrap gap-1.5">
-                            <span>✓ Correct Answer: ({ans})</span>
-                            {correctText && (
-                              <span className="font-semibold text-emerald-950">
-                                <MathText text={correctText} formatBullets={false} />
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                      {filteredMistakes[activeRetryIndex].questions.explanation && (
-                        <MathText text={filteredMistakes[activeRetryIndex].questions.explanation!} />
-                      )}
-                    </div>
-                    <Button
-                      onClick={nextRetryQuestion}
-                      className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm"
-                    >
-                      {activeRetryIndex < filteredMistakes.length - 1 ? "Next Mistake" : "Finish Drill"}
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
+                    <Layers className="w-3.5 h-3.5" />
+                    Drill Weakest Subject: {analytics.weakestSubject}
+                  </Button>
                 )}
               </div>
             )}
           </div>
+
+          {/* 4 Glass Analytics KPIs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 pt-6 mt-6 border-t border-white/10">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
+              <span className="text-2xl sm:text-3xl font-black text-rose-300 leading-tight block">
+                {analytics.activeMistakes}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Active Mistakes
+              </span>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
+              <span className="text-2xl sm:text-3xl font-black text-emerald-300 leading-tight block">
+                {analytics.masteredMistakes}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Questions Mastered
+              </span>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
+              <span className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-tight block">
+                {analytics.masteryRate}%
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Mastery Rate
+              </span>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
+              <span className="text-base sm:text-lg font-black text-cyan-300 leading-tight block truncate">
+                {analytics.weakestSubject || "All Clear"}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Priority Subject
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Classification Distribution Bar */}
+        {analytics.totalMistakes > 0 && (
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-blue-600" />
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight">
+                  Error Cause Distribution (ভুলের কারণ বিশ্লেষণ)
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500">
+                {analytics.totalMistakes} Recorded Errors
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {(["conceptual", "careless", "time_pressure", "guess"] as ErrorType[]).map((errType) => {
+                const def = ERROR_TYPE_DEFINITIONS[errType];
+                const count = analytics.errorTypeBreakdown[errType].count;
+                const pct = analytics.errorTypeBreakdown[errType].percentage;
+                const isFiltered = filterErrorType === errType;
+
+                return (
+                  <button
+                    key={errType}
+                    type="button"
+                    onClick={() => setFilterErrorType(isFiltered ? "all" : errType)}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      isFiltered
+                        ? "ring-2 ring-blue-500 border-blue-500 bg-blue-50/50"
+                        : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-100/70"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900">{def.labelEn}</span>
+                      <span className="text-xs font-black text-blue-600">{pct}%</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-bengali mt-0.5">{def.labelBn}</p>
+                    <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden mt-2">
+                      <div
+                        className={`h-full ${def.pillBgClass}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-bold mt-1 block">
+                      {count} questions
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Filter & Search Toolbar */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 sm:p-5 space-y-3.5">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search mistake questions, subjects, topics, or your reflection notes..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bengali"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
+            {/* Status Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setFilterMastered("active")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                  filterMastered === "active"
+                    ? "bg-rose-500 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                Active ({analytics.activeMistakes})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterMastered("mastered")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                  filterMastered === "mastered"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                Mastered ({analytics.masteredMistakes})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterMastered("all")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                  filterMastered === "all"
+                    ? "bg-[#0F172A] text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                All ({analytics.totalMistakes})
+              </button>
+            </div>
+
+            {/* Error Type Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                type="button"
+                onClick={() => setFilterErrorType("all")}
+                className={`px-3 py-1 text-xs rounded-xl font-bold transition-all ${
+                  filterErrorType === "all"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                All Reasons
+              </button>
+              {(["conceptual", "careless", "time_pressure", "guess"] as ErrorType[]).map((t) => {
+                const def = ERROR_TYPE_DEFINITIONS[t];
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFilterErrorType(t)}
+                    className={`px-3 py-1 text-xs rounded-xl font-bold whitespace-nowrap transition-all ${
+                      filterErrorType === t
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {def.labelEn}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Subject Filter Chips */}
+          {availableSubjects.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setFilterSubject("all")}
+                className={`px-3 py-1 text-xs rounded-xl font-bold shrink-0 ${
+                  filterSubject === "all" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                All Subjects
+              </button>
+              {availableSubjects.map((sub) => (
+                <button
+                  key={sub}
+                  type="button"
+                  onClick={() => setFilterSubject(sub)}
+                  className={`px-3 py-1 text-xs rounded-xl font-bold shrink-0 whitespace-nowrap ${
+                    filterSubject === sub ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {sub}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Mistakes List */}
+        {loading ? (
+          <div className="py-12 space-y-4 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-44 rounded-3xl bg-slate-100" />
+            ))}
+          </div>
+        ) : filteredMistakes.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center bg-white space-y-3">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
+            <h3 className="text-base font-bold text-slate-900">
+              {filterMastered === "active" ? "Zero Unresolved Mistakes! 🎉" : "No Questions Found"}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {filterMastered === "active"
+                ? "You have mastered all recorded errors or answered all test questions correctly. Keep up the high accuracy!"
+                : "No mistakes match your current search and filters."}
+            </p>
+            <Button
+              onClick={() => navigate("/student/exams")}
+              className="mt-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+            >
+              Take a Mock Test
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredMistakes.map((item, idx) => {
+              const errDef = ERROR_TYPE_DEFINITIONS[item.error_type || "unclassified"];
+
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-blue-200 transition-all space-y-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      {/* Number Index */}
+                      <span className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 font-mono font-black text-xs flex items-center justify-center shrink-0">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+
+                      <div className="space-y-1.5 min-w-0">
+                        {/* Question Text */}
+                        <div className="text-slate-900 font-bold text-sm sm:text-base leading-relaxed font-bengali">
+                          <MathText text={item.questions.question_text} />
+                        </div>
+
+                        {/* Metadata Tags */}
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          {item.questions.subject && (
+                            <span className="font-semibold text-slate-500">
+                              {item.questions.subject} {item.questions.topic ? `• ${item.questions.topic}` : ""}
+                            </span>
+                          )}
+
+                          {/* Error Classification Badge */}
+                          <button
+                            type="button"
+                            onClick={() => setClassifyingItem(item)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border transition-colors hover:opacity-90 ${
+                              errDef?.badgeClass || "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}
+                            title="Click to change error category"
+                          >
+                            <Tag className="w-3 h-3" />
+                            <span>{errDef?.labelEn}</span>
+                            <span className="opacity-75 font-bengali">({errDef?.labelBn})</span>
+                          </button>
+
+                          {/* Retry Count */}
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
+                            Wrong {item.retry_count || 1} {item.retry_count === 1 ? "time" : "times"}
+                          </span>
+
+                          {item.is_mastered && (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ✓ Mastered
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mastered Toggle Icon */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleMastered(item.id, item.is_mastered)}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+                        item.is_mastered
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-200 shadow-xs"
+                          : "bg-slate-50 text-slate-400 border-slate-200 hover:text-emerald-600 hover:border-emerald-300"
+                      }`}
+                      title={item.is_mastered ? "Marked as Mastered (click to unmark)" : "Click to mark as Mastered"}
+                    >
+                      <CheckCircle2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Options Comparison */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      { key: "A", text: item.questions.option_a },
+                      { key: "B", text: item.questions.option_b },
+                      { key: "C", text: item.questions.option_c },
+                      { key: "D", text: item.questions.option_d },
+                    ].map((opt) => {
+                      const isCorrect = opt.key === item.correct_answer.toUpperCase();
+                      const isWrongSelected = opt.key === item.selected_answer?.toUpperCase() && !isCorrect;
+
+                      let style = "bg-slate-50/60 border-slate-200/80 text-slate-700";
+                      if (isCorrect) style = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs";
+                      if (isWrongSelected) style = "bg-rose-50 border-rose-400 text-rose-950 font-bold";
+
+                      return (
+                        <div
+                          key={opt.key}
+                          className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs sm:text-sm ${style}`}
+                        >
+                          <span
+                            className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                              isCorrect
+                                ? "bg-emerald-600 text-white"
+                                : isWrongSelected
+                                ? "bg-rose-600 text-white"
+                                : "bg-white border border-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {opt.key}
+                          </span>
+                          <span className="flex-1 font-bengali">
+                            <MathText text={opt.text} />
+                          </span>
+                          {isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                          {isWrongSelected && <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Student Reflection Note Box */}
+                  {item.student_notes ? (
+                    <div className="bg-blue-50/60 rounded-2xl p-3.5 border border-blue-100 flex items-start justify-between gap-3 text-xs">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <MessageSquareQuote className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-blue-950 block text-[11px]">
+                            My Learning Takeaway (আমার নোট):
+                          </span>
+                          <p className="text-blue-900 font-medium font-bengali leading-relaxed pt-0.5">
+                            {item.student_notes}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setClassifyingItem(item)}
+                        className="p-1 rounded-lg text-blue-600 hover:bg-blue-100 shrink-0"
+                        title="Edit note"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setClassifyingItem(item)}
+                      className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>+ Add Personal Reflection Note</span>
+                    </button>
+                  )}
+
+                  {/* Explanation Toggle */}
+                  {item.questions.explanation && (
+                    <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 leading-relaxed font-bengali border border-slate-200/80">
+                      <strong className="text-slate-900 block mb-0.5 font-bold">💡 Explanation (ব্যাখ্যা):</strong>
+                      <MathText text={item.questions.explanation} />
+                    </div>
+                  )}
+
+                  {/* Card Bottom Actions */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleLaunchDrill([item], "Single Mistake Re-attempt")}
+                      className="rounded-xl h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Re-attempt Question
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant={item.is_mastered ? "outline" : "default"}
+                      onClick={() => handleToggleMastered(item.id, item.is_mastered)}
+                      className={`rounded-xl h-8 text-xs font-bold ${
+                        item.is_mastered
+                          ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                      }`}
+                    >
+                      {item.is_mastered ? "✓ Mastered" : "Mark as Mastered"}
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Classification Modal */}
+        {classifyingItem && (
+          <MistakeClassificationModal
+            isOpen={!!classifyingItem}
+            onClose={() => setClassifyingItem(null)}
+            questionId={classifyingItem.question_id}
+            initialErrorType={classifyingItem.error_type}
+            initialNotes={classifyingItem.student_notes}
+            questionSnippet={classifyingItem.questions.question_text}
+            onSave={handleSaveClassification}
+          />
+        )}
+
+        {/* Targeted Revision Drill Modal */}
+        {drillModalConfig.isOpen && (
+          <RevisionDrillModal
+            isOpen={drillModalConfig.isOpen}
+            onClose={() => setDrillModalConfig((prev) => ({ ...prev, isOpen: false }))}
+            mistakes={drillModalConfig.items}
+            title={drillModalConfig.title}
+            onMistakeUpdated={(mistakeId, isMastered) => {
+              setMistakes((prev) =>
+                prev.map((m) => (m.id === mistakeId ? { ...m, is_mastered: isMastered } : m))
+              );
+            }}
+          />
         )}
       </div>
     </StudentLayout>

@@ -19,12 +19,20 @@ import {
   Layers,
   ArrowRight,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
+  Tag,
+  MessageSquareQuote,
+  Edit3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MathText } from "@/components/ui/MathText";
 import { toast as sonnerToast } from "sonner";
 import { initRazorpayPayment } from "@/utils/payment";
+import { MistakeClassificationModal } from "@/components/student/MistakeClassificationModal";
+import { RevisionDrillModal } from "@/components/student/RevisionDrillModal";
+import { classifyStudentMistake } from "@/services/mistakesService";
+import type { ErrorType, MistakeItem } from "@/types/mistakes";
+import { ERROR_TYPE_DEFINITIONS } from "@/types/mistakes";
 
 interface Question {
   id: string;
@@ -82,6 +90,19 @@ export const ReviewTest = () => {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
 
+  // Phase 2: Mistakes Classification & Targeted Revision Drill
+  const [mistakeMetaMap, setMistakeMetaMap] = useState<
+    Record<string, { id?: string; errorType?: ErrorType; notes?: string; isMastered?: boolean; retryCount?: number }>
+  >({});
+  const [classifyingItem, setClassifyingItem] = useState<{
+    questionId: string;
+    questionText: string;
+    mistakeId?: string;
+    errorType?: ErrorType;
+    notes?: string;
+  } | null>(null);
+  const [isDrillOpen, setIsDrillOpen] = useState(false);
+
   const loadTestReview = useCallback(async () => {
     if (!attemptId) return;
     setLoading(true);
@@ -93,7 +114,7 @@ export const ReviewTest = () => {
         return;
       }
 
-      const [attemptResult, answersResult, bookmarksResult, purchaseResult] = await Promise.all([
+      const [attemptResult, answersResult, bookmarksResult, purchaseResult, mistakesResult] = await Promise.all([
         supabase
           .from("test_attempts")
           .select(`*, mock_tests (id, title, passing_marks, is_paid, price)`)
@@ -115,7 +136,11 @@ export const ReviewTest = () => {
           .eq("user_id", session.user.id)
           .eq("status", "completed")
           .limit(1)
-          .maybeSingle()
+          .maybeSingle(),
+        supabase
+          .from("student_mistakes")
+          .select("id, question_id, error_type, student_notes, is_mastered, retry_count")
+          .eq("user_id", session.user.id),
       ]);
 
       if (attemptResult.error || !attemptResult.data) {
@@ -126,6 +151,20 @@ export const ReviewTest = () => {
 
       if (answersResult.error) {
         toast({ title: "Error", description: "Failed to load your answers", variant: "destructive" });
+      }
+
+      if (mistakesResult.data) {
+        const metaMap: Record<string, any> = {};
+        mistakesResult.data.forEach((m: any) => {
+          metaMap[m.question_id] = {
+            id: m.id,
+            errorType: (m.error_type || "unclassified") as ErrorType,
+            notes: m.student_notes,
+            isMastered: m.is_mastered,
+            retryCount: m.retry_count,
+          };
+        });
+        setMistakeMetaMap(metaMap);
       }
 
       // Handle both object and array for mock_tests join
@@ -212,10 +251,74 @@ export const ReviewTest = () => {
     }
   };
 
+  const handleSaveClassification = async (errorType: ErrorType, notes: string) => {
+    if (!classifyingItem) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const qId = classifyingItem.questionId;
+    const existing = mistakeMetaMap[qId];
+
+    setMistakeMetaMap(prev => ({
+      ...prev,
+      [qId]: {
+        ...prev[qId],
+        errorType,
+        notes,
+      }
+    }));
+
+    try {
+      if (existing?.id) {
+        await classifyStudentMistake(existing.id, errorType, notes);
+      } else {
+        const targetAnswer = answers.find(a => a.question_id === qId);
+        const { data: newMistake } = await supabase.from("student_mistakes").upsert({
+          user_id: session.user.id,
+          question_id: qId,
+          attempt_id: attemptId,
+          selected_answer: targetAnswer?.selected_answer || null,
+          correct_answer: targetAnswer?.questions?.correct_answer || "",
+          is_mastered: false,
+          error_type: errorType,
+          student_notes: notes,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id,question_id" }).select("id").single();
+
+        if (newMistake?.id) {
+          setMistakeMetaMap(prev => ({
+            ...prev,
+            [qId]: { ...prev[qId], id: newMistake.id }
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn("Classification save error:", err);
+    }
+  };
+
   const totalQuestions = answers.length;
   const correctAnswers = answers.filter(a => a.is_correct);
   const wrongAnswers = answers.filter(a => !a.is_correct && a.selected_answer);
   const skippedAnswers = answers.filter(a => !a.selected_answer);
+
+  const drillMistakes: MistakeItem[] = wrongAnswers.map((wa) => {
+    const meta = mistakeMetaMap[wa.question_id];
+    return {
+      id: meta?.id || `drill_${wa.question_id}`,
+      question_id: wa.question_id,
+      attempt_id: attemptId,
+      selected_answer: wa.selected_answer,
+      correct_answer: wa.questions.correct_answer,
+      is_mastered: meta?.isMastered ?? false,
+      retry_count: meta?.retryCount ?? 1,
+      streak: 0,
+      error_type: meta?.errorType || "unclassified",
+      student_notes: meta?.notes || null,
+      created_at: new Date().toISOString(),
+      questions: wa.questions,
+    };
+  });
 
   const correctCount = attempt?.correct_count ?? correctAnswers.length;
   const wrongCount = attempt?.wrong_count ?? wrongAnswers.length;
@@ -410,14 +513,24 @@ export const ReviewTest = () => {
 
           <div className="flex flex-wrap gap-2.5 pt-1">
             {wrongCount > 0 && (
-              <Button
-                size="sm"
-                onClick={() => navigate("/student/mistakes")}
-                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-sm"
-              >
-                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                Practice {wrongCount} Mistakes
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => setIsDrillOpen(true)}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-sm flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  🎯 Launch Revision Drill ({wrongCount} Mistakes)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate("/student/mistakes")}
+                  className="bg-white hover:bg-rose-50 text-rose-700 border-rose-200 text-xs font-bold rounded-xl h-10 px-3 shadow-2xs"
+                >
+                  View in Mistakes Vault
+                </Button>
+              </>
             )}
             {weakTopics.length > 0 && (
               <Button
@@ -560,7 +673,7 @@ export const ReviewTest = () => {
                         ? "bg-rose-50 text-rose-700 border border-rose-200"
                         : "bg-slate-100 text-slate-600"
                     }`}>
-                      {a.is_correct ? "Correct (+1)" : a.selected_answer ? "Incorrect (0)" : "Skipped"}
+                      {a.is_correct ? "Correct (+1)" : a.selected_answer ? `Incorrect (${a.marks_obtained !== undefined && a.marks_obtained !== 0 ? a.marks_obtained : '-0.25'})` : "Skipped"}
                     </span>
                     {a.questions.subject && (
                       <span className="text-xs text-slate-400 font-medium">
@@ -670,10 +783,127 @@ export const ReviewTest = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Phase 2: Error Classification & Reflection Row for Incorrect Answers */}
+                {!a.is_correct && a.selected_answer && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {mistakeMetaMap[a.question_id]?.errorType && mistakeMetaMap[a.question_id]?.errorType !== "unclassified" ? (
+                        <button
+                          type="button"
+                          onClick={() => setClassifyingItem({
+                            questionId: a.question_id,
+                            questionText: a.questions.question_text,
+                            mistakeId: mistakeMetaMap[a.question_id]?.id,
+                            errorType: mistakeMetaMap[a.question_id]?.errorType,
+                            notes: mistakeMetaMap[a.question_id]?.notes,
+                          })}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all hover:opacity-90 ${
+                            ERROR_TYPE_DEFINITIONS[mistakeMetaMap[a.question_id].errorType!]?.badgeClass
+                          }`}
+                          title="Click to edit error classification"
+                        >
+                          <Tag className="w-3 h-3" />
+                          <span>{ERROR_TYPE_DEFINITIONS[mistakeMetaMap[a.question_id].errorType!]?.labelEn}</span>
+                          <span className="text-[10px] opacity-75 font-bengali">
+                            ({ERROR_TYPE_DEFINITIONS[mistakeMetaMap[a.question_id].errorType!]?.labelBn})
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setClassifyingItem({
+                            questionId: a.question_id,
+                            questionText: a.questions.question_text,
+                            mistakeId: mistakeMetaMap[a.question_id]?.id,
+                            errorType: "unclassified",
+                            notes: mistakeMetaMap[a.question_id]?.notes,
+                          })}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors"
+                        >
+                          <Tag className="w-3 h-3 text-amber-600" />
+                          <span>Classify Error (ভুলের কারণ চিহ্নিত করুন)</span>
+                        </button>
+                      )}
+
+                      {mistakeMetaMap[a.question_id]?.notes ? (
+                        <button
+                          type="button"
+                          onClick={() => setClassifyingItem({
+                            questionId: a.question_id,
+                            questionText: a.questions.question_text,
+                            mistakeId: mistakeMetaMap[a.question_id]?.id,
+                            errorType: mistakeMetaMap[a.question_id]?.errorType,
+                            notes: mistakeMetaMap[a.question_id]?.notes,
+                          })}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors"
+                        >
+                          <MessageSquareQuote className="w-3 h-3" />
+                          <span className="font-bengali truncate max-w-[200px]">
+                            {mistakeMetaMap[a.question_id].notes}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setClassifyingItem({
+                            questionId: a.question_id,
+                            questionText: a.questions.question_text,
+                            mistakeId: mistakeMetaMap[a.question_id]?.id,
+                            errorType: mistakeMetaMap[a.question_id]?.errorType,
+                            notes: "",
+                          })}
+                          className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 text-[11px] font-medium transition-colors"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>+ Add Note</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      In Mistakes Vault
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+
+        {/* Phase 2: Classification Modal & Revision Drill Modal */}
+        {classifyingItem && (
+          <MistakeClassificationModal
+            isOpen={!!classifyingItem}
+            onClose={() => setClassifyingItem(null)}
+            questionId={classifyingItem.questionId}
+            initialErrorType={classifyingItem.errorType}
+            initialNotes={classifyingItem.notes}
+            questionSnippet={classifyingItem.questionText}
+            onSave={handleSaveClassification}
+          />
+        )}
+
+        {isDrillOpen && (
+          <RevisionDrillModal
+            isOpen={isDrillOpen}
+            onClose={() => setIsDrillOpen(false)}
+            mistakes={drillMistakes}
+            title="Revise Mistakes From This Test"
+            onMistakeUpdated={(mistakeId, isMastered) => {
+              setMistakeMetaMap(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(k => {
+                  if (updated[k].id === mistakeId) {
+                    updated[k].isMastered = isMastered;
+                  }
+                });
+                return updated;
+              });
+            }}
+          />
+        )}
       </main>
     </div>
   );
