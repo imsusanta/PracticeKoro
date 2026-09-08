@@ -330,15 +330,15 @@ export default function CurrentAffairs() {
         </div>
 
         {/* Daily MCQ Challenge CTA Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white p-5 sm:p-6 shadow-md border border-slate-800">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white px-4 py-3 sm:p-5 md:p-6 shadow-md border border-slate-800">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5 max-w-lg">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+            <div className="space-y-1 sm:space-y-1.5 max-w-lg">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-[8px] sm:text-[10px] font-black uppercase tracking-wider">
                 <Sparkles className="w-3 h-3" />
                 Live 10-Question Quiz
               </div>
-              <h2 className="text-lg sm:text-xl font-black font-display tracking-tight text-white">
+              <h2 className="text-base sm:text-lg md:text-xl font-black font-display tracking-tight text-white">
                 Daily Current Affairs MCQ Practice
               </h2>
               <BengaliText className="text-xs text-slate-300 block">

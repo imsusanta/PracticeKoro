@@ -351,7 +351,7 @@ const StudentResults = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 p-5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white select-none"
+            className="relative rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 px-4 py-3.5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white select-none"
           >
             {/* Ambient Glows */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
@@ -363,10 +363,10 @@ const StudentResults = () => {
                   <span className="inline-block bg-white/15 backdrop-blur-sm text-sky-200 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-white/10">
                     EXAM ANALYTICS
                   </span>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-[1.15] mt-2">
+                  <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white tracking-tight leading-[1.15] mt-2">
                     Performance <span className="text-[#FBBF24]">Overview</span>
                   </h2>
-                  <p className="text-[11px] sm:text-xs text-blue-100 font-medium leading-relaxed mt-1.5">
+                  <p className="hidden sm:block text-[11px] sm:text-xs text-blue-100 font-medium leading-relaxed mt-1.5">
                     Real-time accuracy, score distribution, and state rank evaluation.
                   </p>
                 </div>
@@ -384,22 +384,22 @@ const StudentResults = () => {
               {/* 4 Glass KPI Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-2xl sm:text-3xl font-black text-white leading-tight">{stats.totalTests}</p>
+                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-white leading-tight">{stats.totalTests}</p>
                   <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Tests Completed</p>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-2xl sm:text-3xl font-black text-emerald-300 leading-tight">{stats.passed}</p>
+                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-emerald-300 leading-tight">{stats.passed}</p>
                   <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Tests Passed</p>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-tight">{stats.avg}%</p>
+                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-[#FBBF24] leading-tight">{stats.avg}%</p>
                   <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Average Score</p>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-2xl sm:text-3xl font-black text-cyan-300 leading-tight">{stats.overallAccuracy}%</p>
+                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-cyan-300 leading-tight">{stats.overallAccuracy}%</p>
                   <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Overall Accuracy</p>
                 </div>
               </div>

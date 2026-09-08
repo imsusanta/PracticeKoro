@@ -172,21 +172,21 @@ export const MistakesNotebook = () => {
         </div>
 
         {/* Hero Header & Diagnostics Banner */}
-        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl px-4 py-3.5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
           <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-rose-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2.5 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2.5 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[9px] sm:text-[11px] font-black uppercase tracking-wider">
                 <AlertOctagon className="w-3.5 h-3.5" />
                 Zero Negative Marking
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display text-white">
                 Mistakes Notebook <span className="text-[#FBBF24]">— Zero Mark Loss</span>
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
+              <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
                 Review questions you missed in mocks & drills, understand why you lost marks, and master them to eliminate negative marking in the actual exam.
               </p>
             </div>
@@ -196,7 +196,7 @@ export const MistakesNotebook = () => {
               <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2.5">
                 <Button
                   onClick={() => handleLaunchDrill()}
-                  className="h-12 px-6 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2"
+                  className="h-10 px-4 sm:h-12 sm:px-6 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
                   Start Revision Drill 🚀 ({analytics.activeMistakes})
@@ -221,9 +221,9 @@ export const MistakesNotebook = () => {
           </div>
 
           {/* 4 Glass Analytics KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 pt-6 mt-6 border-t border-white/10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 pt-3 mt-3 sm:pt-6 sm:mt-6 border-t border-white/10">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
-              <span className="text-2xl sm:text-3xl font-black text-rose-300 leading-tight block">
+              <span className="text-lg sm:text-2xl md:text-3xl font-black text-rose-300 leading-tight block">
                 {analytics.activeMistakes}
               </span>
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
@@ -232,7 +232,7 @@ export const MistakesNotebook = () => {
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
-              <span className="text-2xl sm:text-3xl font-black text-emerald-300 leading-tight block">
+              <span className="text-lg sm:text-2xl md:text-3xl font-black text-emerald-300 leading-tight block">
                 {analytics.masteredMistakes}
               </span>
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
@@ -241,7 +241,7 @@ export const MistakesNotebook = () => {
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
-              <span className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-tight block">
+              <span className="text-lg sm:text-2xl md:text-3xl font-black text-[#FBBF24] leading-tight block">
                 {analytics.masteryRate}%
               </span>
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
@@ -250,7 +250,7 @@ export const MistakesNotebook = () => {
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
-              <span className="text-base sm:text-lg font-black text-cyan-300 leading-tight block truncate">
+              <span className="text-sm sm:text-base md:text-lg font-black text-cyan-300 leading-tight block truncate">
                 {analytics.weakestSubject || "All Cleared"}
               </span>
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">

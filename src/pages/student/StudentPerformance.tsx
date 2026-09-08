@@ -132,16 +132,16 @@ export const StudentPerformance = () => {
             HERO EXAM READINESS GAUGE CARD
             ═══════════════════════════════════════════════════════════════ */}
         {readiness && (
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-7 md:p-8 shadow-xl relative overflow-hidden border border-slate-800">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl px-4 py-3.5 sm:p-7 md:p-8 shadow-xl relative overflow-hidden border border-slate-800">
             <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
             <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-amber-500/10 rounded-full blur-2xl pointer-events-none -mb-20" />
 
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
               
               {/* Left Gauge & Status */}
-              <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-5 md:gap-6 text-center sm:text-left">
                 {/* Circular Meter */}
-                <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+                <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                     <circle
                       cx="50"
@@ -166,7 +166,7 @@ export const StudentPerformance = () => {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black font-mono tracking-tight text-white leading-none">
+                    <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white leading-none">
                       {readiness.overallReadiness}%
                     </span>
                     <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">
@@ -177,21 +177,21 @@ export const StudentPerformance = () => {
 
                 {/* Score & Verdict Info */}
                 <div className="space-y-1.5">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white/10 backdrop-blur-sm border border-white/20 text-[#FBBF24]">
+                  <div className="inline-flex items-center gap-2 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white/10 backdrop-blur-sm border border-white/20 text-[#FBBF24]">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>{readiness.readinessLabel}</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-white font-display">
                     {selectedExam.name}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-md leading-relaxed">
+                  <p className="hidden sm:block text-xs sm:text-sm text-slate-300 font-medium max-w-md leading-relaxed">
                     Projected Score: <strong className="text-amber-300 font-mono text-base">{readiness.projectedScore}</strong> / {readiness.maxScore} (based on mock tests, PYQs & mistakes revision)
                   </p>
                 </div>
               </div>
 
               {/* Right 4-Factor Breakdown Bars */}
-              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-2.5 min-w-[260px] sm:min-w-[300px]">
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-2.5 min-w-0 w-full sm:min-w-[260px] md:min-w-[300px]">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-1 border-b border-white/10">
                   <span>4 Readiness Factors</span>
                   <span className="text-amber-400">Weightage</span>

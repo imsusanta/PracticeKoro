@@ -105,34 +105,34 @@ const SubjectsView = ({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl px-4 py-3.5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
         <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2.5 max-w-xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-6">
+          <div className="space-y-1.5 sm:space-y-2.5 max-w-xl">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[9px] sm:text-[11px] font-black uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               Smart Study Hub
             </span>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display leading-tight">
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display leading-tight">
               Master Every Topic With <span className="text-[#FBBF24]">Handcrafted Notes</span>
             </h1>
-            <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
+            <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
               Read concise summaries, syllabus breakdowns, and exam-focused revision notes prepared by expert educators for West Bengal competitive exams.
             </p>
           </div>
 
-          <div className="flex gap-3 md:gap-4 shrink-0">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/15 flex flex-col items-center justify-center min-w-[96px] text-center shadow-md">
-              <span className="text-2xl sm:text-3xl font-black text-amber-300 block leading-none mb-1">
+          <div className="flex gap-2 sm:gap-3 md:gap-4 shrink-0">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 sm:p-4 md:p-5 border border-white/15 flex flex-col items-center justify-center min-w-[76px] sm:min-w-[96px] text-center shadow-md">
+              <span className="text-lg sm:text-2xl md:text-3xl font-black text-amber-300 block leading-none mb-1">
                 {subjects.length}
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-200">Subjects</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/15 flex flex-col items-center justify-center min-w-[96px] text-center shadow-md">
-              <span className="text-2xl sm:text-3xl font-black text-emerald-300 block leading-none mb-1">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 sm:p-4 md:p-5 border border-white/15 flex flex-col items-center justify-center min-w-[76px] sm:min-w-[96px] text-center shadow-md">
+              <span className="text-lg sm:text-2xl md:text-3xl font-black text-emerald-300 block leading-none mb-1">
                 {notes.length}
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-200">Chapters</span>

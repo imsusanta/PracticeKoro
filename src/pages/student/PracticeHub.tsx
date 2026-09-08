@@ -224,17 +224,17 @@ export const PracticeHub = () => {
         {/* ═══════════════════════════════════════════════════════════════
             2. HERO BLUE BANNER (Practice Today, Score Tomorrow)
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#0062E0] via-[#1272F3] to-[#2E82FE] text-white shadow-xl shadow-blue-600/15">
+        <div className="relative overflow-hidden rounded-3xl px-4 py-3.5 sm:p-6 md:p-8 bg-gradient-to-r from-[#0062E0] via-[#1272F3] to-[#2E82FE] text-white shadow-xl shadow-blue-600/15">
           {/* Subtle Ambient Background Gradients */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
           <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-blue-300/10 rounded-full blur-2xl pointer-events-none -mb-20" />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div className="max-w-md space-y-3">
-              <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6">
+            <div className="max-w-md space-y-1.5 sm:space-y-3">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
                 Practice Today,<br />Score Tomorrow
               </h2>
-              <p className="text-xs sm:text-sm text-blue-100 leading-relaxed font-normal">
+              <p className="hidden sm:block text-xs sm:text-sm text-blue-100 leading-relaxed font-normal">
                 Topic-wise questions, previous year papers and smart revision tools — all in one place.
               </p>
               <div className="pt-2">

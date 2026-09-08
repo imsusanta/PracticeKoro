@@ -409,15 +409,15 @@ export const ReviewTest = () => {
 
       <main className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 space-y-4 md:space-y-6">
         {/* Scorecard Hero Banner */}
-        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl px-4 py-3.5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
           <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div className="space-y-2.5 max-w-xl">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2.5 max-w-xl">
               <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-black uppercase tracking-wider ${
                   attempt.passed ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-rose-500/20 text-rose-300 border border-rose-400/30"
                 }`}>
                   {attempt.passed ? "✓ Cutoff Cleared 🎉" : "Needs Improvement"}
@@ -427,21 +427,21 @@ export const ReviewTest = () => {
                   Passing Cutoff: {attempt.mock_tests?.passing_marks}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-display text-white">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display text-white">
                 {attempt.mock_tests?.title}
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-medium">
+              <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium">
                 Detailed exam review, answer key comparison, and syllabus weakness breakdown.
               </p>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/15 min-w-[105px]">
-                <p className="text-2xl sm:text-3xl font-black text-white">{attempt.score}</p>
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 sm:p-4 text-center border border-white/15 min-w-[82px] sm:min-w-[105px]">
+                <p className="text-lg sm:text-2xl md:text-3xl font-black text-white">{attempt.score}</p>
                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">Score / {attempt.total_marks}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/15 min-w-[105px]">
-                <p className="text-2xl sm:text-3xl font-black text-emerald-300">{attempt.percentage}%</p>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 sm:p-4 text-center border border-white/15 min-w-[82px] sm:min-w-[105px]">
+                <p className="text-lg sm:text-2xl md:text-3xl font-black text-emerald-300">{attempt.percentage}%</p>
                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">Percentage</p>
               </div>
             </div>

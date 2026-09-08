@@ -205,21 +205,21 @@ export const PYQPractice = () => {
         </div>
 
         {/* Hero Header Banner */}
-        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl px-4 py-3.5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
           <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-amber-500/10 rounded-full blur-2xl pointer-events-none -mb-24" />
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2.5 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2.5 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[9px] sm:text-[11px] font-black uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
                 Official Exam Archive
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display text-white">
                 Previous Year Questions <span className="text-[#FBBF24]">— PYQ Vault</span>
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
+              <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
                 Authentic questions from Panchayat, Police Constable/SI, Clerkship, Primary TET, WBCS & Railways — practice with timer or solutions!
               </p>
 
@@ -242,13 +242,13 @@ export const PYQPractice = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 shrink-0">
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-center min-w-[90px]">
-                <p className="text-2xl font-black text-amber-300 leading-none">{EXAM_CATALOG.length}</p>
+            <div className="flex gap-2 sm:gap-3 shrink-0">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 sm:p-4 border border-white/15 text-center min-w-[72px] sm:min-w-[90px]">
+                <p className="text-lg sm:text-2xl font-black text-amber-300 leading-none">{EXAM_CATALOG.length}</p>
                 <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wider mt-1">Exams</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-center min-w-[90px]">
-                <p className="text-2xl font-black text-emerald-300 leading-none">{questions.length}</p>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 sm:p-4 border border-white/15 text-center min-w-[72px] sm:min-w-[90px]">
+                <p className="text-lg sm:text-2xl font-black text-emerald-300 leading-none">{questions.length}</p>
                 <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wider mt-1">PYQ MCQs</p>
               </div>
             </div>
