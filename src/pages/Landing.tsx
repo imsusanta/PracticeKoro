@@ -1248,7 +1248,7 @@ const Landing = () => {
                             <div className="absolute bottom-0 left-0 right-0 h-4 bg-slate-50 rounded-t-[1.5rem]" />
                           </div>
 
-                          {/* Quiz Content */}
+                          {/* Test Question Content */}
                           <div className="px-4 -mt-2 flex-1 flex flex-col pb-4">
                             {/* Question Card */}
                             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">

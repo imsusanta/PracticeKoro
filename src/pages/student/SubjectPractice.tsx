@@ -171,7 +171,7 @@ export const SubjectPractice = () => {
     const topicLabel = selectedTopic !== "All Topics" ? ` • ${selectedTopic}` : "";
     setActiveDrillConfig({
       title: `${selectedSubject}${topicLabel}`,
-      subtitle: `${questionCount} Questions • ${drillMode === "instant_feedback" ? "Instant Solutions" : "Timed Quiz"}`,
+      subtitle: `${questionCount} Questions • ${drillMode === "instant_feedback" ? "Instant Solutions" : "Timed Test"}`,
       subject: selectedSubject,
       topic: selectedTopic !== "All Topics" ? selectedTopic : undefined,
       difficulty: selectedDifficulty,

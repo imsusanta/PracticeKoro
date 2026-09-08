@@ -185,7 +185,7 @@ export const PracticeHub = () => {
   // Quick Action Buttons
   const quickActions = [
     {
-      label: "Take a Random Quiz",
+      label: "Take a Random Test",
       icon: Zap,
       style: "bg-blue-50/70 hover:bg-blue-100/70 border-blue-200/80 text-blue-700",
       iconColor: "text-blue-600 fill-blue-600",

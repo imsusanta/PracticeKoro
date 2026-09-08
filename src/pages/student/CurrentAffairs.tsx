@@ -336,7 +336,7 @@ export default function CurrentAffairs() {
             <div className="space-y-1 sm:space-y-1.5 max-w-lg">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-[8px] sm:text-[10px] font-black uppercase tracking-wider">
                 <Sparkles className="w-3 h-3" />
-                Live 10-Question Quiz
+                Live 10-Question Test
               </div>
               <h2 className="text-base sm:text-lg md:text-xl font-black font-display tracking-tight text-white">
                 Daily Current Affairs MCQ Practice
@@ -349,7 +349,7 @@ export default function CurrentAffairs() {
               onClick={() => navigate("/student/daily")}
               className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#2563EB] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all shrink-0 active:scale-95"
             >
-              Start Quiz
+              Start Test
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

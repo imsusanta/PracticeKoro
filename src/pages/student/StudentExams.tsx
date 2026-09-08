@@ -515,7 +515,7 @@ const StudentExams = () => {
             ═══════════════════════════════════════════════════════════════ */}
         <div id="mock-test-series-section" className="pt-2">
           <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Mock Test Series</h3>
-          <p className="text-xs text-slate-500 font-medium">Practice full simulated mocks and topic quizzes</p>
+          <p className="text-xs text-slate-500 font-medium">Practice full simulated mocks and topic tests</p>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -723,7 +723,7 @@ const StudentExams = () => {
           </motion.div>
         )}
 
-        {/* Quick Topic Quiz Banner when Topic Test tab is active */}
+        {/* Quick Topic Test Banner when Topic Test tab is active */}
         {filterType === "topic_wise" && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}

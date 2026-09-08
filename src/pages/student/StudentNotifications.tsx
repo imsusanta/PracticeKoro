@@ -94,7 +94,7 @@ const StudentNotifications = () => {
         {
           id: "notif-4",
           title: "New Current Affairs",
-          message: "Daily Current Affairs - 16 Sept 2025 digest and quiz have been published in Study Section.",
+          message: "Daily Current Affairs - 16 Sept 2025 digest and test have been published in Study Section.",
           type: "current_affairs",
           is_read: true,
           link: "/student/current-affairs",

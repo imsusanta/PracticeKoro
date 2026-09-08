@@ -600,27 +600,14 @@ const StudentProfile = () => {
                           {profile?.full_name || "Aspirant"}
                         </h2>
 
-                        <div className="flex items-center gap-2 sm:gap-3 text-xs text-blue-100/80 mt-0.5 sm:mt-1 flex-wrap font-medium">
-                          {profile?.target_exam && (
+                        {profile?.target_exam && (
+                          <div className="flex items-center gap-2 sm:gap-3 text-xs text-blue-100/80 mt-0.5 sm:mt-1 flex-wrap font-medium">
                             <span className="inline-flex items-center gap-1 text-blue-200 text-[10px] sm:text-[11px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded-md truncate max-w-[170px] sm:max-w-none">
                               <Target className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#FBBF24] shrink-0" />
                               <span className="truncate">{profile.target_exam}</span>
                             </span>
-                          )}
-                          <span className="flex items-center gap-1 text-[10px] sm:text-[11px] truncate">
-                            {userEmail?.includes("@whatsapp.practicekoro.local") ? (
-                              <>
-                                <Phone className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-400 shrink-0" />
-                                +91 {userEmail.split("@")[0]}
-                              </>
-                            ) : (
-                              <>
-                                <Mail className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-300 shrink-0" />
-                                <span className="truncate max-w-[130px] sm:max-w-none">{userEmail || "No login email"}</span>
-                              </>
-                            )}
-                          </span>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -912,7 +899,7 @@ const StudentProfile = () => {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1 sm:pt-2">
                             {[
                               "Unlimited Full-Length Mock Tests & Real Percentile Ranks",
-                              "Chapter-Wise Topic Quizzes with Instant Solutions",
+                              "Chapter-Wise Topic Tests with Instant Solutions",
                               "Previous Year Question (PYQ) Vault & Speed Tests",
                               "Detailed Answer Explanations in Bengali & English",
                               "Automatic Mistakes Notebook & Targeted Revision",

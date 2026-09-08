@@ -55,6 +55,7 @@ const BookmarksPage = lazy(() => import("./pages/student/BookmarksPage"));
 const DailyPractice = lazy(() => import("./pages/student/DailyPractice"));
 const StudentLeaderboard = lazy(() => import("./pages/student/StudentLeaderboard"));
 const CurrentAffairs = lazy(() => import("./pages/student/CurrentAffairs"));
+const StudentPerformance = lazy(() => import("./pages/student/StudentPerformance"));
 
 // Admin Pages
 const AdminIndex = lazy(() => import("./pages/admin/AdminIndex"));
@@ -167,6 +168,7 @@ const AppContent = () => {
             <Route path="/student/bookmarks" element={<ProtectedRoute requireRole="student"><BookmarksPage /></ProtectedRoute>} />
             <Route path="/student/daily" element={<ProtectedRoute requireRole="student"><DailyPractice /></ProtectedRoute>} />
             <Route path="/student/leaderboard" element={<ProtectedRoute requireRole="student"><StudentLeaderboard /></ProtectedRoute>} />
+            <Route path="/student/performance" element={<ProtectedRoute requireRole="student"><StudentPerformance /></ProtectedRoute>} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

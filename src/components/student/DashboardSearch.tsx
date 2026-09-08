@@ -45,7 +45,7 @@ const ROTATING_SEARCH_PROMPTS = [
   "Search 'Primary TET 2026'...",
   "Search 'WBCS Mock Tests'...",
   "Search 'Panchayat Clerkship'...",
-  "Search 'Topic Quizzes'...",
+  "Search 'Topic Tests'...",
   "Search 'Math & Reasoning'...",
   "Search 'PYQ Vault'...",
   "Search 'Current Affairs'...",
@@ -67,9 +67,9 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-topic-drills",
     category: "practice",
-    title: "Chapter-wise Topic Quizzes",
-    subtitle: "Customize MCQ quizzes by subject, chapter and difficulty",
-    badge: "Quiz",
+    title: "Chapter-wise Topic Tests",
+    subtitle: "Customize MCQ tests by subject, chapter and difficulty",
+    badge: "Test",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
     icon: Zap,
     url: "/student/practice/subject",
@@ -97,7 +97,7 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-daily-quiz",
     category: "practice",
-    title: "Daily Practice Quiz",
+    title: "Daily Practice Test",
     subtitle: "Daily 10 high-yield questions across all target exam subjects",
     badge: "Daily",
     badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -140,7 +140,7 @@ const TRENDING_CHIPS = [
   { label: "WBP Constable", query: "Police", isHot: true },
   { label: "Primary TET 2026", query: "TET", isHot: true },
   { label: "Panchayat", query: "Panchayat", isHot: false },
-  { label: "Topic Quiz", query: "Quiz", isHot: true },
+  { label: "Topic Test", query: "Test", isHot: true },
   { label: "PYQ Vault", query: "PYQ", isHot: false },
   { label: "Mathematics", query: "Math", isHot: false },
   { label: "Mistakes Book", query: "Mistakes", isHot: false },
@@ -370,7 +370,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
     { id: "all", label: "All", icon: Sparkles },
     { id: "exam", label: "Exams", icon: Target },
     { id: "mock", label: "Mocks", icon: FileText },
-    { id: "practice", label: "Quizzes", icon: Zap },
+    { id: "practice", label: "Tests", icon: Zap },
     { id: "subject", label: "Subjects", icon: BookOpen },
   ];
 
@@ -652,7 +652,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
                     </div>
                     <h4 className="text-xs font-bold text-slate-700">No results found for "{query}"</h4>
                     <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                      Try searching for keywords like "police", "tet", "math", "quiz", or "panchayat".
+                      Try searching for keywords like "police", "tet", "math", "test", or "panchayat".
                     </p>
                   </div>
                 )}
@@ -864,7 +864,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
                     </div>
                     <h4 className="text-sm font-bold text-slate-800">No results found for "{query}"</h4>
                     <p className="text-xs text-slate-500">
-                      Try searching for keywords like "police", "tet", "math", or "quiz".
+                      Try searching for keywords like "police", "tet", "math", or "test".
                     </p>
                   </div>
                 )}

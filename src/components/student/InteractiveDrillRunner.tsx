@@ -178,7 +178,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-black uppercase tracking-wider">
-                {config.mode === "instant_feedback" ? "Instant Feedback" : "Timed Quiz"}
+                {config.mode === "instant_feedback" ? "Instant Feedback" : "Timed Test"}
               </span>
               {config.negativeMarks > 0 ? (
                 <span className="text-[10px] font-bold text-rose-400">

@@ -232,8 +232,8 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
   if (weakestSubject) {
     recommendedActions.push({
       id: "act-weak-subject",
-      title: `Practice ${weakestSubject.subject} Focus Quiz`,
-      bengaliTitle: `${weakestSubject.bengaliName} ফোকাস কুইজ`,
+      title: `Practice ${weakestSubject.subject} Focus Test`,
+      bengaliTitle: `${weakestSubject.bengaliName} ফোকাস টেস্ট`,
       subtitle: `Accuracy is currently ${weakestSubject.scorePercent}%. Practice 10 targeted MCQs to boost this subject.`,
       actionUrl: `/student/practice/subject?subject=${encodeURIComponent(weakestSubject.subject)}`,
       impactLabel: "+4% Readiness",

@@ -119,7 +119,7 @@ const Footer = () => {
                                 </div>
                             </div>
                             <p className="text-sm text-slate-400 mb-6 leading-relaxed text-left">
-                                Get exclusive access to free study notes and daily quizzes.
+                                Get exclusive access to free study notes and daily tests.
                             </p>
                             <a
                                 href="https://t.me/parikshanotespdf"

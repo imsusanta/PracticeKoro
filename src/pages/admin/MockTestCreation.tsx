@@ -1055,7 +1055,7 @@ const MockTestCreation = () => {
             >
               <option value="full_mock">Full Mock Test</option>
               <option value="pyq">Previous Year Question Paper (PYQ)</option>
-              <option value="topic_wise">Topic-wise Test / Quiz</option>
+              <option value="topic_wise">Topic-wise Test</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -1406,7 +1406,7 @@ const MockTestCreation = () => {
                               </Badge>
                             ) : test.test_type === "topic_wise" ? (
                               <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
-                                Topic Quiz
+                                Topic Test
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">

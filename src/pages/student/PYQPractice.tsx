@@ -167,7 +167,7 @@ export const PYQPractice = () => {
 
     setActiveDrillConfig({
       title: `${examTitle} ${yearSub}`,
-      subtitle: `${count} Questions • ${mode === "instant_feedback" ? "Instant Solutions" : "Timed Quiz"}`,
+      subtitle: `${count} Questions • ${mode === "instant_feedback" ? "Instant Solutions" : "Timed Test"}`,
       examId: selectedExamId,
       examName: examTitle,
       subject: selectedSubject !== "all" ? selectedSubject : undefined,
@@ -199,7 +199,7 @@ export const PYQPractice = () => {
                   PYQ Vault
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with topic quizzes</p>
+              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with topic tests</p>
             </div>
           </div>
         </div>
@@ -237,7 +237,7 @@ export const PYQPractice = () => {
                   className="bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold text-xs rounded-xl gap-1.5 h-9 backdrop-blur-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-white" />
-                  <span>20 MCQ Timed Quiz</span>
+                  <span>20 MCQ Timed Test</span>
                 </Button>
               </div>
             </div>
