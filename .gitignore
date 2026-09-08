@@ -31,6 +31,16 @@ android/local.properties
 *.apk
 *.aab
 
-# Local projects
-practicekoro_student/
-
+# Flutter student mobile app build artifacts
+practicekoro_student/.dart_tool/
+practicekoro_student/.flutter-plugins-dependencies
+practicekoro_student/.pub-cache/
+practicekoro_student/.pub/
+practicekoro_student/build/
+practicekoro_student/android/.gradle/
+practicekoro_student/android/local.properties
+practicekoro_student/ios/Flutter/Generated.xcconfig
+practicekoro_student/ios/Flutter/flutter_export_environment.sh
+practicekoro_student/macos/Flutter/ephemeral/
+practicekoro_student/windows/flutter/ephemeral/
+practicekoro_student/linux/flutter/ephemeral/
