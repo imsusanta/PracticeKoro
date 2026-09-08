@@ -336,7 +336,7 @@ const StudentProfile = () => {
       console.error("Logout error:", error);
     }
     localStorage.clear();
-    navigate("/");
+    navigate("/login");
   };
 
   const handleUpdateProfile = async () => {

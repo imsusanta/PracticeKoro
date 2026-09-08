@@ -10,15 +10,15 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     const [isExiting, setIsExiting] = useState(false);
 
     useEffect(() => {
-        // Start exit animation after 500ms (reduced for faster loading)
+        // Show splash screen for 1.8s then smoothly exit
         const exitTimer = setTimeout(() => {
             setIsExiting(true);
-        }, 500);
+        }, 1800);
 
-        // Complete and unmount after exit animation (reduced for faster loading)
+        // Complete and unmount after exit animation
         const completeTimer = setTimeout(() => {
             onComplete();
-        }, 800);
+        }, 2200);
 
         return () => {
             clearTimeout(exitTimer);
@@ -93,9 +93,9 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5, duration: 0.5 }}
-                                className="text-slate-500 text-xs sm:text-sm font-semibold mt-1.5"
+                                className="text-slate-600 text-xs sm:text-sm font-semibold mt-1.5 tracking-wide"
                             >
-                                Your Exam Preparation Partner
+                                for Govt Jobs Preparation App
                             </motion.p>
                         </motion.div>
 

@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { toast } from "sonner";
 import { getVisibleExamIds, getVisibleTestIds } from "@/config/landingVisibility"; // Kept for potential admin toggle feature
+import { Capacitor } from "@capacitor/core";
 
 
 interface Exam {
@@ -58,16 +59,26 @@ const demoTests: MockTest[] = [
   { id: "demo-t6", title: "Quantitative Aptitude Mock", description: "Mathematics practice test", test_type: "topic_wise", duration_minutes: 45, total_marks: 75, exams: { name: "Banking" } },
 ];
 
+const isMobileDevice = () => {
+  if (typeof window === "undefined") return false;
+  if (Capacitor.isNativePlatform()) return true;
+  if (window.innerWidth < 768) return true;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+};
+
 const Landing = () => {
   const navigate = useNavigate();
+  const isMobile = isMobileDevice();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userProfile, setUserProfile] = useState<{ first_name?: string; last_name?: string; full_name?: string; avatar_url?: string } | null>(null);
   const [userRole, setUserRole] = useState<"student" | "admin" | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [splashFinished, setSplashFinished] = useState(false);
   const [exams, setExams] = useState<Exam[]>([]);
   const [featuredTests, setFeaturedTests] = useState<MockTest[]>([]);
   const [filterType, setFilterType] = useState<"all" | "full_mock" | "topic_wise">("all");
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
 
   const handleRefresh = async () => {
     try {
@@ -86,9 +97,41 @@ const Landing = () => {
   });
 
   useEffect(() => {
-    // Run all initial loads in parallel for faster loading
-    Promise.all([checkAuth(), loadExams(), loadFeaturedTests()]);
-  }, []);
+    if (isMobile) {
+      // Check if splash was already shown in this session
+      const alreadyShown = sessionStorage.getItem("pk_splash_shown") === "true";
+      if (alreadyShown) {
+        setSplashFinished(true);
+      }
+      checkAuth();
+    } else {
+      // On desktop, load everything
+      Promise.all([checkAuth(), loadExams(), loadFeaturedTests()]);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile && splashFinished && authChecked) {
+      if (isLoggedIn) {
+        navigate(userRole === "admin" ? "/admin/dashboard" : "/student/dashboard", { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
+    }
+  }, [isMobile, splashFinished, authChecked, isLoggedIn, userRole, navigate]);
+
+  useEffect(() => {
+    if (isMobile && splashFinished) {
+      // Safety timeout: if auth takes longer than 3 seconds, navigate to login
+      const timer = setTimeout(() => {
+        if (!authChecked) {
+          navigate("/login", { replace: true });
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile, splashFinished, authChecked, navigate]);
+
   const checkAuth = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -109,6 +152,7 @@ const Landing = () => {
       console.error("Auth check error:", error);
     } finally {
       setLoading(false);
+      setAuthChecked(true);
     }
   };
   const loadExams = async () => {
@@ -185,9 +229,20 @@ const Landing = () => {
   };
   const filteredTests = filterType === "all" ? featuredTests : featuredTests.filter(test => test.test_type === filterType);
 
+  if (isMobile) {
+    return (
+      <SplashScreen
+        onComplete={() => {
+          sessionStorage.setItem("pk_splash_shown", "true");
+          setSplashFinished(true);
+        }}
+      />
+    );
+  }
+
   return (
     <>
-      {/* Splash Screen */}
+      {/* Splash Screen for desktop if enabled */}
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
 
       {/* Main Content */}

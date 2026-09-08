@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,21 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [touched, setTouched] = useState({ email: false, password: false, phone: false });
+
+  useEffect(() => {
+    const checkCurrentSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const isAdmin = await checkIsAdmin(session.user.id);
+        if (isAdmin) {
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          navigate("/student/dashboard", { replace: true });
+        }
+      }
+    };
+    checkCurrentSession();
+  }, [navigate]);
 
   const [emailFormData, setEmailFormData] = useState({
     email: "",
