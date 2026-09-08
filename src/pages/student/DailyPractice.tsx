@@ -17,7 +17,6 @@ import {
   RotateCcw,
   BookOpen,
   Crown,
-  Bell,
   ChevronRight,
   CheckCircle,
   HelpCircle
@@ -417,16 +416,6 @@ export const DailyPractice = () => {
               </div>
               <p className="text-[11px] text-slate-500 font-medium">10 Questions • 5 Mins Speed Challenge</p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/student/notifications")}
-              className="relative w-9 h-9 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-            </button>
           </div>
         </div>
 

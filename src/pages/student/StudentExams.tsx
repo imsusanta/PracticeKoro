@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Bell,
   Crown,
   Play,
   Lock,
@@ -263,7 +262,7 @@ const StudentExams = () => {
             </div>
           </div>
 
-          {/* Right Header Actions: Pro Plan + Notification */}
+          {/* Right Header Actions: Mobile Search */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowSearchBar(prev => !prev)}
@@ -271,15 +270,6 @@ const StudentExams = () => {
               aria-label="Search tests"
             >
               <Search className="w-5 h-5 stroke-[2.2]" />
-            </button>
-
-            <button
-              onClick={() => navigate("/student/notifications")}
-              className="relative p-2 text-slate-700 hover:text-blue-600 rounded-full hover:bg-slate-100 transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5 stroke-[2.2]" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
             </button>
           </div>
         </header>
@@ -324,13 +314,48 @@ const StudentExams = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 border border-slate-200/60 bg-[#0A2655] select-none"
+          className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] select-none px-4 py-3.5 sm:p-7 md:p-8"
         >
-          <img
-            src="/images/exam_hero_banner.png"
-            alt="Exam Preparation - Master Every Exam With Precision"
-            className="w-full h-auto object-cover block"
-          />
+          {/* Background decorations */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
+          <div className="absolute bottom-0 left-1/4 w-56 h-56 bg-amber-500/10 rounded-full blur-2xl pointer-events-none -mb-20" />
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+
+          <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-6">
+            {/* Left: Text content */}
+            <div className="space-y-1 sm:space-y-2 min-w-0">
+              <span className="inline-block text-[8px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24]">
+                Exam Preparation
+              </span>
+              <h2 className="text-base sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+                Master Every Exam{" "}
+                <span className="text-[#FBBF24]">With Precision</span>
+              </h2>
+              <p className="text-[10px] sm:text-xs text-blue-100/70 font-medium leading-snug max-w-sm hidden sm:block">
+                Full-length simulated mocks and topic-wise practice designed strictly on West Bengal PSC & SSC exam patterns.
+              </p>
+            </div>
+
+            {/* Right: Stats */}
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 text-center min-w-[56px] sm:min-w-[72px]">
+                <p className="text-sm sm:text-xl font-black text-white leading-none">
+                  {String(completedTests).padStart(2, '0')}
+                </p>
+                <p className="text-[7px] sm:text-[9px] font-bold uppercase tracking-wider text-blue-200/80 mt-0.5 sm:mt-1">
+                  Completed
+                </p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 text-center min-w-[56px] sm:min-w-[72px]">
+                <p className="text-sm sm:text-xl font-black text-emerald-400 leading-none">
+                  {avgScore}%
+                </p>
+                <p className="text-[7px] sm:text-[9px] font-bold uppercase tracking-wider text-blue-200/80 mt-0.5 sm:mt-1">
+                  Avg Accuracy
+                </p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -397,7 +422,7 @@ const StudentExams = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {(exams.length > 0 ? exams : [
               { id: "b6edc506-cceb-45cb-b91d-7d2444ffc85f", name: "WBSSC Group D" },
               { id: "22497a19-9a35-4bf0-ba7b-5a44bdd0d5aa", name: "WBSSC Group C" },
@@ -411,7 +436,10 @@ const StudentExams = () => {
                 return true;
               })
               .map((item, idx) => {
-                const fullMockCount = mockTests.filter(t => t.exam_id === item.id && t.test_type === "full_mock").length;
+                const examMocks = mockTests.filter(t => t.exam_id === item.id && t.test_type === "full_mock");
+                const fullMockCount = examMocks.length;
+                const freeMockCount = examMocks.filter(t => !t.is_paid).length;
+                const paidMockCount = examMocks.filter(t => t.is_paid).length;
                 const pyqs = getPyqsForExam(item.id, item.name);
                 const pyqCount = pyqs.length;
                 const colorSchemes = [
@@ -434,31 +462,47 @@ const StudentExams = () => {
                       const el = document.getElementById("mock-test-series-section");
                       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
-                    className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer flex items-center justify-between gap-3 group shadow-xs hover:shadow-md ${
+                    className={`bg-white rounded-2xl p-3.5 sm:p-4 border transition-all cursor-pointer group shadow-xs hover:shadow-md ${
                       selectedExam === item.id
                         ? "border-blue-500 ring-2 ring-blue-500/20 shadow-blue-500/10"
                         : "border-slate-200/90 hover:border-blue-400"
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border border-slate-100 ${scheme.bg}`}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${scheme.bg}`}>
                         {scheme.icon}
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="font-black text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                          {item.name}
-                        </h4>
-                        <p className="text-[11px] font-semibold text-slate-500">
-                          {item.name.toLowerCase().includes("railway") ? "Central Government" : "West Bengal"}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                          {fullMockCount} Full Mocks • {pyqCount} PYQs
-                        </p>
+                      <div className="w-7 h-7 rounded-full bg-slate-50 group-hover:bg-blue-50 group-hover:text-blue-600 flex items-center justify-center text-slate-400 transition-colors shrink-0">
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </div>
                     </div>
-
-                    <div className="w-8 h-8 rounded-full bg-slate-50 group-hover:bg-blue-50 group-hover:text-blue-600 flex items-center justify-center text-slate-400 transition-colors shrink-0">
-                      <ArrowRight className="w-4 h-4" />
+                    <div className="min-w-0">
+                      <h4 className="font-black text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                        {item.name}
+                      </h4>
+                      <p className="text-[11px] font-semibold text-blue-600/70">
+                        {item.name.toLowerCase().includes("railway") ? "Central Government" : "West Bengal"}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {freeMockCount > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {freeMockCount} Free
+                          </span>
+                        )}
+                        {paidMockCount > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+                            {paidMockCount} Pro
+                          </span>
+                        )}
+                        {fullMockCount === 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 border border-slate-200">
+                            {fullMockCount} Mocks
+                          </span>
+                        )}
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                          {pyqCount} PYQs
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
                 );

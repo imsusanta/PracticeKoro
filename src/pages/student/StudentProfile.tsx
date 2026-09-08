@@ -12,11 +12,9 @@ import {
   BookOpen,
   LogOut,
   MessageSquare,
-  Pencil,
   CheckCircle,
   Clock,
   Camera,
-  Bell,
   Sparkles,
   Mail,
   Crown,
@@ -24,7 +22,6 @@ import {
   ShieldCheck,
   Award,
   Settings,
-  CreditCard,
   HelpCircle,
   Receipt,
   BarChart2,
@@ -35,7 +32,13 @@ import {
   Check,
   ExternalLink,
   Target,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  Lock,
+  Copy,
+  Calendar,
+  Zap,
+  CheckCheck
 } from "lucide-react";
 import StudentLayout from "@/components/student/StudentLayout";
 import PullToRefresh from "@/components/student/PullToRefresh";
@@ -85,7 +88,7 @@ const faqs = [
   },
   {
     q: "What should I do if money was deducted but subscription is not unlocked?",
-    a: "Payments are verified automatically. If network issues occur, wait 2 minutes and refresh this page. You can also click 'Open Support Chat' or message us on WhatsApp with your payment ID."
+    a: "Payments are verified automatically via Razorpay webhook. If network issues occur, wait 2 minutes and refresh this page. You can also click 'Open Support Chat' or message us on WhatsApp with your payment ID."
   },
   {
     q: "Are the questions based on the latest exam syllabus?",
@@ -120,11 +123,10 @@ const StudentProfile = () => {
   const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  // Active navigation tab inside Profile
+  // Active navigation tab inside Settings
   const [activeTab, setActiveTab] = useState<"personal" | "membership" | "billing" | "security" | "performance" | "support">("personal");
 
   // Password change state
@@ -133,9 +135,17 @@ const StudentProfile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [sendingResetEmail, setSendingResetEmail] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Expanded FAQ state
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    toast({ title: "Copied!", description: `${label} copied to clipboard.` });
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,36 +172,25 @@ const StudentProfile = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      const avatarUrlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
 
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: avatarUrlWithCacheBust })
+        .update({ avatar_url: publicUrl })
         .eq("id", profile.id);
 
       if (updateError) throw updateError;
 
-      setProfile({ ...profile, avatar_url: avatarUrlWithCacheBust });
-      toast({ title: "Photo Updated!", description: "Profile photo saved successfully." });
+      setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
+      toast({ title: "Photo Updated! 📸", description: "Your profile picture has been updated." });
     } catch (error: any) {
-      console.error("Avatar upload error:", error);
-      toast({ title: "Upload Failed", description: error.message || "Failed to update photo.", variant: "destructive" });
+      toast({ title: "Upload Failed", description: error.message || "Failed to upload image.", variant: "destructive" });
     } finally {
       setUploadingImage(false);
     }
   };
-
-  const loadNotificationsCount = useCallback(async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from("notifications")
-        .select("is_read")
-        .eq("user_id", userId)
-        .eq("is_read", false);
-      if (data) setUnreadNotificationCount(data.length);
-    } catch (_) {}
-  }, []);
 
   const loadChatCount = useCallback(async (studentId: string) => {
     try {
@@ -203,12 +202,15 @@ const StudentProfile = () => {
   const loadPurchases = useCallback(async (userId: string) => {
     setLoadingPurchases(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("purchases" as any)
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
-      if (data) setPurchases(data as any[]);
+
+      if (!error && data) {
+        setPurchases(data as any[]);
+      }
     } catch (_) {}
     setLoadingPurchases(false);
   }, []);
@@ -216,7 +218,7 @@ const StudentProfile = () => {
   const loadStatistics = useCallback(async (userId: string) => {
     const { data: attempts } = await supabase
       .from("test_attempts")
-      .select("passed")
+      .select("id, passed, percentage, score")
       .eq("user_id", userId);
 
     if (attempts && attempts.length > 0) {
@@ -292,12 +294,11 @@ const StudentProfile = () => {
     await Promise.all([
       loadStatistics(session.user.id),
       loadPurchases(session.user.id),
-      loadNotificationsCount(session.user.id),
       loadChatCount(session.user.id)
     ]);
 
     setLoading(false);
-  }, [navigate, loadStatistics, loadPurchases, loadNotificationsCount, loadChatCount]);
+  }, [navigate, loadStatistics, loadPurchases, loadChatCount]);
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -349,13 +350,19 @@ const StudentProfile = () => {
     const { error } = await supabase.from("profiles").update({
       full_name: formData.full_name,
       whatsapp_number: formData.whatsapp_number,
+      target_exam: formData.target_exam,
     }).eq("id", profile.id);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Saved! ✅", description: "Profile information updated successfully." });
-      setProfile({ ...profile, full_name: formData.full_name, whatsapp_number: formData.whatsapp_number });
+      setProfile({
+        ...profile,
+        full_name: formData.full_name,
+        whatsapp_number: formData.whatsapp_number,
+        target_exam: formData.target_exam
+      });
     }
     setSaving(false);
   };
@@ -412,7 +419,6 @@ const StudentProfile = () => {
     }
   };
 
-  const firstName = profile?.full_name?.trim()?.split(" ")[0] || "Student";
   const userInitials = profile?.full_name
     ? profile.full_name
         .split(" ")
@@ -422,207 +428,237 @@ const StudentProfile = () => {
         .slice(0, 2)
     : "PK";
 
+  const tabsConfig = [
+    { id: "personal", label: "Profile Info", icon: User },
+    { id: "membership", label: "VIP Plan", icon: Crown, badge: subscription ? "ACTIVE" : "PRO" },
+    { id: "billing", label: "Orders & Receipts", icon: Receipt },
+    { id: "security", label: "Security & Login", icon: KeyRound },
+    { id: "performance", label: "Analytics", icon: BarChart2 },
+    { id: "support", label: "Help & Support", icon: HelpCircle, unread: chatUnreadCount > 0 },
+  ] as const;
+
   return (
-    <StudentLayout title="Student Profile" subtitle="Account Settings & Membership" hideNavbar={chatOpen}>
+    <StudentLayout title="Student Settings" subtitle="Account, VIP Membership & Preferences" hideNavbar={chatOpen}>
       <PullToRefresh onRefresh={checkAuthAndLoadData}>
-        <div className="w-full max-w-5xl mx-auto px-2.5 sm:px-4 py-2 sm:py-4 pb-28 space-y-4 sm:space-y-6">
-          {/* Top Brand Header */}
-          <div className="flex items-center justify-between gap-3 pb-1">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
-                <User className="w-5 h-5 text-white" />
+        <div className="w-full max-w-5xl mx-auto px-3 sm:px-5 py-2 sm:py-4 pb-28 space-y-4 sm:space-y-6">
+
+          {/* ═══════════════════════════════════════════════════════════
+              TOP HEADER BAR (Brand + Pro Plan Button — Notification icon excluded)
+              ═══════════════════════════════════════════════════════════ */}
+          <div className="flex items-center justify-between gap-2.5 pb-1">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-md shadow-blue-600/20 shrink-0">
+                <Settings className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white stroke-[2.2]" />
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  My Profile
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <h1 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight whitespace-nowrap">
+                    Account Settings
+                  </h1>
                   {subscription ? (
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+                    <span className="text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                       ★ VIP Member
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Active Student
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Active
                     </span>
                   )}
-                </h1>
-                <p className="text-xs text-slate-500 font-medium">Manage your learning account and study preferences</p>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">
+                  Manage your learning account, VIP pass & preferences
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => navigate("/student/notifications")}
-                className="relative w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs hover:border-slate-300 transition-all"
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadNotificationCount > 0 && (
-                  <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-                )}
-              </button>
-            </div>
+            {/* Right: Pro Plan pill button (Exclusively shown on Home & Settings) */}
+            <button
+              onClick={handleProPlanUpgrade}
+              className={`h-8 sm:h-9 px-2.5 sm:px-4 rounded-full flex items-center gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border shrink-0 ${
+                subscription
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                  : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-200/80"
+              }`}
+              title={subscription ? "VIP Membership Active" : "Upgrade to VIP"}
+            >
+              <Crown className={`w-3.5 h-3.5 shrink-0 ${subscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
+              <span className="text-[11px] sm:text-xs font-bold whitespace-nowrap">
+                {subscription ? "VIP Active" : "Upgrade to Pro"}
+              </span>
+            </button>
           </div>
 
           {loading ? (
             <div className="py-8 space-y-4 animate-pulse">
-              <div className="h-64 rounded-3xl bg-slate-200/70" />
-              <div className="h-14 rounded-2xl bg-slate-200/70" />
+              <div className="h-52 rounded-3xl bg-slate-200/70" />
+              <div className="h-12 rounded-2xl bg-slate-200/70" />
               <div className="h-80 rounded-3xl bg-slate-200/70" />
             </div>
           ) : (
             <>
               {/* ═══════════════════════════════════════════════════════════
-                  HERO PROFILE SHOWCASE CARD
+                  ULTRA-PREMIUM HERO PROFILE SHOWCASE CARD
                   ═══════════════════════════════════════════════════════════ */}
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-3xl p-5 sm:p-7 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-indigo-900/40"
+                className="relative overflow-hidden rounded-3xl p-5 sm:p-7 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl select-none"
               >
-                {/* Glow Orbs & Patterns */}
-                <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none -mr-24 -mt-24" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-500/20 rounded-full blur-3xl pointer-events-none -ml-24 -mb-24" />
-                <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+                {/* Glow Orbs & Subtle Radial Dot Grid */}
+                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+                <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-amber-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-                <div className="relative z-10 space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-                    {/* Interactive Avatar with Upload */}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                    />
-                    <div className="relative shrink-0 self-start sm:self-center">
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingImage}
-                        className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/20 overflow-hidden group shadow-lg transition-transform hover:scale-105"
-                        title="Click to update photo"
-                      >
-                        {profile?.avatar_url ? (
-                          <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-3xl sm:text-4xl font-black text-white">{userInitials}</span>
-                        )}
-                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          {uploadingImage ? (
-                            <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                <div className="relative z-10 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      {/* Avatar with Camera Uploader */}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                      <div className="relative shrink-0">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/25 overflow-hidden group shadow-lg transition-transform hover:scale-105"
+                          title="Click to update photo"
+                        >
+                          {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                           ) : (
-                            <>
-                              <Camera className="w-5 h-5 text-white" />
-                              <span className="text-[10px] font-bold text-white mt-1">Change</span>
-                            </>
+                            <span className="text-2xl sm:text-3xl font-black text-white">{userInitials}</span>
+                          )}
+                          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            {uploadingImage ? (
+                              <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                            ) : (
+                              <>
+                                <Camera className="w-4 h-4 text-white" />
+                                <span className="text-[9px] font-bold text-white mt-0.5">Change</span>
+                              </>
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 border-2 border-[#0A2655] flex items-center justify-center text-white shadow-xs hover:bg-blue-500 transition-colors"
+                          title="Upload photo"
+                        >
+                          <Camera className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* Profile Name & Metadata */}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          {approvalStatus === "approved" ? (
+                            <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-400/30">
+                              <CheckCircle className="w-3 h-3" />
+                              Verified Student
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-400/30">
+                              <Clock className="w-3 h-3" />
+                              Approval Pending
+                            </span>
+                          )}
+
+                          {subscription ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-950 px-2.5 py-0.5 rounded-full shadow-xs"
+                              style={{ background: "linear-gradient(135deg, #D4A017 0%, #FBBF24 50%, #D4A017 100%)" }}
+                            >
+                              <Crown className="w-3 h-3 fill-amber-950" />
+                              VIP PASS
+                            </span>
+                          ) : (
+                            <button
+                              onClick={handleProPlanUpgrade}
+                              className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-300 hover:text-amber-200 transition-colors underline"
+                            >
+                              <Sparkles className="w-3 h-3 text-amber-400" />
+                              Upgrade to VIP
+                            </button>
                           )}
                         </div>
-                      </button>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-indigo-600 border-2 border-slate-900 flex items-center justify-center text-white shadow-sm hover:bg-indigo-500"
-                        title="Upload photo"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        {approvalStatus === "approved" ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-400/30">
-                            <CheckCircle className="w-3 h-3" />
-                            Verified Student
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-400/30">
-                            <Clock className="w-3 h-3" />
-                            Approval Pending
-                          </span>
-                        )}
+                        <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
+                          {profile?.full_name || "Aspirant"}
+                        </h2>
 
-                        {subscription ? (
-                          <span
-                            className="inline-flex items-center gap-1 text-[11px] font-black text-amber-950 px-3 py-0.5 rounded-full shadow-md shadow-amber-500/20"
-                            style={{ background: "linear-gradient(135deg, #D4A017 0%, #FBBF24 50%, #D4A017 100%)" }}
-                          >
-                            <Crown className="w-3.5 h-3.5 fill-amber-950" />
-                            VIP PASS
-                          </span>
-                        ) : (
-                          <button
-                            onClick={handleProPlanUpgrade}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 hover:text-amber-200 transition-colors underline"
-                          >
-                            <Sparkles className="w-3 h-3 text-amber-400" />
-                            Upgrade to VIP
-                          </button>
-                        )}
-                      </div>
-
-                      <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate">
-                        {profile?.full_name || "Aspirant"}
-                      </h2>
-
-                      <div className="flex items-center gap-4 text-xs text-slate-300 mt-1 flex-wrap font-medium">
-                        <span className="flex items-center gap-1.5">
-                          {userEmail?.includes("@whatsapp.practicekoro.local") ? (
-                            <>
-                              <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                              +91 {userEmail.split("@")[0]}
-                            </>
-                          ) : (
-                            <>
-                              <Mail className="w-3.5 h-3.5 text-blue-400" />
-                              {userEmail || "No login email"}
-                            </>
+                        <div className="flex items-center gap-3 text-xs text-blue-100/80 mt-1 flex-wrap font-medium">
+                          {profile?.target_exam && (
+                            <span className="inline-flex items-center gap-1 text-blue-200 text-[11px] bg-white/10 px-2 py-0.5 rounded-md">
+                              <Target className="w-3 h-3 text-[#FBBF24]" />
+                              {profile.target_exam}
+                            </span>
                           )}
-                        </span>
-                        {profile?.whatsapp_number && (
-                          <span className="flex items-center gap-1 text-emerald-300">
-                            <Phone className="w-3 h-3" />
-                            +91 {profile.whatsapp_number}
+                          <span className="flex items-center gap-1 text-[11px]">
+                            {userEmail?.includes("@whatsapp.practicekoro.local") ? (
+                              <>
+                                <Phone className="w-3 h-3 text-emerald-400" />
+                                +91 {userEmail.split("@")[0]}
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="w-3 h-3 text-blue-300" />
+                                {userEmail || "No login email"}
+                              </>
+                            )}
                           </span>
-                        )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Quick Profile Edit Shortcut Button */}
+                    <button
+                      onClick={() => setActiveTab("personal")}
+                      className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>Edit Info</span>
+                    </button>
                   </div>
 
-                  {/* 4 KPI Metric Badges */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
-                      <p className="text-2xl sm:text-3xl font-black text-white leading-none">
-                        {statistics.totalTests}
+                  {/* 4 Glassmorphism Stat Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-3.5 text-center border border-white/15">
+                      <p className="text-xl sm:text-2xl font-black text-white leading-none">
+                        {String(statistics.totalTests).padStart(2, "0")}
                       </p>
-                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1.5">
-                        Tests Taken
+                      <p className="text-blue-200/80 text-[10px] font-bold uppercase tracking-wider mt-1.5">
+                        Tests Completed
                       </p>
                     </div>
 
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
-                      <p className="text-2xl sm:text-3xl font-black text-emerald-400 leading-none">
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-3.5 text-center border border-white/15">
+                      <p className="text-xl sm:text-2xl font-black text-emerald-400 leading-none">
                         {statistics.passRate}%
                       </p>
-                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1.5">
+                      <p className="text-blue-200/80 text-[10px] font-bold uppercase tracking-wider mt-1.5">
                         Pass Rate
                       </p>
                     </div>
 
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
-                      <p className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-none">
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-3.5 text-center border border-white/15">
+                      <p className="text-xl sm:text-2xl font-black text-[#FBBF24] leading-none">
                         {accountDays <= 0 ? 1 : accountDays}
                       </p>
-                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1.5">
+                      <p className="text-blue-200/80 text-[10px] font-bold uppercase tracking-wider mt-1.5">
                         Days on App
                       </p>
                     </div>
 
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
-                      <p className="text-base sm:text-lg font-black text-white leading-none mt-1">
-                        {subscription ? "Active" : "Free"}
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-3.5 text-center border border-white/15">
+                      <p className="text-sm sm:text-base font-black text-white leading-none mt-1">
+                        {subscription ? "VIP Member" : "Free Plan"}
                       </p>
-                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-2.5">
-                        {subscription ? "VIP Member" : "Standard"}
+                      <p className="text-blue-200/80 text-[10px] font-bold uppercase tracking-wider mt-2">
+                        {subscription ? "365-Day Access" : "Standard Tier"}
                       </p>
                     </div>
                   </div>
@@ -630,57 +666,64 @@ const StudentProfile = () => {
               </motion.div>
 
               {/* ═══════════════════════════════════════════════════════════
-                  SEGMENTED MODERN TAB BAR
+                  SEGMENTED PREMIUM TAB BAR
                   ═══════════════════════════════════════════════════════════ */}
-              <div className="flex gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
-                {[
-                  { id: "personal", label: "Profile Info", icon: User },
-                  { id: "membership", label: "VIP Plan", icon: Crown },
-                  { id: "billing", label: "Orders & Receipts", icon: Receipt },
-                  { id: "security", label: "Security", icon: KeyRound },
-                  { id: "performance", label: "Analytics", icon: BarChart2 },
-                  { id: "support", label: "Help & FAQs", icon: HelpCircle },
-                ].map((tab) => {
+              <div className="bg-slate-100/90 p-1.5 rounded-2xl flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden border border-slate-200/80">
+                {tabsConfig.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      className={`flex-1 min-w-fit px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap transition-all duration-150 ${
                         isActive
-                          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          ? "bg-white text-blue-600 shadow-xs border border-slate-200/90 font-black"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-blue-600 stroke-[2.4]" : "text-slate-500"}`} />
                       <span>{tab.label}</span>
+                      {"badge" in tab && tab.badge && (
+                        <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-md ${
+                          subscription
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-900"
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                      {"unread" in tab && tab.unread && (
+                        <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
+                      )}
                     </button>
                   );
                 })}
               </div>
 
               {/* ═══════════════════════════════════════════════════════════
-                  TAB CONTENT AREA
+                  TAB CONTENT PANELS
                   ═══════════════════════════════════════════════════════════ */}
               <AnimatePresence mode="wait">
-                {/* ─── TAB 1: PERSONAL INFO ─── */}
+
+                {/* ─── TAB 1: PERSONAL INFORMATION ─── */}
                 {activeTab === "personal" && (
                   <motion.div
                     key="personal"
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, y: -6 }}
                     className="grid grid-cols-1 md:grid-cols-12 gap-4"
                   >
-                    <div className="md:col-span-8 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5">
+                    {/* Primary Editable Form Card */}
+                    <div className="md:col-span-8 bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-xs space-y-5">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                         <div>
-                          <h3 className="text-base font-bold text-slate-900">Personal Information</h3>
-                          <p className="text-xs text-slate-500">Update your name and primary contact number</p>
+                          <h3 className="text-base font-black text-slate-900">Personal Information</h3>
+                          <p className="text-xs text-slate-500 mt-0.5">Update your display name, WhatsApp number and target exam</p>
                         </div>
-                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                          Editable
+                        <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 whitespace-nowrap shrink-0">
+                          Live Sync
                         </span>
                       </div>
 
@@ -695,7 +738,7 @@ const StudentProfile = () => {
                               value={formData.full_name}
                               onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                               placeholder="e.g. Rahul Sharma"
-                              className="pl-10 h-11 rounded-xl border-slate-200 text-sm font-medium"
+                              className="pl-10 h-11 rounded-xl border-slate-200 text-sm font-medium focus-visible:ring-blue-500"
                             />
                           </div>
                         </div>
@@ -705,7 +748,9 @@ const StudentProfile = () => {
                             WhatsApp Mobile Number
                           </label>
                           <div className="relative">
-                            <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                              +91
+                            </span>
                             <Input
                               value={formData.whatsapp_number}
                               onChange={(e) =>
@@ -713,27 +758,33 @@ const StudentProfile = () => {
                               }
                               placeholder="10-digit mobile number"
                               maxLength={10}
-                              className="pl-10 h-11 rounded-xl border-slate-200 text-sm font-medium"
+                              className="pl-12 h-11 rounded-xl border-slate-200 text-sm font-medium focus-visible:ring-blue-500"
                             />
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-1">Used for score updates and mentor support</p>
+                          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-emerald-500" />
+                            Used for score updates, test notifications & mentor support
+                          </p>
                         </div>
 
                         <div>
                           <label className="text-xs font-bold text-slate-700 block mb-1.5">
                             Target Competitive Exam
                           </label>
-                          <select
-                            value={formData.target_exam}
-                            onChange={(e) => setFormData({ ...formData, target_exam: e.target.value })}
-                            className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                          >
-                            {targetExamsList.map((exam) => (
-                              <option key={exam} value={exam}>
-                                {exam}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <Target className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <select
+                              value={formData.target_exam}
+                              onChange={(e) => setFormData({ ...formData, target_exam: e.target.value })}
+                              className="w-full pl-10 pr-4 h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            >
+                              {targetExamsList.map((exam) => (
+                                <option key={exam} value={exam}>
+                                  {exam}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       </div>
 
@@ -741,36 +792,58 @@ const StudentProfile = () => {
                         <Button
                           onClick={handleUpdateProfile}
                           disabled={saving}
-                          className="h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20"
+                          className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
                         >
-                          {saving ? "Saving Changes..." : "Save Changes"}
+                          {saving ? "Saving Changes..." : "Save Profile Changes"}
                         </Button>
                       </div>
                     </div>
 
+                    {/* Right: Account Meta Card */}
                     <div className="md:col-span-4 space-y-4">
-                      {/* Account Meta Card */}
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Account Credentials</h4>
-                        <div className="space-y-3 text-xs">
-                          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Registered Login</span>
-                            <span className="font-bold text-slate-800 truncate block mt-0.5">
-                              {userEmail?.includes("@whatsapp.practicekoro.local")
-                                ? `+91 ${userEmail.split("@")[0]}`
-                                : userEmail || "Not specified"}
-                            </span>
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                          Account Credentials
+                        </h4>
+                        <div className="space-y-2.5 text-xs">
+                          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block">Registered Login</span>
+                              <span className="font-bold text-slate-800 truncate block mt-0.5">
+                                {userEmail?.includes("@whatsapp.practicekoro.local")
+                                  ? `+91 ${userEmail.split("@")[0]}`
+                                  : userEmail || "Not specified"}
+                              </span>
+                            </div>
+                            {userEmail && (
+                              <button
+                                onClick={() => copyToClipboard(userEmail.replace("@whatsapp.practicekoro.local", ""), "Login ID")}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white transition-colors"
+                                title="Copy"
+                              >
+                                {copiedField === "Login ID" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
                           </div>
+
                           <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
                             <span className="text-[10px] font-bold text-slate-400 uppercase block">Joined Date</span>
-                            <span className="font-bold text-slate-800 block mt-0.5">
+                            <span className="font-bold text-slate-800 block mt-0.5 flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
                               {profile?.created_at
                                 ? new Date(profile.created_at).toLocaleDateString("en-IN", {
                                     day: "2-digit",
                                     month: "short",
                                     year: "numeric"
                                   })
-                                : "N/A"}
+                                : "Active"}
+                            </span>
+                          </div>
+
+                          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Account ID</span>
+                            <span className="font-mono text-[11px] text-slate-600 truncate block mt-0.5">
+                              {profile?.id ? `${profile.id.slice(0, 18)}...` : "PK-STUDENT"}
                             </span>
                           </div>
                         </div>
@@ -779,139 +852,154 @@ const StudentProfile = () => {
                   </motion.div>
                 )}
 
-                {/* ─── TAB 2: PRO MEMBERSHIP ─── */}
+                {/* ─── TAB 2: VIP MEMBERSHIP ─── */}
                 {activeTab === "membership" && (
                   <motion.div
                     key="membership"
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, y: -6 }}
                     className="space-y-4"
                   >
                     {subscription ? (
-                      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-amber-500/30 shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+                      /* Active VIP Membership Pass Card */
+                      <div className="bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-amber-400/30">
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
                         <div className="relative z-10 space-y-6">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-3.5">
-                              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/30">
+                              <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/30">
                                 <Crown className="w-7 h-7 fill-slate-950" />
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h3 className="text-xl font-black text-white">Yearly VIP Pass Active</h3>
-                                  <span className="text-[10px] font-black text-amber-900 bg-amber-400 px-2 py-0.5 rounded-full">
-                                    ★ VIP PASS
+                                  <span className="text-[10px] font-black text-amber-950 bg-amber-400 px-2 py-0.5 rounded-full">
+                                    ★ UNLIMITED
                                   </span>
                                 </div>
-                                <p className="text-xs text-slate-300 mt-0.5">
+                                <p className="text-xs text-blue-200 mt-0.5">
                                   Valid until {subscription.expiryDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                                 </p>
                               </div>
                             </div>
-                            <div className="text-left sm:text-right">
-                              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Status</span>
-                              <span className="text-sm font-black text-emerald-400">UNLIMITED ACCESS</span>
+                            <div className="text-left sm:text-right bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/15">
+                              <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">Access Status</span>
+                              <span className="text-sm font-black text-emerald-400 flex items-center gap-1 sm:justify-end">
+                                <CheckCircle className="w-3.5 h-3.5" /> ALL TESTS UNLOCKED
+                              </span>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                             {[
-                              "Unlimited All India Mock Tests & Ranks",
-                              "Chapter-Wise Topic Tests with Instant Solutions",
-                              "High-Yield Study Notes (PDF Ready)",
+                              "Unlimited Full-Length Mock Tests & Real Percentile Ranks",
+                              "Chapter-Wise Topic Drills with Instant Solutions",
+                              "Previous Year Question (PYQ) Vault & Speed Tests",
                               "Detailed Answer Explanations in Bengali & English",
-                              "Mistakes Notebook & Revision Tracker",
+                              "Automatic Mistakes Notebook & Targeted Revision",
                               "Direct Mentor & Support Chat Priority"
                             ].map((benefit, i) => (
-                              <div key={i} className="flex items-center gap-2.5 text-xs text-slate-200">
-                                <div className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center shrink-0">
+                              <div key={i} className="flex items-center gap-2.5 text-xs text-blue-100">
+                                <div className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-400/30">
                                   <Check className="w-3 h-3" />
                                 </div>
-                                <span>{benefit}</span>
+                                <span className="font-semibold">{benefit}</span>
                               </div>
                             ))}
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm space-y-6">
+                      /* High-Converting VIP Pass Upgrade Card */
+                      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
                           <div className="flex items-center gap-3.5">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
-                              <Crown className="w-6 h-6 fill-slate-950" />
+                            <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/25 shrink-0">
+                              <Crown className="w-7 h-7 fill-slate-950" />
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-black text-slate-900">Upgrade to PracticeKoro VIP Pass</h3>
+                                <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                                  PracticeKoro Yearly VIP Pass
+                                </h3>
                                 <span className="text-[9px] font-black text-amber-900 bg-amber-200 px-2 py-0.5 rounded-full">
-                                  BEST VALUE
+                                  MOST POPULAR
                                 </span>
                               </div>
                               <p className="text-xs text-slate-500 mt-0.5">
-                                Complete preparation bundle for WB Food SI, Police, Clerkship & more
+                                Complete preparation for WB Police, Clerkship, Food SI, SSC & Railway exams
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-2xl sm:text-3xl font-black text-slate-900">₹{subscriptionFee}</span>
-                            <span className="text-xs font-bold text-slate-400">/ 1 Full Year</span>
+                          <div className="flex flex-col sm:items-end">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-3xl font-black text-slate-900 font-display">₹{subscriptionFee}</span>
+                              <span className="text-xs font-bold text-slate-400">/ 1 Full Year</span>
+                            </div>
+                            <span className="text-[11px] font-bold text-emerald-600">
+                              Only ~₹{Math.round(subscriptionFee / 12)}/month
+                            </span>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                           {[
-                            "100+ Full-Length Timed Mock Tests",
+                            "100+ Full-Length Timed Simulated Mocks",
                             "Subject-Wise Topic Practice with Explanations",
-                            "Previous Year Question (PYQ) Solved Series",
-                            "Complete PDF Notes & Current Affairs Digests",
-                            "Instant Solution Reviews with Speed Analysis",
-                            "24/7 Student WhatsApp & Mentor Support"
+                            "10 Years of Solved Previous Year Questions (PYQs)",
+                            "Complete PDF Notes & Syllabus Study Digest",
+                            "Instant Solution Reviews with Accuracy Analysis",
+                            "Priority Student Mentor & WhatsApp Support"
                           ].map((perk, idx) => (
                             <div key={idx} className="flex items-center gap-2.5 text-xs text-slate-700">
                               <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                                <Check className="w-3 h-3" />
+                                <Check className="w-3 h-3 stroke-[2.5]" />
                               </div>
                               <span className="font-semibold">{perk}</span>
                             </div>
                           ))}
                         </div>
 
-                        <div className="pt-2">
+                        <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                           <Button
                             onClick={handleProPlanUpgrade}
-                            className="w-full sm:w-auto h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-all"
                           >
                             <Crown className="w-4 h-4 fill-slate-950" />
-                            <span>Unlock VIP Membership (₹{subscriptionFee}/yr)</span>
+                            <span>Activate VIP Membership (₹{subscriptionFee}/yr)</span>
                           </Button>
+                          <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                            100% Secure Checkout via Razorpay (UPI / Cards / NetBanking)
+                          </span>
                         </div>
                       </div>
                     )}
                   </motion.div>
                 )}
 
-                {/* ─── TAB 3: BILLING & ORDERS ─── */}
+                {/* ─── TAB 3: ORDERS & RECEIPTS ─── */}
                 {activeTab === "billing" && (
                   <motion.div
                     key="billing"
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4"
+                    exit={{ opacity: 0, y: -6 }}
+                    className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-xs space-y-4"
                   >
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                       <div>
-                        <h3 className="text-base font-bold text-slate-900">Order & Payment History</h3>
-                        <p className="text-xs text-slate-500">Your past transactions and active passes</p>
+                        <h3 className="text-base font-black text-slate-900">Order & Payment History</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Your past transactions, active passes and receipts</p>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => profile?.id && loadPurchases(profile.id)}
                         disabled={loadingPurchases}
-                        className="h-8 rounded-xl text-xs gap-1.5"
+                        className="h-8 rounded-xl text-xs gap-1.5 border-slate-200 text-slate-700"
                       >
                         <RefreshCw className={`w-3 h-3 ${loadingPurchases ? "animate-spin" : ""}`} />
                         Refresh
@@ -921,24 +1009,29 @@ const StudentProfile = () => {
                     {loadingPurchases ? (
                       <div className="py-12 text-center text-xs text-slate-400">Loading purchase records...</div>
                     ) : purchases.length === 0 ? (
-                      <div className="py-12 text-center space-y-2">
-                        <Receipt className="w-8 h-8 text-slate-300 mx-auto" />
+                      <div className="py-12 text-center space-y-2.5">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                          <Receipt className="w-6 h-6" />
+                        </div>
                         <p className="text-sm font-bold text-slate-700">No purchase records yet</p>
-                        <p className="text-xs text-slate-400">Your mock test or membership receipts will appear here.</p>
+                        <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                          When you subscribe to a VIP Pass or purchase study materials, your receipts will appear here.
+                        </p>
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-100">
                         {purchases.map((p) => (
                           <div key={p.id} className="py-3.5 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                                <Receipt className="w-4 h-4" />
+                              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                                <Receipt className="w-5 h-5" />
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-slate-800 capitalize">
+                                <p className="text-sm font-bold text-slate-900 capitalize">
                                   {p.content_type === "subscription" ? "Yearly VIP Membership Pass" : `${p.content_type} Access`}
                                 </p>
-                                <p className="text-[11px] text-slate-400">
+                                <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                  <Clock className="w-3 h-3" />
                                   {new Date(p.created_at).toLocaleDateString("en-IN", {
                                     day: "2-digit",
                                     month: "short",
@@ -968,19 +1061,20 @@ const StudentProfile = () => {
                   </motion.div>
                 )}
 
-                {/* ─── TAB 4: SECURITY ─── */}
+                {/* ─── TAB 4: SECURITY & LOGIN ─── */}
                 {activeTab === "security" && (
                   <motion.div
                     key="security"
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, y: -6 }}
                     className="grid grid-cols-1 md:grid-cols-12 gap-4"
                   >
-                    <div className="md:col-span-7 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                    {/* Change Password Card */}
+                    <div className="md:col-span-7 bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-xs space-y-4">
                       <div className="border-b border-slate-100 pb-4">
-                        <h3 className="text-base font-bold text-slate-900">Change Password</h3>
-                        <p className="text-xs text-slate-500">Update your account login password</p>
+                        <h3 className="text-base font-black text-slate-900">Change Password</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Update your account login password</p>
                       </div>
 
                       <form onSubmit={handlePasswordUpdate} className="space-y-4">
@@ -992,12 +1086,12 @@ const StudentProfile = () => {
                               value={newPassword}
                               onChange={(e) => setNewPassword(e.target.value)}
                               placeholder="Minimum 6 characters"
-                              className="h-11 rounded-xl border-slate-200 pr-10 text-sm font-medium"
+                              className="h-11 rounded-xl border-slate-200 pr-10 text-sm font-medium focus-visible:ring-blue-500"
                             />
                             <button
                               type="button"
                               onClick={() => setShowNewPassword(!showNewPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
                             >
                               {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
@@ -1011,46 +1105,51 @@ const StudentProfile = () => {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Re-type new password"
-                            className="h-11 rounded-xl border-slate-200 text-sm font-medium"
+                            className="h-11 rounded-xl border-slate-200 text-sm font-medium focus-visible:ring-blue-500"
                           />
                         </div>
 
                         <Button
                           type="submit"
                           disabled={updatingPassword || !newPassword}
-                          className="h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20"
+                          className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
                         >
                           {updatingPassword ? "Updating..." : "Update Password"}
                         </Button>
                       </form>
                     </div>
 
+                    {/* Right: Password Recovery & Logout */}
                     <div className="md:col-span-5 space-y-4">
-                      {/* Password Reset via Email */}
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Password Recovery</h4>
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs space-y-3">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                          Password Recovery
+                        </h4>
                         <p className="text-xs text-slate-500 leading-relaxed">
-                          Forgot your password or want to reset via email link? We'll email you a secure link.
+                          Want to reset via email link? We will send a secure one-click link to your inbox.
                         </p>
                         <Button
                           variant="outline"
                           onClick={handleSendResetEmail}
                           disabled={sendingResetEmail}
-                          className="w-full h-10 rounded-xl text-xs font-bold border-slate-200"
+                          className="w-full h-10 rounded-xl text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50"
                         >
                           {sendingResetEmail ? "Sending Link..." : "Send Reset Email"}
                         </Button>
                       </div>
 
                       {/* Sign Out Card */}
-                      <div className="bg-rose-50/60 rounded-3xl p-5 border border-rose-100 space-y-2">
-                        <h4 className="text-xs font-bold text-rose-900">Session Management</h4>
-                        <p className="text-[11px] text-rose-700 leading-relaxed">
-                          Sign out of this browser session safely when using shared or cyber cafe devices.
+                      <div className="bg-rose-50/70 rounded-3xl p-5 border border-rose-200/80 space-y-2">
+                        <h4 className="text-xs font-black text-rose-900 flex items-center gap-1.5">
+                          <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                          Session Management
+                        </h4>
+                        <p className="text-[11px] text-rose-700 leading-relaxed font-medium">
+                          Sign out of this browser session safely when using cyber cafe or shared family devices.
                         </p>
                         <Button
                           onClick={handleLogout}
-                          className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 mt-2"
+                          className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 mt-2 active:scale-[0.98] transition-all cursor-pointer"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           Sign Out of PracticeKoro
@@ -1060,59 +1159,59 @@ const StudentProfile = () => {
                   </motion.div>
                 )}
 
-                {/* ─── TAB 5: PERFORMANCE ─── */}
+                {/* ─── TAB 5: ANALYTICS & PERFORMANCE ─── */}
                 {activeTab === "performance" && (
                   <motion.div
                     key="performance"
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, y: -6 }}
                     className="space-y-4"
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs">
                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Attempts</span>
                         <p className="text-3xl font-black text-slate-900 mt-1">{statistics.totalTests}</p>
-                        <p className="text-[11px] text-slate-500 mt-1">Mock & Topic Tests</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Full Mocks & Topic Tests</p>
                       </div>
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs">
                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Passed Tests</span>
                         <p className="text-3xl font-black text-emerald-600 mt-1">{statistics.passedCount}</p>
                         <p className="text-[11px] text-slate-500 mt-1">Above qualifying cutoff</p>
                       </div>
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pass Ratio</span>
-                        <p className="text-3xl font-black text-indigo-600 mt-1">{statistics.passRate}%</p>
-                        <p className="text-[11px] text-slate-500 mt-1">Accuracy index</p>
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Accuracy Rate</span>
+                        <p className="text-3xl font-black text-blue-600 mt-1">{statistics.passRate}%</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Average score index</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <button
                         onClick={() => navigate("/student/results")}
-                        className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-300 text-left transition-all shadow-xs group"
+                        className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-blue-400 text-left transition-all shadow-xs group cursor-pointer"
                       >
-                        <BarChart2 className="w-5 h-5 text-indigo-600 mb-2 group-hover:scale-110 transition-transform" />
-                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">View Full Results</h4>
+                        <BarChart2 className="w-5 h-5 text-blue-600 mb-2 group-hover:scale-110 transition-transform" />
+                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">View Full Results</h4>
                         <p className="text-[11px] text-slate-500 mt-0.5">Check scorecards and answer keys</p>
                       </button>
 
                       <button
                         onClick={() => navigate("/student/mistakes")}
-                        className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-rose-300 text-left transition-all shadow-xs group"
+                        className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-rose-300 text-left transition-all shadow-xs group cursor-pointer"
                       >
                         <AlertCircle className="w-5 h-5 text-rose-500 mb-2 group-hover:scale-110 transition-transform" />
                         <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Mistakes Notebook</h4>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Revise incorrect questions</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Targeted review of incorrect questions</p>
                       </button>
 
                       <button
                         onClick={() => navigate("/student/bookmarks")}
-                        className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-300 text-left transition-all shadow-xs group"
+                        className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-amber-300 text-left transition-all shadow-xs group cursor-pointer"
                       >
                         <Bookmark className="w-5 h-5 text-amber-500 mb-2 group-hover:scale-110 transition-transform" />
-                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Bookmarks</h4>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Access saved important questions</p>
+                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Saved Bookmarks</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Quick access to marked questions</p>
                       </button>
                     </div>
                   </motion.div>
@@ -1122,46 +1221,46 @@ const StudentProfile = () => {
                 {activeTab === "support" && (
                   <motion.div
                     key="support"
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, y: -6 }}
                     className="space-y-4"
                   >
                     {/* Live Support Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs space-y-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                             <MessageSquare className="w-5 h-5" />
                           </div>
                           <div>
                             <h4 className="text-sm font-bold text-slate-900">Live Mentor Chat</h4>
-                            <p className="text-[11px] text-slate-500">Direct message our student support</p>
+                            <p className="text-[11px] text-slate-500">Direct message student support</p>
                           </div>
                         </div>
                         <Button
                           onClick={() => setChatOpen(true)}
-                          className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                          className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer"
                         >
-                          Open Chat ({chatUnreadCount} unread)
+                          Open Chat {chatUnreadCount > 0 ? `(${chatUnreadCount} unread)` : ""}
                         </Button>
                       </div>
 
-                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+                      <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs space-y-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                            <Phone className="w-5 h-5" />
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                            <Phone className="w-5 h-5 text-emerald-600" />
                           </div>
                           <div>
                             <h4 className="text-sm font-bold text-slate-900">WhatsApp Support</h4>
-                            <p className="text-[11px] text-slate-500">Quick response for payment & access issues</p>
+                            <p className="text-[11px] text-slate-500">Quick response for payment & syllabus questions</p>
                           </div>
                         </div>
                         <a
                           href="https://wa.me/919876543210?text=Hello%20PracticeKoro%20Support,%20I%20need%20help%20with%20my%20account."
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2"
+                          className="w-full h-10 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           Chat on WhatsApp
@@ -1170,8 +1269,8 @@ const StudentProfile = () => {
                     </div>
 
                     {/* FAQs Accordion */}
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                      <h3 className="text-base font-bold text-slate-900">Frequently Asked Questions</h3>
+                    <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-xs space-y-4">
+                      <h3 className="text-base font-black text-slate-900">Frequently Asked Questions</h3>
                       <div className="divide-y divide-slate-100">
                         {faqs.map((faq, idx) => {
                           const isExpanded = expandedFaq === idx;
@@ -1179,12 +1278,12 @@ const StudentProfile = () => {
                             <div key={idx} className="py-3">
                               <button
                                 onClick={() => setExpandedFaq(isExpanded ? null : idx)}
-                                className="w-full text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-slate-800 hover:text-indigo-600 transition-colors"
+                                className="w-full text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-slate-800 hover:text-blue-600 transition-colors cursor-pointer"
                               >
                                 <span>{faq.q}</span>
                                 <ChevronRight
                                   className={`w-4 h-4 text-slate-400 transition-transform ${
-                                    isExpanded ? "rotate-90 text-indigo-600" : ""
+                                    isExpanded ? "rotate-90 text-blue-600" : ""
                                   }`}
                                 />
                               </button>

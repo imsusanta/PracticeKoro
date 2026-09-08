@@ -188,15 +188,6 @@ const StudentNotifications = () => {
               <p className="text-[11px] text-slate-500 font-medium">Exam Notifications & Alerts</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative w-9 h-9 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Hero Banner */}

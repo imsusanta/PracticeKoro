@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Bell,
   Crown,
   Trophy,
   ChevronRight,
@@ -308,15 +307,6 @@ const StudentResults = () => {
                 aria-label="Search attempts"
               >
                 <Search className="w-5 h-5 stroke-[2.2]" />
-              </button>
-
-              <button
-                onClick={() => navigate("/student/notifications")}
-                className="relative p-2 text-slate-700 hover:text-blue-600 rounded-full hover:bg-slate-100 transition-colors"
-                aria-label="Notifications"
-              >
-                <Bell className="w-5 h-5 stroke-[2.2]" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
               </button>
             </div>
           </header>
