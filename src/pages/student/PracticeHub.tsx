@@ -224,39 +224,40 @@ export const PracticeHub = () => {
         {/* ═══════════════════════════════════════════════════════════════
             2. HERO BLUE BANNER (Practice Today, Score Tomorrow)
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-3xl px-4 py-3.5 sm:p-6 md:p-8 bg-gradient-to-r from-[#0062E0] via-[#1272F3] to-[#2E82FE] text-white shadow-xl shadow-blue-600/15">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-5 md:p-8 bg-gradient-to-r from-[#0062E0] via-[#1272F3] to-[#2E82FE] text-white shadow-xl shadow-blue-600/15">
           {/* Subtle Ambient Background Gradients */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
           <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-blue-300/10 rounded-full blur-2xl pointer-events-none -mb-20" />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6">
-            <div className="max-w-md space-y-1.5 sm:space-y-3">
-              <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-                Practice Today,<br />Score Tomorrow
+          <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-6">
+            <div className="space-y-1 sm:space-y-2 min-w-0">
+              <h2 className="text-base sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
+                Practice Today,<br className="sm:hidden" /> Score Tomorrow
               </h2>
-              <p className="hidden sm:block text-xs sm:text-sm text-blue-100 leading-relaxed font-normal">
+              <p className="hidden sm:block text-xs sm:text-sm text-blue-100 leading-relaxed font-normal max-w-md">
                 Topic-wise questions, previous year papers and smart revision tools — all in one place.
               </p>
-              <div className="pt-1 sm:pt-2">
-                <button
-                  onClick={() => navigate("/student/practice/subject")}
-                  className="inline-flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-[11px] sm:text-sm px-4 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer"
-                >
-                  <span>Start Practicing</span>
-                  <ArrowRight className="w-4 h-4 text-[#0062E0] stroke-[2.5]" />
-                </button>
-              </div>
             </div>
 
-            {/* Right Illustration — hidden on mobile to reduce banner height */}
-            <div className="hidden sm:block self-auto shrink-0">
-              <HeroPracticeIllustration />
+            <div className="flex items-center gap-4 shrink-0">
+              <button
+                onClick={() => navigate("/student/practice/subject")}
+                className="inline-flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-xs sm:text-sm px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <span>Start Practicing</span>
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0062E0] stroke-[2.5]" />
+              </button>
+
+              {/* Right Illustration — shown on md+ screens */}
+              <div className="hidden md:block self-auto shrink-0">
+                <HeroPracticeIllustration />
+              </div>
             </div>
           </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            3. FOUR TOP FEATURE CARDS
+            3. FOUR TOP FEATURE CARDS (Web view layout for all mobile devices)
             ═══════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
           {featureCards.map((card) => {
@@ -265,25 +266,27 @@ export const PracticeHub = () => {
               <div
                 key={card.id}
                 onClick={() => navigate(card.path)}
-                className={`rounded-2xl border p-3 sm:p-5 flex flex-row sm:flex-col items-center sm:items-center sm:text-center sm:justify-between gap-2.5 sm:gap-0 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group ${card.cardBg}`}
+                className={`rounded-2xl border p-3.5 sm:p-5 flex flex-col items-center text-center justify-between shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group ${card.cardBg}`}
               >
-                <div
-                  className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 sm:mb-3 shadow-2xs group-hover:scale-110 transition-transform ${card.iconBg}`}
-                >
-                  <Icon className="w-4 h-4 sm:w-6 sm:h-6 stroke-[2.2]" />
-                </div>
-                <div className="min-w-0 flex-1 sm:flex-initial">
-                  <h3 className="font-bold text-[11px] sm:text-sm text-slate-900 leading-snug">
+                <div className="flex flex-col items-center w-full">
+                  <div
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-2 sm:mb-3 shadow-2xs group-hover:scale-110 transition-transform ${card.iconBg}`}
+                  >
+                    <Icon className="w-4.5 h-4.5 sm:w-6 sm:h-6 stroke-[2.2]" />
+                  </div>
+                  <h3 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
                     {card.title}
                   </h3>
-                  <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 leading-snug hidden sm:block">
+                  <p className="text-[10.5px] sm:text-xs text-slate-500 mt-1 leading-snug">
                     {card.subtitle}
                   </p>
                 </div>
 
-                <ArrowRight
-                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mt-3 ${card.arrowColor} stroke-[2.2] group-hover:translate-x-1 transition-transform shrink-0`}
-                />
+                <div className="pt-2 sm:pt-3">
+                  <ArrowRight
+                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${card.arrowColor} stroke-[2.2] group-hover:translate-x-1 transition-transform`}
+                  />
+                </div>
               </div>
             );
           })}

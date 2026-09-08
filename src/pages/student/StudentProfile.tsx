@@ -534,28 +534,28 @@ const StudentProfile = () => {
                         <button
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploadingImage}
-                          className="relative w-13 h-13 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/25 overflow-hidden group shadow-lg transition-transform hover:scale-105 cursor-pointer"
+                          className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/25 overflow-hidden group shadow-md transition-transform hover:scale-105 cursor-pointer"
                           title="Click to update photo"
                         >
                           {profile?.avatar_url ? (
                             <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-lg sm:text-3xl font-black text-white">{userInitials}</span>
+                            <span className="text-sm sm:text-lg font-black text-white">{userInitials}</span>
                           )}
                           <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             {uploadingImage ? (
-                              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-spin" />
+                              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white animate-spin" />
                             ) : (
                               <>
-                                <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-                                <span className="text-[8px] sm:text-[9px] font-bold text-white mt-0.5">Change</span>
+                                <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+                                <span className="text-[7px] sm:text-[8px] font-bold text-white mt-0.5">Change</span>
                               </>
                             )}
                           </div>
                         </button>
                         <button
                           onClick={() => fileInputRef.current?.click()}
-                          className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-600 border-2 border-[#0A2655] flex items-center justify-center text-white shadow-xs hover:bg-blue-500 transition-colors cursor-pointer"
+                          className="absolute -bottom-1 -right-1 w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-blue-600 border-2 border-[#0A2655] flex items-center justify-center text-white shadow-xs hover:bg-blue-500 transition-colors cursor-pointer"
                           title="Upload photo"
                         >
                           <Camera className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
