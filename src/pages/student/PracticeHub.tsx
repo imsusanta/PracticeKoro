@@ -207,16 +207,16 @@ export const PracticeHub = () => {
 
   return (
     <StudentLayout title="Practice" subtitle="Master your speed & accuracy">
-      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 md:py-6 pb-28 md:pb-12 space-y-6 sm:space-y-7">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-3 md:py-6 pb-28 md:pb-12 space-y-4 sm:space-y-6 md:space-y-7">
 
         {/* ═══════════════════════════════════════════════════════════════
             1. PAGE HEADER
             ═══════════════════════════════════════════════════════════════ */}
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#0B1930] tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#0B1930] tracking-tight">
             Practice & Revision
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+          <p className="text-[11px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1 font-medium">
             Strengthen your concepts with focused practice
           </p>
         </div>
@@ -237,10 +237,10 @@ export const PracticeHub = () => {
               <p className="hidden sm:block text-xs sm:text-sm text-blue-100 leading-relaxed font-normal">
                 Topic-wise questions, previous year papers and smart revision tools — all in one place.
               </p>
-              <div className="pt-2">
+              <div className="pt-1 sm:pt-2">
                 <button
                   onClick={() => navigate("/student/practice/subject")}
-                  className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-xs sm:text-sm px-5 py-2.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-[11px] sm:text-sm px-4 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer"
                 >
                   <span>Start Practicing</span>
                   <ArrowRight className="w-4 h-4 text-[#0062E0] stroke-[2.5]" />
@@ -248,8 +248,8 @@ export const PracticeHub = () => {
               </div>
             </div>
 
-            {/* Right Illustration */}
-            <div className="self-center sm:self-auto shrink-0">
+            {/* Right Illustration — hidden on mobile to reduce banner height */}
+            <div className="hidden sm:block self-auto shrink-0">
               <HeroPracticeIllustration />
             </div>
           </div>
@@ -258,34 +258,32 @@ export const PracticeHub = () => {
         {/* ═══════════════════════════════════════════════════════════════
             3. FOUR TOP FEATURE CARDS
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
           {featureCards.map((card) => {
             const Icon = card.icon;
             return (
               <div
                 key={card.id}
                 onClick={() => navigate(card.path)}
-                className={`rounded-2xl border p-4 sm:p-5 flex flex-col items-center text-center justify-between shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group ${card.cardBg}`}
+                className={`rounded-2xl border p-3 sm:p-5 flex flex-row sm:flex-col items-center sm:items-center sm:text-center sm:justify-between gap-2.5 sm:gap-0 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group ${card.cardBg}`}
               >
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-3 shadow-2xs group-hover:scale-110 transition-transform ${card.iconBg}`}
-                  >
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
-                  </div>
-                  <h3 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
+                <div
+                  className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 sm:mb-3 shadow-2xs group-hover:scale-110 transition-transform ${card.iconBg}`}
+                >
+                  <Icon className="w-4 h-4 sm:w-6 sm:h-6 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0 flex-1 sm:flex-initial">
+                  <h3 className="font-bold text-[11px] sm:text-sm text-slate-900 leading-snug">
                     {card.title}
                   </h3>
-                  <p className="text-[11px] sm:text-xs text-slate-500 mt-1 leading-snug">
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 leading-snug hidden sm:block">
                     {card.subtitle}
                   </p>
                 </div>
 
-                <div className="pt-3">
-                  <ArrowRight
-                    className={`w-4 h-4 ${card.arrowColor} stroke-[2.2] group-hover:translate-x-1 transition-transform`}
-                  />
-                </div>
+                <ArrowRight
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mt-3 ${card.arrowColor} stroke-[2.2] group-hover:translate-x-1 transition-transform shrink-0`}
+                />
               </div>
             );
           })}
