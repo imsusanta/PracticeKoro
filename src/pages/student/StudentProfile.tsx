@@ -440,7 +440,7 @@ const StudentProfile = () => {
   return (
     <StudentLayout title="Student Settings" subtitle="Account, VIP Membership & Preferences" hideNavbar={chatOpen}>
       <PullToRefresh onRefresh={checkAuthAndLoadData}>
-        <div className="w-full max-w-5xl mx-auto px-3 sm:px-5 py-2 sm:py-4 pb-28 space-y-3.5 sm:space-y-6">
+        <div className="w-full max-w-5xl mx-auto px-3 sm:px-5 py-2 sm:py-4 pb-3 sm:pb-6 space-y-3.5 sm:space-y-6">
 
           {/* ═══════════════════════════════════════════════════════════
               TOP HEADER BAR (Brand + Pro Plan Button — Mobile-Friendly Compact Row)

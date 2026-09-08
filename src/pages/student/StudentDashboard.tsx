@@ -517,7 +517,7 @@ const StudentDashboard = () => {
 
   return (
     <StudentLayout title="PracticeKoro" subtitle="Your Exam Preparation Partner">
-      <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-2 md:py-4 pb-24 md:pb-10 space-y-4 md:space-y-5">
+      <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-2 md:py-4 pb-2 md:pb-6 space-y-4 md:space-y-5">
         
         {/* ═══════════════════════════════════════════════════════════════
             SECTION 1: HEADER (Logo Left + Center Search + Pro Plan Badge + Bell + Avatar Right)

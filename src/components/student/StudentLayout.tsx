@@ -341,7 +341,7 @@ const StudentLayout = ({
               initial="initial"
               animate="animate"
               exit="exit"
-              className="flex flex-col px-0 pt-1 pb-32 sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
+              className="flex flex-col px-0 pt-1 pb-20 sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
             >
               <div className="w-full max-w-7xl mx-auto">{children}</div>
             </motion.main>

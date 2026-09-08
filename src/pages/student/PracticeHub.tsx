@@ -207,7 +207,7 @@ export const PracticeHub = () => {
 
   return (
     <StudentLayout title="Practice" subtitle="Master your speed & accuracy">
-      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-3 md:py-6 pb-28 md:pb-12 space-y-4 sm:space-y-6 md:space-y-7">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-3 md:py-6 pb-3 md:pb-8 space-y-4 sm:space-y-6 md:space-y-7">
 
         {/* ═══════════════════════════════════════════════════════════════
             1. PAGE HEADER
