@@ -443,24 +443,24 @@ const StudentProfile = () => {
         <div className="w-full max-w-5xl mx-auto px-3 sm:px-5 py-2 sm:py-4 pb-28 space-y-3.5 sm:space-y-6">
 
           {/* ═══════════════════════════════════════════════════════════
-              TOP HEADER BAR (Brand + Pro Plan Button — Notification icon excluded)
+              TOP HEADER BAR (Brand + Pro Plan Button — Mobile-Friendly Compact Row)
               ═══════════════════════════════════════════════════════════ */}
-          <div className="flex items-center justify-between gap-2 pb-0.5 sm:pb-1">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="flex items-center justify-between gap-2 pb-0.5 sm:pb-1 flex-nowrap w-full">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-md shadow-blue-600/20 shrink-0">
                 <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.2]" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <h1 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight whitespace-nowrap">
-                    Account Settings
+                  <h1 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight whitespace-nowrap truncate">
+                    <span className="hidden sm:inline">Account </span>Settings
                   </h1>
                   {subscription ? (
-                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0">
                       ★ VIP
                     </span>
                   ) : (
-                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                       Active
                     </span>
                   )}
@@ -468,25 +468,32 @@ const StudentProfile = () => {
                 <p className="hidden sm:block text-xs text-slate-500 font-medium truncate">
                   Manage your learning account, VIP pass & preferences
                 </p>
-                <p className="sm:hidden text-[10.5px] text-slate-400 font-medium truncate">
-                  Profile & Preferences
-                </p>
               </div>
             </div>
 
             {/* Right: Pro Plan pill button (Exclusively shown on Home & Settings) */}
             <button
               onClick={handleProPlanUpgrade}
-              className={`h-8 sm:h-9 px-2.5 sm:px-4 rounded-full flex items-center gap-1 sm:gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border shrink-0 ${
+              className={`h-7.5 sm:h-9 px-2 sm:px-4 rounded-full flex items-center gap-1 sm:gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border shrink-0 ${
                 subscription
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                   : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-200/80"
               }`}
               title={subscription ? "VIP Membership Active" : "Upgrade to VIP"}
             >
-              <Crown className={`w-3.5 h-3.5 shrink-0 ${subscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
-              <span className="text-[11px] sm:text-xs font-bold whitespace-nowrap">
-                {subscription ? "VIP Active" : "Upgrade to Pro"}
+              <Crown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${subscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
+              <span className="text-[10.5px] sm:text-xs font-bold whitespace-nowrap">
+                {subscription ? (
+                  <>
+                    <span className="sm:hidden">VIP</span>
+                    <span className="hidden sm:inline">VIP Active</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="sm:hidden">Upgrade</span>
+                    <span className="hidden sm:inline">Upgrade to Pro</span>
+                  </>
+                )}
               </span>
             </button>
           </div>
