@@ -21,7 +21,9 @@ import {
   Sparkles,
   Check,
   HelpCircle,
-  Lock
+  Lock,
+  FileText,
+  Crown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -100,6 +102,7 @@ const TakeTest = () => {
   const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [hasConfirmedInstructions, setHasConfirmedInstructions] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showNavigator, setShowNavigator] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -385,6 +388,7 @@ const TakeTest = () => {
       if (attemptRes.savedResponses && Object.keys(attemptRes.savedResponses).length > 0) {
         setAnswers(attemptRes.savedResponses);
         answersRef.current = attemptRes.savedResponses;
+        setHasConfirmedInstructions(true);
         sonnerToast.success("Test Resumed", { description: "Your answers and timer were restored." });
       }
       if (attemptRes.savedReviews && attemptRes.savedReviews.length > 0) {
@@ -412,7 +416,7 @@ const TakeTest = () => {
 
   // Countdown is independent of answer changes so the interval is not torn down every keystroke.
   useEffect(() => {
-    if (loading || !startTime) return;
+    if (loading || !startTime || !hasConfirmedInstructions) return;
     if (timeExpired) {
       handleAutoSubmitRef.current();
       return;
@@ -598,6 +602,226 @@ const TakeTest = () => {
           <Button onClick={() => navigate("/student/exam")} className="w-full bg-blue-600 text-white rounded-xl font-bold">
             Back to Mock Tests
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasConfirmedInstructions) {
+    const totalQ = questions.length || test.total_marks || 100;
+    const duration = test.duration_minutes || 60;
+    const marks = test.total_marks || 200;
+    const marksPerQ =
+      marks && totalQ
+        ? (marks / totalQ) % 1 === 0
+          ? `+${marks / totalQ}`
+          : `+${(marks / totalQ).toFixed(2)}`
+        : "+2";
+    const rawNeg = test.negative_marking
+      ? (test.negative_marks_per_question ? `-${test.negative_marks_per_question}` : "-0.5")
+      : "0";
+    const negative = rawNeg.startsWith("-") ? rawNeg : `-${rawNeg}`;
+
+    const subjectCounts = questions.reduce((acc, q) => {
+      const subj = q.questions.subject || "General Studies";
+      acc[subj] = (acc[subj] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const subjectKeys = Object.keys(subjectCounts);
+    const dynamicSections = subjectKeys.length > 1
+      ? subjectKeys.map((subj, idx) => ({
+          id: idx + 1,
+          name: subj,
+          count: `${subjectCounts[subj]} Qs`
+        }))
+      : [
+          { id: 1, name: "General Intelligence & Reasoning", count: `${Math.round(totalQ / 4)} Qs` },
+          { id: 2, name: "General Awareness", count: `${Math.round(totalQ / 4)} Qs` },
+          { id: 3, name: "Quantitative Aptitude", count: `${Math.round(totalQ / 4)} Qs` },
+          { id: 4, name: "English Comprehension", count: `${totalQ - Math.round(totalQ / 4) * 3} Qs` },
+        ];
+
+    return (
+      <div className="min-h-[100dvh] bg-[#F8FAFC] flex flex-col font-sans">
+        <div className="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between p-4 sm:p-5">
+          {/* Top Bar: "< Test Instructions" */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 py-1">
+              <button
+                onClick={() => navigate("/student/exam")}
+                className="p-1 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                aria-label="Back"
+              >
+                <ChevronLeft className="w-6 h-6 stroke-[2.4]" />
+              </button>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                Test Instructions
+              </h1>
+            </div>
+
+            {/* Card 1: Test Overview Header Card */}
+            <div className="bg-white rounded-2xl p-4 sm:p-4.5 border border-slate-200/90 shadow-2xs space-y-3.5">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 leading-snug tracking-tight">
+                {test.title}
+              </h2>
+
+              {/* Badges Row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200/80">
+                  Full Mock
+                </span>
+                <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+                  Bilingual (EN/BN)
+                </span>
+                {test.is_paid ? (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200/80 flex items-center gap-1">
+                    <Crown className="w-3 h-3 fill-amber-600 text-amber-700" />
+                    Premium
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                    Free Test
+                  </span>
+                )}
+              </div>
+
+              {/* 3 Metrics: Questions | Minutes | Marks */}
+              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80">
+                    <FileText className="w-4.5 h-4.5 stroke-[2.2]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">
+                      {totalQ}
+                    </p>
+                    <p className="text-[10.5px] sm:text-[11px] text-slate-500 font-medium">
+                      Questions
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80">
+                    <Timer className="w-4.5 h-4.5 stroke-[2.2]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">
+                      {duration}
+                    </p>
+                    <p className="text-[10.5px] sm:text-[11px] text-slate-500 font-medium">
+                      Minutes
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80">
+                    <CheckCircle2 className="w-4.5 h-4.5 stroke-[2.2]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">
+                      {marks}
+                    </p>
+                    <p className="text-[10.5px] sm:text-[11px] text-slate-500 font-medium">
+                      Marks
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Sections */}
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                Sections
+              </h3>
+              <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden divide-y divide-slate-100 shadow-2xs">
+                {dynamicSections.map((sec) => (
+                  <div key={sec.id} className="flex items-center justify-between px-3.5 py-3 text-xs sm:text-sm">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-5 text-center font-black text-slate-800 text-xs shrink-0">
+                        {sec.id}
+                      </span>
+                      <span className="font-semibold text-slate-800 truncate">
+                        {sec.name}
+                      </span>
+                    </div>
+                    <span className="font-bold text-slate-700 shrink-0 pl-2 text-xs sm:text-sm">
+                      {sec.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card 3: Marking Scheme */}
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                Marking Scheme
+              </h3>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
+                <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.8]" />
+                  </div>
+                  <span className="font-semibold text-slate-800">
+                    <strong className="text-emerald-700 font-bold">{marksPerQ}</strong> for each correct answer
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+                  <div className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <AlertCircle className="w-3.5 h-3.5 stroke-[2.8]" />
+                  </div>
+                  <span className="font-semibold text-slate-800">
+                    <strong className="text-rose-700 font-bold">{negative}</strong> for each wrong answer
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+                  <div className="w-5 h-5 rounded-full bg-slate-400 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <span className="text-[10px] font-bold">0</span>
+                  </div>
+                  <span className="font-medium text-slate-600">
+                    <strong className="text-slate-800 font-bold">0</strong> for unattempted questions
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Other Details */}
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                Other Details
+              </h3>
+              <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden divide-y divide-slate-100 shadow-2xs text-xs sm:text-sm">
+                <div className="flex items-center px-4 py-3">
+                  <span className="w-1/3 font-semibold text-slate-500">Language</span>
+                  <span className="font-bold text-slate-900">English / বাংলা</span>
+                </div>
+                <div className="flex items-center px-4 py-3">
+                  <span className="w-1/3 font-semibold text-slate-500">Attempt Mode</span>
+                  <span className="font-bold text-slate-900">Online (Live Test)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Start Test Button */}
+          <div className="pt-6 pb-2">
+            <Button
+              onClick={() => {
+                setStartTime(new Date());
+                startTimeRef.current = new Date();
+                setHasConfirmedInstructions(true);
+              }}
+              className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base shadow-md shadow-blue-500/25 active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer"
+            >
+              Start Test
+            </Button>
+          </div>
         </div>
       </div>
     );

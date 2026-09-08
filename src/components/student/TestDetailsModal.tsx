@@ -10,8 +10,10 @@ import {
   Clock,
   Award,
   CheckCircle2,
+  XCircle,
+  MinusCircle,
   Crown,
-  ArrowRight,
+  ChevronLeft,
 } from "lucide-react";
 
 export interface TestDetailsModalProps {
@@ -29,7 +31,73 @@ export interface TestDetailsModalProps {
     language?: string;
     attemptsAllowed?: number | string;
     validity?: string;
+    isPyq?: boolean;
+    year?: number;
+    sections?: { id: number; name: string; count: string }[];
   } | null;
+}
+
+function getTestSections(title: string, examName?: string, totalQuestions: number = 100) {
+  const combined = `${title} ${examName || ""}`.toLowerCase();
+
+  if (combined.includes("cgl") || combined.includes("ssc") || combined.includes("chsl")) {
+    const qPerSection = Math.round(totalQuestions / 4);
+    return [
+      { id: 1, name: "General Intelligence & Reasoning", count: `${qPerSection} Qs` },
+      { id: 2, name: "General Awareness", count: `${qPerSection} Qs` },
+      { id: 3, name: "Quantitative Aptitude", count: `${qPerSection} Qs` },
+      { id: 4, name: "English Comprehension", count: `${totalQuestions - qPerSection * 3} Qs` },
+    ];
+  }
+
+  if (combined.includes("police") || combined.includes("wbp") || combined.includes("constable") || combined.includes("si")) {
+    if (totalQuestions === 85) {
+      return [
+        { id: 1, name: "General Awareness & GK", count: "25 Qs" },
+        { id: 2, name: "Elementary Mathematics", count: "20 Qs" },
+        { id: 3, name: "Reasoning & Logical Analysis", count: "15 Qs" },
+        { id: 4, name: "English Language", count: "25 Qs" },
+      ];
+    }
+    const qPerSection = Math.max(1, Math.round(totalQuestions / 4));
+    return [
+      { id: 1, name: "General Awareness & Current Affairs", count: `${qPerSection} Qs` },
+      { id: 2, name: "Logical & Analytical Reasoning", count: `${qPerSection} Qs` },
+      { id: 3, name: "Elementary Mathematics", count: `${qPerSection} Qs` },
+      { id: 4, name: "English Comprehension", count: `${totalQuestions - qPerSection * 3} Qs` },
+    ];
+  }
+
+  if (combined.includes("railway") || combined.includes("rrb") || combined.includes("ntpc")) {
+    const s1 = Math.round(totalQuestions * 0.3);
+    const s2 = Math.round(totalQuestions * 0.25);
+    const s3 = Math.round(totalQuestions * 0.3);
+    const s4 = Math.max(0, totalQuestions - s1 - s2 - s3);
+    return [
+      { id: 1, name: "General Science", count: `${s1} Qs` },
+      { id: 2, name: "Mathematics", count: `${s2} Qs` },
+      { id: 3, name: "General Intelligence & Reasoning", count: `${s3} Qs` },
+      { id: 4, name: "General Awareness & Current Affairs", count: `${s4} Qs` },
+    ];
+  }
+
+  if (combined.includes("group d") || combined.includes("clerkship") || combined.includes("food si")) {
+    const qPerSection = Math.max(1, Math.round(totalQuestions / 3));
+    return [
+      { id: 1, name: "General Knowledge & Static GK", count: `${qPerSection} Qs` },
+      { id: 2, name: "Current Affairs & Science", count: `${qPerSection} Qs` },
+      { id: 3, name: "Arithmetic & Mental Ability", count: `${totalQuestions - qPerSection * 2} Qs` },
+    ];
+  }
+
+  // Default balanced 4 sections matching official SSC / WB exam blueprint
+  const qPerSection = Math.max(1, Math.round(totalQuestions / 4));
+  return [
+    { id: 1, name: "General Intelligence & Reasoning", count: `${qPerSection} Qs` },
+    { id: 2, name: "General Awareness", count: `${qPerSection} Qs` },
+    { id: 3, name: "Quantitative Aptitude", count: `${qPerSection} Qs` },
+    { id: 4, name: "English Comprehension", count: `${totalQuestions - qPerSection * 3} Qs` },
+  ];
 }
 
 export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
@@ -42,9 +110,22 @@ export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
   if (!test) return null;
 
   const totalQ = test.totalQuestions || 100;
-  const duration = test.durationMinutes || 90;
-  const marks = test.totalMarks || 100;
-  const negative = test.negativeMarking ?? "-0.25";
+  const duration = test.durationMinutes || 60;
+  const marks = test.totalMarks || 200;
+
+  // Calculate positive mark per question
+  const marksPerQ =
+    marks && totalQ
+      ? marks / totalQ % 1 === 0
+        ? `+${marks / totalQ}`
+        : `+${(marks / totalQ).toFixed(2)}`
+      : "+2";
+
+  // Calculate negative mark display
+  const rawNeg = test.negativeMarking ?? "-0.5";
+  const negative = String(rawNeg).startsWith("-") ? String(rawNeg) : `-${rawNeg}`;
+
+  const sections = test.sections || getTestSections(test.title, test.examName, totalQ);
 
   const handleStart = () => {
     onClose();
@@ -57,162 +138,182 @@ export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl bg-white border border-slate-200/90 shadow-2xl max-h-[92vh] flex flex-col">
-        {/* Header Banner matching Screen 9 */}
-        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white p-5 pb-6 relative overflow-hidden shrink-0">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10" />
-          
-          <div className="relative z-10 flex items-start gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-sm text-white">
-              <FileText className="w-6 h-6" />
-            </div>
-
-            <div className="flex-1 min-w-0 pr-6">
-              <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                {test.isPaid ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 shadow-xs">
-                    <Crown className="w-3 h-3 fill-amber-950" />
-                    Pro
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-emerald-950 shadow-xs">
-                    Free
-                  </span>
-                )}
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white">
-                  Full Syllabus
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white">
-                  Most Popular
-                </span>
-              </div>
-
-              <h3 className="text-lg font-black text-white leading-snug tracking-tight">
-                {test.title}
-              </h3>
-            </div>
-          </div>
-        </div>
-
-        {/* Scrollable Specs Body */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
-          {/* 4 Round KPI Badges matching Screen 9 */}
-          <div className="grid grid-cols-4 gap-2 text-center">
-            {/* Questions */}
-            <div className="bg-amber-50/80 border border-amber-200/70 rounded-2xl p-2.5 flex flex-col items-center justify-center">
-              <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold mb-1">
-                Q
-              </div>
-              <span className="text-sm font-black text-slate-900 leading-tight">
-                {totalQ}
-              </span>
-              <span className="text-[10px] font-bold text-amber-800/80 uppercase tracking-tight">
-                Questions
-              </span>
-            </div>
-
-            {/* Minutes */}
-            <div className="bg-blue-50/80 border border-blue-200/70 rounded-2xl p-2.5 flex flex-col items-center justify-center">
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold mb-1">
-                <Clock className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-sm font-black text-slate-900 leading-tight">
-                {duration}
-              </span>
-              <span className="text-[10px] font-bold text-blue-800/80 uppercase tracking-tight">
-                Minutes
-              </span>
-            </div>
-
-            {/* Marks */}
-            <div className="bg-emerald-50/80 border border-emerald-200/70 rounded-2xl p-2.5 flex flex-col items-center justify-center">
-              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold mb-1">
-                <Award className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-sm font-black text-slate-900 leading-tight">
-                {marks}
-              </span>
-              <span className="text-[10px] font-bold text-emerald-800/80 uppercase tracking-tight">
-                Marks
-              </span>
-            </div>
-
-            {/* Negative Marking */}
-            <div className="bg-rose-50/80 border border-rose-200/70 rounded-2xl p-2.5 flex flex-col items-center justify-center">
-              <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold mb-1">
-                -
-              </div>
-              <span className="text-sm font-black text-slate-900 leading-tight">
-                {negative}
-              </span>
-              <span className="text-[10px] font-bold text-rose-800/80 uppercase tracking-tight">
-                Negative
-              </span>
-            </div>
-          </div>
-
-          {/* Detailed Spec List matching Screen 9 */}
-          <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-200/60 divide-y divide-slate-100 text-xs font-medium text-slate-600 space-y-2">
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Exam</span>
-              <span className="font-bold text-slate-900">{test.examName || "Panchayat Exam"}</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Language</span>
-              <span className="font-bold text-slate-900">{test.language || "Bengali + English"}</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Total Questions</span>
-              <span className="font-bold text-slate-900">{totalQ} MCQs</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Total Marks</span>
-              <span className="font-bold text-slate-900">{marks}</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Negative Marking</span>
-              <span className="font-bold text-rose-600">{negative} per wrong answer</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Attempts Allowed</span>
-              <span className="font-bold text-slate-900">{test.attemptsAllowed || "Unlimited Attempts"}</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-500">Test Validity</span>
-              <span className="font-bold text-slate-900">{test.validity || "365 Days"}</span>
-            </div>
-            <div className="flex justify-between items-start py-1.5">
-              <span className="text-slate-500">Includes</span>
-              <div className="text-right space-y-0.5">
-                <div className="text-emerald-700 font-bold flex items-center justify-end gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Detailed Solutions
-                </div>
-                <div className="text-emerald-700 font-bold flex items-center justify-end gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> All West Bengal Rank
-                </div>
-                <div className="text-emerald-700 font-bold flex items-center justify-end gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Subject-wise Analysis
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sticky Action Footer */}
-        <div className="p-4 bg-white border-t border-slate-100 flex items-center gap-3 shrink-0">
-          <Button
-            variant="outline"
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl bg-[#F8FAFC] border border-slate-200 shadow-2xl max-h-[92vh] flex flex-col [&>button]:hidden">
+        {/* Top Bar matching Screen: "< Test Instructions" */}
+        <div className="bg-white px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 shrink-0">
+          <button
             onClick={onClose}
-            className="flex-1 h-11 rounded-2xl text-xs font-bold text-slate-600 border-slate-200"
+            className="p-1 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+            aria-label="Back"
           >
-            Cancel
-          </Button>
+            <ChevronLeft className="w-6 h-6 stroke-[2.4]" />
+          </button>
+          <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+            Test Instructions
+          </h2>
+        </div>
+
+        {/* Scrollable Content Body */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+          {/* Card 1: Test Overview Header Card */}
+          <div className="bg-white rounded-2xl p-4 sm:p-4.5 border border-slate-200/90 shadow-2xs space-y-3.5">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug tracking-tight">
+              {test.title}
+            </h3>
+
+            {/* Badges Row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200/80">
+                {test.isPyq ? "Previous Year" : "Full Mock"}
+              </span>
+              <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+                Bilingual (EN/BN)
+              </span>
+              {test.isPaid ? (
+                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200/80 flex items-center gap-1">
+                  <Crown className="w-3 h-3 fill-amber-600 text-amber-700" />
+                  Premium
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                  Free Test
+                </span>
+              )}
+            </div>
+
+            {/* 3 Metrics: Questions | Minutes | Marks */}
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+              {/* Questions */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80">
+                  <FileText className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-black text-slate-900 leading-none truncate">
+                    {totalQ}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium whitespace-nowrap mt-0.5">
+                    Questions
+                  </p>
+                </div>
+              </div>
+
+              {/* Minutes */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80">
+                  <Clock className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-black text-slate-900 leading-none truncate">
+                    {duration}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium whitespace-nowrap mt-0.5">
+                    Minutes
+                  </p>
+                </div>
+              </div>
+
+              {/* Marks */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80">
+                  <Award className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-black text-slate-900 leading-none truncate">
+                    {marks}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium whitespace-nowrap mt-0.5">
+                    Marks
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Sections */}
+          <div className="space-y-2">
+            <h4 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              Sections
+            </h4>
+            <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden divide-y divide-slate-100 shadow-2xs">
+              {sections.map((sec) => (
+                <div key={sec.id} className="flex items-center justify-between px-3.5 py-3 text-xs sm:text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-5 text-center font-black text-slate-800 text-xs shrink-0">
+                      {sec.id}
+                    </span>
+                    <span className="font-semibold text-slate-800 truncate">
+                      {sec.name}
+                    </span>
+                  </div>
+                  <span className="font-bold text-slate-700 shrink-0 pl-2 text-xs sm:text-sm">
+                    {sec.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Card 3: Marking Scheme */}
+          <div className="space-y-2">
+            <h4 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              Marking Scheme
+            </h4>
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
+              <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+                <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.8]" />
+                </div>
+                <span className="font-semibold text-slate-800">
+                  <strong className="text-emerald-700 font-bold">{marksPerQ}</strong> for each correct answer
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+                <div className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <XCircle className="w-3.5 h-3.5 stroke-[2.8]" />
+                </div>
+                <span className="font-semibold text-slate-800">
+                  <strong className="text-rose-700 font-bold">{negative}</strong> for each wrong answer
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+                <div className="w-5 h-5 rounded-full bg-slate-400 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <MinusCircle className="w-3.5 h-3.5 stroke-[2.8]" />
+                </div>
+                <span className="font-medium text-slate-600">
+                  <strong className="text-slate-800 font-bold">0</strong> for unattempted questions
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Other Details */}
+          <div className="space-y-2">
+            <h4 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              Other Details
+            </h4>
+            <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden divide-y divide-slate-100 shadow-2xs text-xs sm:text-sm">
+              <div className="flex items-center px-4 py-3">
+                <span className="w-1/3 font-semibold text-slate-500">Language</span>
+                <span className="font-bold text-slate-900">{test.language || "English / বাংলা"}</span>
+              </div>
+              <div className="flex items-center px-4 py-3">
+                <span className="w-1/3 font-semibold text-slate-500">Attempt Mode</span>
+                <span className="font-bold text-slate-900">Online (Live Test)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed Sticky Action Footer with Vibrant Blue "Start Test" Button */}
+        <div className="p-3.5 sm:p-4 bg-white border-t border-slate-100 shrink-0">
           <Button
             onClick={handleStart}
-            className="flex-1 h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base shadow-md shadow-blue-500/25 active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer"
           >
-            <span>Start Test</span>
-            <ArrowRight className="w-4 h-4" />
+            Start Test
           </Button>
         </div>
       </DialogContent>

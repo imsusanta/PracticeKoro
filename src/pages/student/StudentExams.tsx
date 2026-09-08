@@ -1045,7 +1045,19 @@ const StudentExams = () => {
                           if (test.is_paid && !hasSubscription) {
                             handleProPlanClick();
                           } else {
-                            navigate(`/student/take-test/${test.id}`);
+                            setSelectedTestForModal({
+                              id: test.id,
+                              title: test.title,
+                              examName: test.exams?.name || test.subjects?.name || "West Bengal Mock Test",
+                              totalQuestions: (test as any).total_questions || 100,
+                              durationMinutes: test.duration_minutes || 90,
+                              totalMarks: test.total_marks || 100,
+                              negativeMarking: (test as any).negative_marks ? `-${(test as any).negative_marks}` : "-0.25",
+                              isPaid: test.is_paid,
+                              language: "Bengali & English",
+                              attemptsAllowed: "Unlimited",
+                              validity: "1 Year",
+                            });
                           }
                         }}
                         className={`h-10 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-xs ${
