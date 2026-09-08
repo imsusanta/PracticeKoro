@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
+import { MathText } from "@/components/ui/MathText";
 
 interface GeneratedQuestion {
   question_text: string;
@@ -391,10 +392,20 @@ const AIQuestionGenerator = () => {
       return;
     }
 
-    if (!formData.subject_name && !formData.topic_name) {
+    // SECURITY: Require BOTH subject AND topic to prevent uncategorized questions
+    if (!formData.subject_name || formData.subject_name.trim() === "") {
       toast({
-        title: "Error",
-        description: "Please provide at least a Subject or Topic",
+        title: "⚠️ Subject Required",
+        description: "Every question must have a Subject assigned. Please select or enter a subject.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.topic_name || formData.topic_name.trim() === "") {
+      toast({
+        title: "⚠️ Topic Required",
+        description: "Every question must have a Topic assigned. Please select or enter a topic.",
         variant: "destructive",
       });
       return;
@@ -673,7 +684,7 @@ const AIQuestionGenerator = () => {
                         <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 font-bold">Q{index + 1}</Badge>
                         <Badge variant="outline" className="text-slate-500 font-medium border-slate-200">Answer: {q.correct_answer}</Badge>
                       </div>
-                      <p className="font-bold text-slate-800 text-lg mb-4 leading-snug">{q.question_text}</p>
+                      <div className="font-bold text-slate-800 text-lg mb-4 leading-snug"><MathText text={q.question_text} /></div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         {(['A', 'B', 'C', 'D'] as const).map((opt) => (
                           <div
@@ -683,8 +694,8 @@ const AIQuestionGenerator = () => {
                               : 'bg-slate-50 border-slate-100 text-slate-600'
                               }`}
                           >
-                            <span className="w-6 h-6 rounded-lg bg-white/50 flex items-center justify-center text-[10px] font-black">{opt}</span>
-                            {opt === 'A' ? q.option_a : opt === 'B' ? q.option_b : opt === 'C' ? q.option_c : q.option_d}
+                            <span className="w-6 h-6 rounded-lg bg-white/50 flex items-center justify-center text-[10px] font-black min-w-[24px]">{opt}</span>
+                            <MathText text={opt === 'A' ? q.option_a : opt === 'B' ? q.option_b : opt === 'C' ? q.option_c : q.option_d} />
                           </div>
                         ))}
                       </div>
@@ -694,7 +705,7 @@ const AIQuestionGenerator = () => {
                             <FileText className="w-4 h-4 text-slate-400" />
                             <span className="font-bold text-xs text-slate-500 uppercase tracking-widest">Short Notes & Explanation</span>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{q.explanation}</p>
+                          <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line"><MathText text={q.explanation} /></div>
                         </div>
                       )}
                     </div>

@@ -29,6 +29,7 @@ import { motion } from "framer-motion";
 interface BlogPost {
     id: string;
     title: string;
+    slug?: string | null;
     excerpt: string | null;
     content: string | null;
     image_url: string | null;

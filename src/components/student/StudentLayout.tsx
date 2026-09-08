@@ -1,10 +1,47 @@
-import { ReactNode, useState, useEffect, useCallback } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useStudentAuth } from "@/contexts/StudentContext";
+import { checkIsAdmin } from "@/utils/adminAuth";
 import { studentNav } from "@/config/studentNav";
-import { Home, ChevronLeft, ChevronRight, Zap } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar";
+import {
+  Home,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  ClipboardList,
+  UserRound,
+  NotebookPen,
+  BarChart3,
+  RotateCcw,
+  Trophy,
+  Bookmark,
+  User,
+  Crown,
+  Sparkles,
+  ExternalLink,
+  ShieldCheck,
+  Check,
+  Target
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+  SidebarInset,
+  useSidebar
+} from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
+import { initRazorpayPayment } from "@/utils/payment";
+import { toast } from "sonner";
+
 interface StudentLayoutProps {
   title: string;
   subtitle?: string;
@@ -13,24 +50,31 @@ interface StudentLayoutProps {
   hideNavbar?: boolean;
 }
 
-// Sidebar Toggle Button Component - Same position as Admin Panel
+// Integrated, sleek Sidebar Toggle Button positioned on the sidebar border
 const SidebarToggleButton = () => {
-  const {
-    state,
-    toggleSidebar
-  } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
-  return <button onClick={toggleSidebar} className={`hidden md:flex fixed z-[100] rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 items-center justify-center hover:from-indigo-600 hover:to-violet-700 hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white w-8 h-8 ${isCollapsed ? "left-[4rem] top-5" : "left-[15.5rem] top-5"}`} title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
-    {isCollapsed ? <ChevronRight className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
-  </button>;
+  return (
+    <button
+      onClick={toggleSidebar}
+      className={`hidden md:flex fixed z-[60] rounded-full bg-white text-slate-500 hover:text-blue-600 shadow-sm border border-slate-200 hover:border-blue-300 items-center justify-center transition-all duration-150 w-6 h-6 ${
+        isCollapsed ? "left-[3.75rem] top-4.5" : "left-[15.25rem] top-4.5"
+      }`}
+      title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+      aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+    >
+      {isCollapsed ? (
+        <ChevronRight className="w-3.5 h-3.5 stroke-[2.2]" />
+      ) : (
+        <ChevronLeft className="w-3.5 h-3.5 stroke-[2.2]" />
+      )}
+    </button>
+  );
 };
 
-// Mobile-optimized page transition config (simpler = faster)
+// Page transition config
 const pageVariants = {
-  initial: {
-    opacity: 0,
-    y: 8,
-  },
+  initial: { opacity: 0, y: 8 },
   animate: {
     opacity: 1,
     y: 0,
@@ -39,235 +83,356 @@ const pageVariants = {
       ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number],
     },
   },
-  exit: {
-    opacity: 0,
-    transition: {
-      duration: 0.15,
-    },
-  },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
 };
 
-// Icon color schemes for nav items
-const iconColors = [{
-  bg: "from-indigo-100 to-violet-100",
-  icon: "text-indigo-600",
-  activeBg: "from-indigo-500 to-violet-500",
-  glow: "shadow-indigo-500/30"
-}, {
-  bg: "from-emerald-100 to-teal-100",
-  icon: "text-emerald-600",
-  activeBg: "from-emerald-500 to-teal-500",
-  glow: "shadow-emerald-500/30"
-}, {
-  bg: "from-blue-100 to-cyan-100",
-  icon: "text-blue-600",
-  activeBg: "from-blue-500 to-cyan-500",
-  glow: "shadow-blue-500/30"
-}, {
-  bg: "from-purple-100 to-pink-100",
-  icon: "text-purple-600",
-  activeBg: "from-purple-500 to-pink-500",
-  glow: "shadow-purple-500/30"
-}, {
-  bg: "from-orange-100 to-amber-100",
-  icon: "text-orange-600",
-  activeBg: "from-orange-500 to-amber-500",
-  glow: "shadow-orange-500/30"
-}];
+// Structured navigation categories matching user preferences (No test count mentioned)
+const navGroups = [
+  {
+    category: "Main Menu",
+    items: [
+      { name: "Home", path: "/student/dashboard", icon: Home },
+      { name: "Exams", path: "/student/exam", icon: ClipboardList },
+      { name: "Practice", path: "/student/practice", icon: Target },
+      { name: "Test Results", path: "/student/results", icon: BarChart3 },
+      { name: "My Profile", path: "/student/profile", icon: UserRound },
+    ],
+  },
+  {
+    category: "Practice & Revision",
+    items: [
+      { name: "Mistakes Notebook", path: "/student/mistakes", icon: RotateCcw },
+      { name: "State Leaderboard", path: "/student/leaderboard", icon: Trophy },
+      { name: "Saved Bookmarks", path: "/student/bookmarks", icon: Bookmark },
+      { name: "Study Notes", path: "/student/notes", icon: BookOpen },
+    ],
+  },
+  {
+    category: "Portal",
+    items: [
+      { name: "Public Home", path: "/", icon: ExternalLink },
+    ],
+  },
+];
+
 const StudentLayout = ({
   title,
   subtitle,
   children,
   headerActions,
-  hideNavbar = false
+  hideNavbar = false,
 }: StudentLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
-
-  const checkSubscription = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const oneYearAgo = new Date();
-    oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-    const { data } = await (supabase
-      .from("purchases" as any)
-      .select("id")
-      .eq("user_id", session.user.id)
-      .eq("content_type", "subscription")
-      .eq("status", "completed")
-      .gt("created_at", oneYearAgo.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle() as any);
-
-    setHasSubscription(!!data);
-  }, [supabase]);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const { profile: userProfile, hasSubscription, subscriptionFee, refreshSubscription } = useStudentAuth();
 
   useEffect(() => {
-    checkSubscription();
-  }, [location.pathname, checkSubscription]);
+    checkIsAdmin().then(setIsAdminUser);
+  }, []);
 
-  const goToHome = () => {
-    navigate("/");
+  const handleProUpgrade = async () => {
+    if (hasSubscription) {
+      toast.success("Pro Plan is already active!");
+      return;
+    }
+    try {
+      await initRazorpayPayment({
+        amount: subscriptionFee || 199,
+        contentId: "site_yearly_subscription",
+        contentType: "subscription",
+        title: "PracticeKoro Pro Pass",
+        description: "Unlock all mock tests and study notes for 1 year"
+      });
+      await refreshSubscription();
+      toast.success("Pro Access Activated!");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Opening Pro upgrade...";
+      if (errorMsg !== "Payment cancelled") {
+        toast.info(errorMsg);
+      }
+    }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/40 relative flex overflow-x-hidden" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
-    {/* Clean Background - No blur orbs */}
 
-    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
-      <SidebarToggleButton />
+  return (
+    <div
+      className="min-h-screen bg-[#F8FAFC] relative flex overflow-x-hidden"
+      style={{
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
+    >
+      <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SidebarToggleButton />
 
-      {/* Desktop Sidebar - Fixed */}
-      <Sidebar side="left" variant="sidebar" collapsible="icon" className="hidden md:flex bg-white/80 backdrop-blur-sm border-r border-slate-100/80 transition-all duration-200 shadow-xl" style={{
-        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.04)'
-      }}>
-        <SidebarHeader className="border-b border-slate-100/60 bg-gradient-to-r from-white/90 to-indigo-50/30">
-          <div className="flex items-center gap-3 px-3 py-4 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:justify-center">
-            <motion.div whileHover={{
-              scale: 1.05,
-              rotate: 3
-            }} whileTap={{
-              scale: 0.95
-            }} className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shrink-0" style={{
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
-            }}>
-              <Zap className="w-5 h-5 text-white" />
-            </motion.div>
-            <div className="group-data-[collapsible=icon]:hidden overflow-hidden flex flex-col">
-              <h1 className="text-base font-bold text-slate-900 whitespace-nowrap tracking-tight">Student Panel</h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-[10px] text-indigo-600 font-semibold uppercase tracking-wider">Practice Koro</p>
-                {hasSubscription && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-[8px] font-black text-white shadow-sm shadow-amber-500/20"
-                  >
-                    <Zap className="w-2 h-2 fill-current" />
-                    PREMIUM
-                  </motion.div>
-                )}
+        {/* ═══════════════════════════════════════════════════════════════
+            PREMIUM DESKTOP SIDEBAR
+            ═══════════════════════════════════════════════════════════════ */}
+        <Sidebar
+          side="left"
+          variant="sidebar"
+          collapsible="icon"
+          className="hidden md:flex bg-white border-r border-slate-200/80 transition-all duration-200 shadow-[2px_0_12px_rgba(0,0,0,0.02)] z-40"
+        >
+          {/* Brand Header */}
+          <SidebarHeader className="border-b border-slate-100/90 px-3.5 py-4 bg-white">
+            <div className="flex items-center gap-3 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:justify-center">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-xs border border-slate-200/80 bg-white"
+              >
+                <img src="/logo-circle.png" alt="PracticeKoro" className="w-full h-full object-cover" />
+              </motion.div>
+
+              <div className="group-data-[collapsible=icon]:hidden overflow-hidden flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="text-base font-extrabold tracking-tight text-slate-900">Practice</span>
+                    <span className="text-base font-extrabold tracking-tight text-[#0066FF]">Koro</span>
+                  </div>
+                  {hasSubscription && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
+                      <Crown className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
+                      PRO
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">
+                  WB Exam Preparation
+                </p>
               </div>
             </div>
-          </div>
-        </SidebarHeader>
+          </SidebarHeader>
 
-        <SidebarContent className="py-4 px-2 flex flex-col h-full group-data-[collapsible=icon]:px-1.5">
-          <div className="flex-1">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-3 group-data-[collapsible=icon]:hidden">Menu</p>
-            <SidebarMenu className="space-y-1.5 group-data-[collapsible=icon]:space-y-2">
-              {studentNav.map((item, index) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                const colorSet = iconColors[index % iconColors.length];
-                return <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton asChild isActive={isActive} className={`rounded-2xl transition-all duration-150 group/item h-auto py-2.5 px-3 ${isActive ? `bg-gradient-to-r ${colorSet.activeBg} text-white shadow-lg ${colorSet.glow}` : "text-slate-600 hover:bg-slate-50"} group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:justify-center ${isActive ? 'group-data-[collapsible=icon]:bg-gradient-to-br group-data-[collapsible=icon]:shadow-md' : 'group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:hover:bg-slate-100'}`}>
-                    <Link to={item.path} title={item.name} className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-                      {/* Round icon container */}
-                      <motion.div
-                        whileTap={{ scale: 0.9, backgroundColor: isActive ? 'rgba(255,255,255,0.4)' : 'rgba(99, 102, 241, 0.15)' }}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${isActive ? 'bg-white/25' : `bg-gradient-to-br ${colorSet.bg}`}`}
-                      >
-                        <Icon className={`w-5 h-5 ${isActive ? "text-white" : colorSet.icon}`} />
-                      </motion.div>
-                      <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden whitespace-nowrap">{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>;
-              })}
-            </SidebarMenu>
-          </div>
-
-          <div className="mt-auto pt-4 border-t border-slate-100/60 space-y-1.5 group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:pt-2">
-            <SidebarMenuButton asChild className="w-full rounded-2xl text-slate-600 hover:bg-blue-50 transition-all duration-150 group/btn h-auto py-2.5 px-3 group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:hover:bg-blue-50">
-              <button onClick={goToHome} title="Home" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-                <motion.div
-                  whileTap={{ scale: 0.9, backgroundColor: 'rgba(59, 130, 246, 0.2)' }}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center shrink-0"
+          {/* Sidebar Navigation Content */}
+          <SidebarContent className="py-3 px-2 flex flex-col gap-3 group-data-[collapsible=icon]:px-1.5">
+            {/* Pro Upgrade Mini-Banner for Free Users (Soft harmonious amber palette) */}
+            {!hasSubscription && (
+              <div className="mx-1.5 p-3 rounded-2xl bg-gradient-to-br from-amber-500/[0.08] via-orange-500/[0.04] to-transparent border border-amber-200/70 group-data-[collapsible=icon]:hidden">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0">
+                    <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">PracticeKoro Pro</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug font-medium mt-1">
+                  Unlock all mock tests, solutions & study notes
+                </p>
+                <button
+                  onClick={handleProUpgrade}
+                  className="mt-2.5 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 shadow-xs shadow-amber-500/20 active:scale-[0.98] transition-all"
                 >
-                  <Home className="w-5 h-5 text-blue-500" />
-                </motion.div>
-                <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden">Home</span>
-              </button>
-            </SidebarMenuButton>
-          </div>
-        </SidebarContent>
-      </Sidebar>
+                  <Sparkles className="w-3.5 h-3.5 fill-white/80" /> Upgrade to Pro
+                </button>
+              </div>
+            )}
 
-      <SidebarInset className="bg-transparent flex-1">
-        <AnimatePresence mode="wait">
-          <motion.main
-            key={location.pathname}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="flex flex-col px-0 pt-1 pb-32 sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
-          >
-            <div className="w-full max-w-7xl mx-auto">
-              {children}
-            </div>
-          </motion.main>
-        </AnimatePresence>
-      </SidebarInset>
-    </SidebarProvider>
+            {/* Categorized Menu Groups */}
+            {navGroups.map((group) => (
+              <SidebarGroup key={group.category} className="p-0">
+                <SidebarGroupLabel className="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3 py-1 mb-1 group-data-[collapsible=icon]:hidden">
+                  {group.category}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="space-y-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.path;
 
-    {/* ═══════════════════════════════════════════════════════════════
-                        MOBILE BOTTOM NAVIGATION - Premium Round Icons
-                        ═══════════════════════════════════════════════════════════════ */}
-    {!hideNavbar && (
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[100] pointer-events-none w-full"
-        style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-          paddingLeft: 'max(env(safe-area-inset-left), 8px)',
-          paddingRight: 'max(env(safe-area-inset-right), 8px)'
-        }}
-      >
-        <div className="bottom-nav-container pointer-events-auto w-full max-w-lg mx-auto bg-white/95 backdrop-blur-sm border border-white/60 shadow-[0_-2px_20px_rgba(0,0,0,0.06),0_-8px_40px_rgba(0,0,0,0.04)] rounded-[20px] overflow-visible">
-          <div className="flex items-center justify-around py-1.5 px-1">
-            {studentNav.map((item, index) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              const colorSet = iconColors[index % iconColors.length];
-              return (
+                      return (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className={`rounded-xl transition-all duration-150 h-auto py-2.5 px-3 text-xs sm:text-sm font-semibold group/item ${
+                              isActive
+                                ? "bg-[#0066FF]/10 text-[#0066FF] font-bold border border-[#0066FF]/20 shadow-2xs hover:bg-[#0066FF]/15"
+                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium"
+                            } group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center`}
+                          >
+                            <Link
+                              to={item.path}
+                              title={item.name}
+                              className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Icon
+                                  className={`w-4 h-4 shrink-0 transition-colors ${
+                                    isActive
+                                      ? "text-[#0066FF] stroke-[2.3]"
+                                      : "text-slate-400 group-hover/item:text-slate-700 stroke-[1.8]"
+                                  }`}
+                                />
+                                <span className="group-data-[collapsible=icon]:hidden truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+
+                              {/* Active Indicator Dot */}
+                              <div className="group-data-[collapsible=icon]:hidden flex items-center">
+                                {isActive && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF] shrink-0" />
+                                )}
+                              </div>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+
+          {/* Student Profile Footer Card */}
+          <SidebarFooter className="border-t border-slate-100/90 p-2.5 bg-slate-50/60 space-y-2">
+            {isAdminUser && (
+              <div className="px-1 group-data-[collapsible=icon]:hidden">
                 <Link
-                  key={item.path}
-                  to={item.path}
-                  className="relative flex flex-col items-center justify-center flex-1 py-1 tap-highlight overflow-visible"
+                  to="/admin/dashboard"
+                  className="flex items-center justify-center gap-1.5 w-full py-1.5 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all"
                 >
-                  <motion.div
-                    whileTap={{ scale: 0.85 }}
-                    className="flex flex-col items-center justify-center overflow-visible"
-                  >
-                    {/* Round colored icon container */}
-                    <div
-                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-150 ${isActive
-                        ? `bg-gradient-to-br ${colorSet.activeBg}`
-                        : 'bg-slate-100'
-                        }`}
-                      style={isActive ? {
-                        boxShadow: '0 6px 20px rgba(99, 102, 241, 0.35)',
-                        transform: 'translateY(-2px)'
-                      } : {}}
-                    >
-                      <Icon className={`w-5 h-5 transition-colors duration-200 ${isActive ? "text-white" : "text-slate-500"}`} />
-                    </div>
-                    {/* Label */}
-                    <span className={`text-[10px] font-semibold mt-1.5 transition-colors duration-200 ${isActive ? colorSet.icon : "text-slate-400"}`}>
-                      {item.name}
-                    </span>
-                  </motion.div>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Admin Panel</span>
                 </Link>
-              );
-            })}
+              </div>
+            )}
+            <div className="flex items-center gap-2.5 p-1 rounded-xl group-data-[collapsible=icon]:justify-center">
+              <div className="w-8 h-8 rounded-xl bg-white text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0 overflow-hidden border border-slate-200">
+                {userProfile?.avatar_url ? (
+                  <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <img src="/logo-icon.png" alt="Profile" className="w-full h-full object-cover" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                <div className="flex items-center gap-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {userProfile?.full_name || "Student Aspirant"}
+                  </p>
+                  {hasSubscription && (
+                    <Crown className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 truncate">
+                  {hasSubscription ? "Pro Member" : "Free Aspirant"}
+                </p>
+              </div>
+              <Link
+                to="/student/profile"
+                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors group-data-[collapsible=icon]:hidden"
+                title="Go to Profile"
+              >
+                <User className="w-4 h-4" />
+              </Link>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+
+        {/* Main Content Inset */}
+        <SidebarInset className="bg-[#F8FAFC] flex-1 min-w-0 overflow-x-hidden">
+          <AnimatePresence mode="wait">
+            <motion.main
+              key={location.pathname}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="flex flex-col px-0 pt-1 pb-32 sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
+            >
+              <div className="w-full max-w-7xl mx-auto">{children}</div>
+            </motion.main>
+          </AnimatePresence>
+        </SidebarInset>
+      </SidebarProvider>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          MOBILE BOTTOM NAVIGATION - Balanced 5-Item Touch Bar
+          Home | Exams | Practice | Study | Profile
+          ═══════════════════════════════════════════════════════════════ */}
+      {!hideNavbar && (
+        <nav
+          className="md:hidden fixed bottom-0 left-0 right-0 z-[100] w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]"
+          style={{
+            paddingBottom: "max(env(safe-area-inset-bottom), 6px)",
+            paddingTop: "6px",
+          }}
+        >
+          <div className="w-full max-w-md mx-auto px-1.5">
+            <div className="flex items-center justify-around">
+              {studentNav.map((item) => {
+                const Icon = item.icon;
+                const isActive = (
+                  (item.path === "/student/dashboard" && (location.pathname === "/student/dashboard" || location.pathname === "/student")) ||
+                  (item.path === "/student/exam" && (
+                    location.pathname === "/student/exam" ||
+                    location.pathname === "/student/exams" ||
+                    location.pathname === "/student/mocktest" ||
+                    location.pathname.startsWith("/student/take-test") ||
+                    location.pathname.startsWith("/student/test-review")
+                  )) ||
+                  (item.path === "/student/practice" && (
+                    location.pathname === "/student/practice" ||
+                    location.pathname.startsWith("/student/practice/") ||
+                    location.pathname === "/student/daily" ||
+                    location.pathname === "/student/mistakes" ||
+                    location.pathname === "/student/bookmarks" ||
+                    location.pathname === "/student/pyq"
+                  )) ||
+                  (item.path === "/student/results" && (
+                    location.pathname === "/student/results" ||
+                    location.pathname.startsWith("/student/test-review")
+                  )) ||
+                  (item.path === "/student/notes" && (
+                    location.pathname === "/student/notes" ||
+                    location.pathname === "/student/current-affairs"
+                  )) ||
+                  (item.path === "/student/profile" && location.pathname === "/student/profile")
+                );
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className="relative flex flex-col items-center justify-center flex-1 py-0.5 tap-highlight"
+                  >
+                    <motion.div
+                      whileTap={{ scale: 0.92 }}
+                      className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 ${
+                        isActive
+                          ? "bg-[#0066FF]/10 text-[#0066FF]"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      <Icon
+                        className={`w-5 h-5 transition-transform duration-200 ${
+                          isActive
+                            ? "text-[#0066FF] stroke-[2.4] scale-105"
+                            : "text-slate-400 stroke-[1.8]"
+                        }`}
+                      />
+                      <span
+                        className={`text-[10.5px] mt-0.5 tracking-tight transition-colors duration-150 ${
+                          isActive
+                            ? "font-bold text-[#0066FF]"
+                            : "font-semibold text-slate-500"
+                        }`}
+                      >
+                        {item.name}
+                      </span>
+                    </motion.div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </nav>
-    )}
-  </div>;
+        </nav>
+      )}
+    </div>
+  );
 };
+
 export default StudentLayout;

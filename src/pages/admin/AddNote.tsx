@@ -33,6 +33,12 @@ const AddNote = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const editId = searchParams.get("edit");
+    
+    // Quick Add parameters
+    const prefillSubjectId = searchParams.get("subject_id") || "";
+    const prefillTopicId = searchParams.get("topic_id") || "";
+    const prefillTopicName = searchParams.get("topic_name") || "";
+
     const { toast } = useToast();
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [topics, setTopics] = useState<Topic[]>([]);
@@ -42,10 +48,10 @@ const AddNote = () => {
     const [initialLoading, setInitialLoading] = useState(!!editId);
 
     const [formData, setFormData] = useState({
-        title: "",
+        title: prefillTopicName,
         content: "",
-        subject_id: "",
-        topic_id: "",
+        subject_id: prefillSubjectId,
+        topic_id: prefillTopicId,
         is_paid: false,
         price: 0,
     });
@@ -57,7 +63,7 @@ const AddNote = () => {
     }, []);
 
     const loadTopics = useCallback(async () => {
-        const { data } = await supabase.from("topics").select("id, subject_id, name").eq("category", "notes").order("name");
+        const { data } = await supabase.from("topics").select("id, subject_id, name, order_index").eq("category", "notes").order("order_index", { ascending: true, nullsFirst: false });
         if (data) setTopics(data);
     }, []);
 
@@ -70,7 +76,8 @@ const AddNote = () => {
             .single();
 
         if (error || !data) {
-            toast({ title: "Error", description: "Failed to load note data", variant: "destructive" });
+            console.error("Error loading note data:", error);
+            toast({ title: "Error", description: `Failed to load note data: ${error?.message || "Unknown error"}`, variant: "destructive" });
             navigate("/admin/notes");
             return;
         }
@@ -116,37 +123,36 @@ const AddNote = () => {
     useEffect(() => {
         if (formData.subject_id) {
             setFilteredTopics(topics.filter(t => t.subject_id === formData.subject_id));
-            // Reset topic_id if current selection is invalid
-            setFormData(prev => {
-                if (prev.topic_id && !topics.some(t => t.subject_id === formData.subject_id && t.id === prev.topic_id)) {
-                    return { ...prev, topic_id: "" };
-                }
-                return prev;
-            });
+            // Only validate and reset topic_id if topics are actually loaded
+            if (topics.length > 0) {
+                setFormData(prev => {
+                    if (prev.topic_id && !topics.some(t => t.subject_id === formData.subject_id && t.id === prev.topic_id)) {
+                        return { ...prev, topic_id: "" };
+                    }
+                    return prev;
+                });
+            }
         } else {
             setFilteredTopics([]);
         }
     }, [formData.subject_id, topics]);
 
     const handleSubmit = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
         if (!formData.title.trim() || !formData.subject_id || !formData.topic_id) {
             toast({ title: "Error", description: "Title, Subject and Topic are required", variant: "destructive" });
             return;
         }
-
         setSaving(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
 
         const payload = {
             title: formData.title,
             content: formData.content || null,
-            subject_id: formData.subject_id,
-            topic_id: formData.topic_id,
-            exam_id: null, // Always null to keep it global as requested
+            subject_id: formData.subject_id || null,
+            topic_id: formData.topic_id || null,
+            exam_id: null,
             is_paid: formData.is_paid,
-            price: formData.price,
             uploaded_by: session.user.id,
         };
 
@@ -162,7 +168,12 @@ const AddNote = () => {
         setSaving(false);
 
         if (error) {
-            toast({ title: "Error", description: editId ? "Failed to update note" : "Failed to add note", variant: "destructive" });
+            console.error("Error saving note:", error);
+            toast({ 
+                title: "Error", 
+                description: `${editId ? "Failed to update note" : "Failed to add note"}: ${error.message || "Unknown error"}`, 
+                variant: "destructive" 
+            });
             return;
         }
 
@@ -234,14 +245,14 @@ const AddNote = () => {
                                     </Select>
                                 </div>
                                 <div className="space-y-3">
-                                    <Label className="text-sm font-bold text-gray-700 ml-1">Sub-topic (Headline Category)</Label>
+                                    <Label className="text-sm font-bold text-gray-700 ml-1">Topic</Label>
                                     <Select
                                         value={formData.topic_id}
                                         onValueChange={(value) => setFormData({ ...formData, topic_id: value })}
                                         disabled={!formData.subject_id}
                                     >
                                         <SelectTrigger className="rounded-2xl h-14 border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-violet-500/20 transition-all shadow-sm">
-                                            <SelectValue placeholder={formData.subject_id ? "Specify the topic headline" : "Select a subject first"} />
+                                            <SelectValue placeholder={formData.subject_id ? "Select a topic" : "Select a subject first"} />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-2xl">
                                             {filteredTopics.map((topic) => (
@@ -264,12 +275,12 @@ const AddNote = () => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-violet-50/30 rounded-3xl border border-violet-100/50">
+                            <div className="space-y-6">
                                 <div className="flex items-center space-x-3 p-2">
                                     <Checkbox
                                         id="is_paid"
                                         checked={formData.is_paid}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked as boolean, price: 0 })}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked as boolean })}
                                         className="w-6 h-6 rounded-lg border-violet-300 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
                                     />
                                     <div className="grid gap-1.5 leading-none">

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, FolderOpen, BookOpen, ChevronRight, MoreVertical, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, FolderOpen, BookOpen, ChevronRight, MoreVertical, GripVertical, ListPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -189,6 +189,9 @@ const SubjectManagement = () => {
     // Form data
     const [subjectForm, setSubjectForm] = useState({ exam_id: "", name: "", description: "" });
     const [topicForm, setTopicForm] = useState({ name: "", description: "" });
+    const [bulkMode, setBulkMode] = useState(false);
+    const [bulkTopicText, setBulkTopicText] = useState("");
+    const [isSavingBulk, setIsSavingBulk] = useState(false);
 
     // Delete dialog states
     const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
@@ -429,6 +432,8 @@ const SubjectManagement = () => {
         if (!selectedSubject) return;
         setEditingTopic(null);
         setTopicForm({ name: "", description: "" });
+        setBulkMode(false);
+        setBulkTopicText("");
         setTopicDialogOpen(true);
     };
 
@@ -455,6 +460,7 @@ const SubjectManagement = () => {
             }
             toast({ title: "Success", description: "Topic updated" });
         } else {
+            const maxOrder = topics.length > 0 ? Math.max(...topics.map(t => t.order_index || 0)) : 0;
             const { error } = await supabase
                 .from("topics")
                 .insert([
@@ -463,7 +469,8 @@ const SubjectManagement = () => {
                         name: topicForm.name,
                         description: topicForm.description || null,
                         created_by: session.user.id,
-                        category: "notes"
+                        category: "notes",
+                        order_index: maxOrder + 1
                     },
                 ]);
 
@@ -475,6 +482,51 @@ const SubjectManagement = () => {
         }
 
         setTopicDialogOpen(false);
+        await loadTopics(selectedSubject.id);
+    };
+
+    const handleBulkSaveTopic = async () => {
+        if (!selectedSubject || !bulkTopicText.trim()) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Helper to strip list prefixes like "1.", "2)", "*", "-", "•"
+        const cleanBulkLine = (line: string) => line.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim();
+
+        const lines = bulkTopicText
+            .split("\n")
+            .map(line => cleanBulkLine(line))
+            .filter(line => line.length > 0);
+
+        if (lines.length === 0) {
+            toast({ title: "Error", description: "No topics to add", variant: "destructive" });
+            return;
+        }
+
+        setIsSavingBulk(true);
+        const maxOrder = topics.length > 0 ? Math.max(...topics.map(t => t.order_index || 0)) : 0;
+
+        const topicsToInsert = lines.map((name, idx) => ({
+            subject_id: selectedSubject.id,
+            name,
+            description: null,
+            created_by: session.user.id,
+            category: "notes",
+            order_index: maxOrder + idx + 1
+        }));
+
+        const { error } = await supabase.from("topics").insert(topicsToInsert);
+
+        if (error) {
+            toast({ title: "Error", description: "Failed to add topics in bulk", variant: "destructive" });
+            setIsSavingBulk(false);
+            return;
+        }
+
+        toast({ title: "Success", description: `${lines.length} topics added successfully` });
+        setIsSavingBulk(false);
+        setTopicDialogOpen(false);
+        setBulkTopicText("");
         await loadTopics(selectedSubject.id);
     };
 
@@ -644,39 +696,115 @@ const SubjectManagement = () => {
 
             {/* Topic Dialog */}
             <Dialog open={topicDialogOpen} onOpenChange={setTopicDialogOpen}>
-                <DialogContent className="sm:max-w-md rounded-2xl">
+                <DialogContent className="sm:max-w-lg rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle>{editingTopic ? "Edit Topic" : "Create Topic"}</DialogTitle>
+                        <DialogTitle>{editingTopic ? "Edit Topic" : "Add Topics"}</DialogTitle>
                         <DialogDescription>
-                            {selectedSubject && `${editingTopic ? "Update" : "Add"} topic in ${selectedSubject.name}`}
+                            {selectedSubject && `${editingTopic ? "Update" : "Add"} topic${!editingTopic ? "(s)" : ""} in ${selectedSubject.name}`}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Topic Name *</Label>
-                            <Input
-                                value={topicForm.name}
-                                onChange={e => setTopicForm({ ...topicForm, name: e.target.value })}
-                                placeholder="e.g., Heat, Light, Mechanics"
-                                className="h-11 rounded-xl"
-                            />
+
+                    {/* Mode Tabs - only show when creating new */}
+                    {!editingTopic && (
+                        <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+                            <button
+                                onClick={() => setBulkMode(false)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                                    !bulkMode
+                                        ? "bg-white shadow-sm text-violet-700"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                <Plus className="w-4 h-4" />
+                                Single Topic
+                            </button>
+                            <button
+                                onClick={() => setBulkMode(true)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                                    bulkMode
+                                        ? "bg-white shadow-sm text-violet-700"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                <ListPlus className="w-4 h-4" />
+                                Bulk Topics
+                            </button>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Description</Label>
-                            <Textarea
-                                value={topicForm.description}
-                                onChange={e => setTopicForm({ ...topicForm, description: e.target.value })}
-                                placeholder="Brief description"
-                                rows={2}
-                                className="rounded-xl"
-                            />
-                        </div>
+                    )}
+
+                    <div className="space-y-4 py-2">
+                        {bulkMode && !editingTopic ? (
+                            /* Bulk Mode */
+                            <div className="space-y-3">
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Topics (one per line) *</Label>
+                                    <Textarea
+                                        value={bulkTopicText}
+                                        onChange={e => setBulkTopicText(e.target.value)}
+                                        placeholder={"ভারতের অবস্থান, আয়তন ও সীমানা\nভারতের পর্বত ও মালভূমি\nভারতের নদনদী\n..."}
+                                        rows={10}
+                                        className="rounded-xl font-mono text-sm leading-relaxed"
+                                    />
+                                </div>
+                                {bulkTopicText.trim() && (
+                                    <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
+                                        <p className="text-xs font-semibold text-violet-700 mb-1">
+                                            📋 {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} topics will be added
+                                        </p>
+                                        <div className="max-h-24 overflow-y-auto space-y-0.5">
+                                            {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).map((line, i) => (
+                                                <p key={i} className="text-xs text-violet-600 truncate">
+                                                    {i + 1}. {line}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            /* Single Mode */
+                            <>
+                                <div className="space-y-2">
+                                    <Label>Topic Name *</Label>
+                                    <Input
+                                        value={topicForm.name}
+                                        onChange={e => setTopicForm({ ...topicForm, name: e.target.value })}
+                                        placeholder="e.g., Heat, Light, Mechanics"
+                                        className="h-11 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Description</Label>
+                                    <Textarea
+                                        value={topicForm.description}
+                                        onChange={e => setTopicForm({ ...topicForm, description: e.target.value })}
+                                        placeholder="Brief description"
+                                        rows={2}
+                                        className="rounded-xl"
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                     <DialogFooter className="gap-2">
                         <Button variant="outline" onClick={() => setTopicDialogOpen(false)} className="rounded-xl">Cancel</Button>
-                        <Button onClick={handleSaveTopic} disabled={!topicForm.name.trim()} className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600">
-                            {editingTopic ? "Update" : "Create"}
-                        </Button>
+                        {bulkMode && !editingTopic ? (
+                            <Button
+                                onClick={handleBulkSaveTopic}
+                                disabled={!bulkTopicText.trim() || isSavingBulk}
+                                className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600"
+                            >
+                                {isSavingBulk ? (
+                                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Adding...</>
+                                ) : (
+                                    <><ListPlus className="w-4 h-4 mr-2" /> Add {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} Topics</>
+                                )}
+                            </Button>
+                        ) : (
+                            <Button onClick={handleSaveTopic} disabled={!topicForm.name.trim()} className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600">
+                                {editingTopic ? "Update" : "Create"}
+                            </Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

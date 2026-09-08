@@ -33,9 +33,20 @@ class ErrorBoundary extends Component<Props, State> {
                             <AlertCircle className="w-10 h-10 text-red-500" />
                         </div>
                         <h1 className="text-2xl font-bold text-slate-900 mb-2">Something went wrong</h1>
-                        <p className="text-slate-500 mb-8">
+                        <p className="text-slate-500 mb-4">
                             We encountered an unexpected error. Please try refreshing the page.
                         </p>
+
+                        {this.state.error && (
+                            <div className="mb-6 p-3 rounded-xl bg-red-50 border border-red-200 text-left overflow-auto max-h-36 text-xs text-red-700 font-mono">
+                                <p className="font-bold">{this.state.error.message}</p>
+                                {this.state.error.stack && (
+                                    <pre className="text-[10px] text-red-500 mt-1 whitespace-pre-wrap truncate">
+                                        {this.state.error.stack.split('\n').slice(0, 4).join('\n')}
+                                    </pre>
+                                )}
+                            </div>
+                        )}
 
                         <div className="space-y-3">
                             <Button

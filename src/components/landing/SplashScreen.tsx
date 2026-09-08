@@ -57,7 +57,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
                     {/* Logo and brand container */}
                     <div className="relative z-10 flex flex-col items-center">
-                        {/* Animated Icon */}
+                        {/* Animated Graduation Cap Icon */}
                         <motion.div
                             initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: 1, rotate: 0 }}
@@ -71,14 +71,11 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
                         >
                             {/* Main icon container */}
                             <motion.div
-                                className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 flex items-center justify-center"
+                                className="relative w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center p-4 shadow-xl shadow-blue-500/25 text-white"
                             >
-                                <motion.div
-                                    animate={{ rotate: [0, 10, -10, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                                >
-                                    <Zap className="w-12 h-12 text-white" strokeWidth={2.5} />
-                                </motion.div>
+                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14">
+                                    <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
+                                </svg>
                             </motion.div>
                         </motion.div>
 
@@ -86,27 +83,40 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+                            transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
                             className="text-center"
                         >
-                            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-gray-900 via-emerald-800 to-gray-900 bg-clip-text text-transparent tracking-tight">
-                                Practice Koro
+                            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                                Practice<span className="text-blue-600">Koro</span>
                             </h1>
                             <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 0.8, duration: 0.5 }}
-                                className="text-emerald-600 text-sm font-semibold mt-2"
+                                transition={{ delay: 0.5, duration: 0.5 }}
+                                className="text-slate-500 text-xs sm:text-sm font-semibold mt-1.5"
                             >
-                                #1 Mock Test Platform
+                                Your Exam Preparation Partner
                             </motion.p>
+                        </motion.div>
+
+                        {/* Bengali Quote matching Screen 1 */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.7, duration: 0.5 }}
+                            className="mt-12 text-center"
+                        >
+                            <p className="text-blue-900 font-bold text-base sm:text-lg font-bengali leading-snug">
+                                প্রস্তুতি আজ <br />
+                                <span className="text-blue-600 font-extrabold">সাফল্য আগামী কাল</span>
+                            </p>
                         </motion.div>
 
                         {/* Loading indicator */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1, duration: 0.4 }}
+                            transition={{ delay: 0.8, duration: 0.4 }}
                             className="mt-8 flex items-center gap-2"
                         >
                             {[0, 1, 2].map((i) => (
@@ -122,7 +132,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
                                         delay: i * 0.15,
                                         ease: "easeInOut",
                                     }}
-                                    className="w-2 h-2 rounded-full bg-emerald-500"
+                                    className="w-2 h-2 rounded-full bg-blue-600"
                                 />
                             ))}
                         </motion.div>

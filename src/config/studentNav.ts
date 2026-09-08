@@ -1,17 +1,31 @@
 import {
-    Home,
-    BookOpen,
-    Trophy,
-    User,
-    NotebookPen
+  Home,
+  ClipboardList,
+  Target,
+  BookOpen,
+  UserRound,
+  BarChart3,
+  RotateCcw,
+  Trophy
 } from "lucide-react";
 
+// Mobile Bottom Navigation (Balanced 5 Core Pillars: Home, Exams, Practice, Results, Profile)
 export const studentNav = [
-    { name: "Dashboard", path: "/student/dashboard", icon: Home },
-    { name: "Tests", path: "/student/exams", icon: BookOpen },
-    { name: "Results", path: "/student/results", icon: Trophy },
-    { name: "Notes", path: "/student/notes", icon: NotebookPen },
-    { name: "Profile", path: "/student/profile", icon: User },
+  { name: "Home", path: "/student/dashboard", icon: Home },
+  { name: "Exams", path: "/student/exam", icon: ClipboardList },
+  { name: "Practice", path: "/student/practice", icon: Target },
+  { name: "Results", path: "/student/results", icon: BarChart3 },
+  { name: "Profile", path: "/student/profile", icon: UserRound },
 ];
 
-
+// Desktop Sidebar Menu
+export const studentFullNav = [
+  { name: "Dashboard", path: "/student/dashboard", icon: Home },
+  { name: "Exams & Mocks", path: "/student/exam", icon: ClipboardList },
+  { name: "Practice", path: "/student/practice", icon: Target },
+  { name: "Test Results", path: "/student/results", icon: BarChart3 },
+  { name: "Study Notes", path: "/student/notes", icon: BookOpen },
+  { name: "Mistakes Notebook", path: "/student/mistakes", icon: RotateCcw },
+  { name: "State Leaderboard", path: "/student/leaderboard", icon: Trophy },
+  { name: "My Profile", path: "/student/profile", icon: UserRound },
+];

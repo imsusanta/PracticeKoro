@@ -2,23 +2,29 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   ArrowLeft,
-  Award,
-  Target,
-  BookOpen,
-  Trophy,
-  Zap,
   ChevronDown,
   ChevronUp,
-  Lightbulb,
-  RotateCw
+  Bookmark,
+  BookmarkCheck,
+  Sparkles,
+  RotateCcw,
+  Clock,
+  Target,
+  BarChart3,
+  Layers,
+  ArrowRight,
+  TrendingDown,
+  TrendingUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MathText } from "@/components/ui/MathText";
+import { toast as sonnerToast } from "sonner";
+import { initRazorpayPayment } from "@/utils/payment";
 
 interface Question {
   id: string;
@@ -44,20 +50,27 @@ interface TestAnswer {
 
 interface TestAttempt {
   id: string;
+  test_id: string;
   score: number;
   total_marks: number;
   percentage: number;
   passed: boolean;
+  time_taken_seconds?: number | null;
+  correct_count?: number | null;
+  wrong_count?: number | null;
+  unanswered_count?: number | null;
   started_at: string;
   completed_at: string;
   mock_tests: {
     id: string;
     title: string;
     passing_marks: number;
+    is_paid?: boolean;
+    price?: number;
   };
 }
 
-const ReviewTest = () => {
+export const ReviewTest = () => {
   const navigate = useNavigate();
   const { attemptId } = useParams();
   const { toast } = useToast();
@@ -66,12 +79,10 @@ const ReviewTest = () => {
   const [answers, setAnswers] = useState<TestAnswer[]>([]);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "skipped">("all");
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
 
-  useEffect(() => {
-    loadTestReview();
-  }, [attemptId]);
-
-  const loadTestReview = async () => {
+  const loadTestReview = useCallback(async () => {
     if (!attemptId) return;
     setLoading(true);
 
@@ -82,9 +93,29 @@ const ReviewTest = () => {
         return;
       }
 
-      const [attemptResult, answersResult] = await Promise.all([
-        supabase.from("test_attempts").select(`*, mock_tests (id, title, passing_marks)`).eq("id", attemptId).eq("user_id", session.user.id).single(),
-        supabase.from("test_answers").select(`*, questions (*)`).eq("attempt_id", attemptId).order("created_at", { ascending: true })
+      const [attemptResult, answersResult, bookmarksResult, purchaseResult] = await Promise.all([
+        supabase
+          .from("test_attempts")
+          .select(`*, mock_tests (id, title, passing_marks, is_paid, price)`)
+          .eq("id", attemptId)
+          .eq("user_id", session.user.id)
+          .single(),
+        supabase
+          .from("test_answers")
+          .select(`*, questions (*)`)
+          .eq("attempt_id", attemptId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("student_bookmarks")
+          .select("question_id")
+          .eq("user_id", session.user.id),
+        supabase
+          .from("purchases")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .eq("status", "completed")
+          .limit(1)
+          .maybeSingle()
       ]);
 
       if (attemptResult.error || !attemptResult.data) {
@@ -93,25 +124,24 @@ const ReviewTest = () => {
         return;
       }
 
-      // Handle both object and array for mock_tests join
       const rawAttempt = attemptResult.data as any;
       if (Array.isArray(rawAttempt.mock_tests)) {
         rawAttempt.mock_tests = rawAttempt.mock_tests[0];
       }
       setAttempt(rawAttempt);
 
-      console.log("[ReviewTest] Fetched answers with questions:", answersResult.data);
+      const rawAnswers = (answersResult.data || []).map((a: any) => ({
+        ...a,
+        questions: Array.isArray(a.questions) ? a.questions[0] : a.questions
+      })).filter((a: any) => a.questions != null);
 
-      const rawAnswers = answersResult.data || [];
-      // Ensure questions is always an object, not an array
-      const processedAnswers = rawAnswers.map((a: any) => {
-        if (Array.isArray(a.questions)) {
-          a.questions = a.questions[0];
-        }
-        return a;
-      });
+      setAnswers(rawAnswers);
 
-      setAnswers(processedAnswers);
+      if (bookmarksResult.data) {
+        setBookmarkedIds(new Set(bookmarksResult.data.map((b: any) => b.question_id)));
+      }
+
+      setHasSubscription(!!purchaseResult.data);
     } catch (error) {
       console.error("[ReviewTest] Error loading test review:", error);
       toast({
@@ -123,15 +153,87 @@ const ReviewTest = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [attemptId, navigate, toast]);
+
+  useEffect(() => {
+    loadTestReview();
+  }, [loadTestReview]);
 
   const toggleQuestion = (id: string) => {
     setExpandedQuestions(prev => {
-      const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-      return newSet;
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
   };
+
+  const toggleBookmark = async (questionId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    if (bookmarkedIds.has(questionId)) {
+      await supabase
+        .from("student_bookmarks")
+        .delete()
+        .eq("user_id", session.user.id)
+        .eq("question_id", questionId);
+
+      setBookmarkedIds(prev => {
+        const next = new Set(prev);
+        next.delete(questionId);
+        return next;
+      });
+      sonnerToast.info("Removed from bookmarks");
+    } else {
+      await supabase
+        .from("student_bookmarks")
+        .insert({ user_id: session.user.id, question_id: questionId });
+
+      setBookmarkedIds(prev => new Set(prev).add(questionId));
+      sonnerToast.success("Saved to bookmarks");
+    }
+  };
+
+  const totalQuestions = answers.length;
+  const correctAnswers = answers.filter(a => a.is_correct);
+  const wrongAnswers = answers.filter(a => !a.is_correct && a.selected_answer);
+  const skippedAnswers = answers.filter(a => !a.selected_answer);
+
+  const correctCount = attempt?.correct_count ?? correctAnswers.length;
+  const wrongCount = attempt?.wrong_count ?? wrongAnswers.length;
+  const skippedCount = attempt?.unanswered_count ?? skippedAnswers.length;
+
+  const attemptedCount = correctCount + wrongCount;
+  const accuracy = attemptedCount > 0 ? Math.round((correctCount / attemptedCount) * 100) : 0;
+  const timeTaken = attempt?.time_taken_seconds || 0;
+  const avgSecondsPerQuestion = totalQuestions > 0 ? Math.round(timeTaken / totalQuestions) : 0;
+
+  const subjectStats: { [sub: string]: { total: number; correct: number; wrong: number } } = {};
+  const topicStats: { [topic: string]: { subject: string; total: number; correct: number; wrong: number } } = {};
+
+  answers.forEach(a => {
+    const sub = a.questions.subject || "General";
+    const top = a.questions.topic || "General Knowledge";
+
+    if (!subjectStats[sub]) subjectStats[sub] = { total: 0, correct: 0, wrong: 0 };
+    subjectStats[sub].total++;
+    if (a.is_correct) subjectStats[sub].correct++;
+    else if (a.selected_answer) subjectStats[sub].wrong++;
+
+    if (!topicStats[top]) topicStats[top] = { subject: sub, total: 0, correct: 0, wrong: 0 };
+    topicStats[top].total++;
+    if (a.is_correct) topicStats[top].correct++;
+    else if (a.selected_answer) topicStats[top].wrong++;
+  });
+
+  const weakTopics: { topic: string; subject: string; accuracy: number }[] = [];
+  const strongTopics: { topic: string; subject: string; accuracy: number }[] = [];
+
+  Object.entries(topicStats).forEach(([top, stat]) => {
+    const acc = Math.round((stat.correct / stat.total) * 100);
+    if (acc < 60) weakTopics.push({ topic: top, subject: stat.subject, accuracy: acc });
+    else strongTopics.push({ topic: top, subject: stat.subject, accuracy: acc });
+  });
 
   const filteredAnswers = answers.filter(a => {
     if (filter === "correct") return a.is_correct;
@@ -140,368 +242,419 @@ const ReviewTest = () => {
     return true;
   });
 
-  if (loading) {
+  if (loading || !attempt) {
     return (
-      <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-indigo-50/30 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-emerald-500/30">
-            <Trophy className="w-8 h-8 text-white" />
-          </div>
-          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm font-medium">Loading Review...</p>
-        </motion.div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-slate-600">Generating Performance Analytics...</p>
+        </div>
       </div>
     );
   }
-
-  if (!attempt || !answers || answers.length === 0) {
-    return (
-      <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-indigo-50/30 flex items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-8 text-center max-w-sm"
-        >
-          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-7 h-7 text-slate-400" />
-          </div>
-          <p className="text-slate-800 text-lg font-bold mb-2">No data found</p>
-          <p className="text-slate-500 text-sm mb-6">This test review is not available</p>
-          <Button onClick={() => navigate("/student/results")} className="bg-indigo-600 text-white rounded-xl h-11 w-full">
-            Back to Results
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  const correctAnswers = answers.filter(a => a.is_correct).length;
-  const incorrectAnswers = answers.filter(a => !a.is_correct && a.selected_answer).length;
-  const skippedAnswers = answers.filter(a => !a.selected_answer).length;
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-indigo-50/30 pb-8">
-      {/* ═══════════════════════════════════════════════════════════════
-          COMPACT HERO HEADER - Pass/Fail Gradient
-          ═══════════════════════════════════════════════════════════════ */}
-      <header className="relative overflow-hidden safe-area-top"
-        style={{
-          background: attempt.passed
-            ? 'linear-gradient(135deg, #10b981 0%, #14b8a6 50%, #0d9488 100%)'
-            : 'linear-gradient(135deg, #ef4444 0%, #f43f5e 50%, #e11d48 100%)'
-        }}
-      >
-        {/* Decorative Elements */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/40 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/30 rounded-full translate-y-1/2 -translate-x-1/3 blur-xl" />
-        </div>
+    <div className="min-h-screen bg-slate-50/70 pb-20">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
+        <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/student/results")}
+            className="text-slate-600 hover:text-slate-900 -ml-2 font-bold text-xs"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" /> All Results
+          </Button>
 
-        <div className="relative px-4 pt-2 pb-4 md:px-6 md:pt-3 md:pb-6">
-          {/* Navigation */}
-          <div className="flex items-center mb-4">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/student/results")}
-              className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30"
-            >
-              <ArrowLeft className="w-4 h-4 text-white" />
-            </motion.button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
+              <img src="/logo-icon.png" alt="PracticeKoro" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-xs font-bold text-slate-800 truncate max-w-[160px] sm:max-w-none">
+              {attempt.mock_tests?.title || "Exam Review"}
+            </span>
           </div>
 
-          {/* Result Display - Compact */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
+          <Button
+            size="sm"
+            onClick={() => navigate(`/student/take-test/${attempt.test_id}`)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold h-9 shadow-sm"
           >
-            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-2 border-2 border-white/30"
-              style={{ boxShadow: '0 6px 24px rgba(0, 0, 0, 0.12)' }}
-            >
-              {attempt.passed ? (
-                <Trophy className="w-7 h-7 md:w-8 md:h-8 text-yellow-300" />
-              ) : (
-                <XCircle className="w-7 h-7 md:w-8 md:h-8 text-white" />
-              )}
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-white mb-0.5 font-mono">{attempt?.percentage || 0}%</h1>
-            <p className="text-white/80 text-[11px] md:text-sm mb-2">{attempt?.score || 0} / {attempt?.total_marks || 0} marks</p>
-            <Badge className="bg-white/20 text-white text-[10px] px-2.5 py-0.5 border border-white/30">
-              {attempt?.passed ? '🎉 Passed!' : '📚 Keep Practicing!'}
-            </Badge>
-            <p className="text-white/70 text-[10px] md:text-xs mt-2 font-medium px-4 truncate">{attempt?.mock_tests?.title || 'Unknown Test'}</p>
-          </motion.div>
+            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Retake
+          </Button>
         </div>
       </header>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          STATS CARDS - Floating Above Header
-          ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-5 -mt-5">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-[24px] p-5 grid grid-cols-3 gap-4"
-          style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)' }}
-        >
-          <div className="text-center">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-2"
-              style={{ boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
-            >
-              <CheckCircle className="w-5 h-5 text-white" />
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-slate-900 font-mono">{correctAnswers}</p>
-            <p className="text-[10px] md:text-xs text-slate-500 font-semibold">Correct</p>
-          </div>
-          <div className="text-center">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center mx-auto mb-2"
-              style={{ boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}
-            >
-              <XCircle className="w-5 h-5 text-white" />
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-slate-900 font-mono">{incorrectAnswers}</p>
-            <p className="text-[10px] md:text-xs text-slate-500 font-semibold">Incorrect</p>
-          </div>
-          <div className="text-center">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-2"
-              style={{ boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)' }}
-            >
-              <Target className="w-5 h-5 text-white" />
-            </div>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 font-mono">{skippedAnswers}</p>
-            <p className="text-[10px] md:text-xs text-slate-500 font-semibold">Skipped</p>
-          </div>
-        </motion.div>
-      </div>
+      <main className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 space-y-4 md:space-y-6">
+        {/* Scorecard Hero Banner */}
+        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white shadow-xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none -mb-24" />
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-      {/* ═══════════════════════════════════════════════════════════════
-          MAIN CONTENT
-          ═══════════════════════════════════════════════════════════════ */}
-      <main className="px-5 pt-6 space-y-4 max-w-4xl mx-auto">
-        {/* Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide scroll-native">
-          {[
-            { key: "all", label: `All (${answers.length})` },
-            { key: "correct", label: `Correct (${correctAnswers})` },
-            { key: "incorrect", label: `Wrong (${incorrectAnswers})` },
-            { key: "skipped", label: `Skipped (${skippedAnswers})` },
-          ].map(({ key, label }) => (
-            <motion.button
-              key={key}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setFilter(key as any)}
-              className={`chip-animated whitespace-nowrap shrink-0 ${filter === key ? 'active' : ''}`}
-            >
-              {label}
-            </motion.button>
-          ))}
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="space-y-2.5 max-w-xl">
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                  attempt.passed ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-rose-500/20 text-rose-300 border border-rose-400/30"
+                }`}>
+                  {attempt.passed ? "✓ Cutoff Passed / সফল" : "Needs Improvement"}
+                </span>
+                <span className="text-white/60 text-xs">•</span>
+                <span className="text-white/80 text-xs font-semibold">
+                  Passing Cutoff: {attempt.mock_tests?.passing_marks}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-display text-white">
+                {attempt.mock_tests?.title}
+              </h1>
+              <p className="text-slate-200 text-xs sm:text-sm font-medium">
+                Detailed exam review, answer key comparison, and syllabus weakness breakdown.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/15 min-w-[105px]">
+                <p className="text-2xl sm:text-3xl font-black text-white">{attempt.score}</p>
+                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">Score / {attempt.total_marks}</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/15 min-w-[105px]">
+                <p className="text-2xl sm:text-3xl font-black text-emerald-300">{attempt.percentage}%</p>
+                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">Percentage</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Questions List */}
-        <div className="space-y-3">
-          {filteredAnswers.map((answer, index) => {
-            const isExpanded = expandedQuestions.has(answer.id);
-            const originalIndex = answers.findIndex(a => a.id === answer.id);
+        {/* 4 KPI Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white rounded-2xl border border-slate-100/90 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xl font-black text-slate-900 leading-none">{correctCount}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Correct</p>
+            </div>
+          </div>
 
-            return (
-              <motion.div
-                key={answer.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className="bg-white rounded-[20px] overflow-hidden"
-                style={{ boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)' }}
+          <div className="bg-white rounded-2xl border border-slate-100/90 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+              <XCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xl font-black text-slate-900 leading-none">{wrongCount}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Wrong</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-100/90 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xl font-black text-slate-900 leading-none">{accuracy}%</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Accuracy</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-100/90 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xl font-black text-slate-900 leading-none">{avgSecondsPerQuestion}s</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Avg / Question</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Personalized Learning Recommendation */}
+        <div className="bg-blue-50/70 rounded-3xl border border-blue-100 p-5 sm:p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-blue-900 font-bold text-sm sm:text-base">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              Practice Recommendation & Action Plan
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-600 text-white">
+              Smart Loop
+            </span>
+          </div>
+
+          <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+            Based on this attempt, your weakest area is{" "}
+            <span className="font-bold text-blue-700">
+              {weakTopics.length > 0 ? weakTopics[0].topic : "General Revision"}
+            </span>
+            . Practicing focused drill questions will boost your test score significantly.
+          </p>
+
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            {wrongCount > 0 && (
+              <Button
+                size="sm"
+                onClick={() => navigate("/student/mistakes")}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-sm"
               >
-                {/* Question Header */}
-                <div
-                  onClick={() => toggleQuestion(answer.id)}
-                  className="p-4 cursor-pointer active:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Status Icon */}
-                    <div className={`w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center shrink-0 ${answer.is_correct
-                      ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
-                      : answer.selected_answer
-                        ? 'bg-gradient-to-br from-red-500 to-rose-500'
-                        : 'bg-gradient-to-br from-amber-500 to-orange-500'
-                      }`}
-                      style={{
-                        boxShadow: answer.is_correct
-                          ? '0 4px 12px rgba(16, 185, 129, 0.25)'
-                          : answer.selected_answer
-                            ? '0 4px 12px rgba(239, 68, 68, 0.25)'
-                            : '0 4px 12px rgba(245, 158, 11, 0.25)'
-                      }}
-                    >
-                      {answer.is_correct ? (
-                        <CheckCircle className="w-5 h-5 text-white" />
-                      ) : answer.selected_answer ? (
-                        <XCircle className="w-5 h-5 text-white" />
-                      ) : (
-                        <Target className="w-5 h-5 text-white" />
-                      )}
-                    </div>
+                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                Practice {wrongCount} Mistakes
+              </Button>
+            )}
+            {weakTopics.length > 0 && (
+              <Button
+                size="sm"
+                onClick={() => navigate("/student/practice")}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-sm"
+              >
+                <Layers className="w-3.5 h-3.5 mr-1.5" />
+                Drill {weakTopics[0].topic}
+              </Button>
+            )}
+          </div>
+        </div>
 
-                    {/* Question Text */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-slate-400">Q{originalIndex + 1}</span>
-                        <Badge className={`text-[10px] ${answer.is_correct
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : answer.selected_answer
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-amber-100 text-amber-700'
-                          }`}>
-                          {answer.is_correct ? 'Correct' : answer.selected_answer ? 'Wrong' : 'Skipped'}
-                        </Badge>
-                      </div>
-                      {(() => {
-                        const q = answer.questions;
-                        return (
-                          <p className={`text-slate-900 text-sm md:text-base leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
-                            {q?.question_text || "Question text not available"}
-                          </p>
-                        );
-                      })()}
+        {/* Subject & Topic Breakdown Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white rounded-3xl border border-slate-100/90 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-600" /> Subject Accuracy Breakdown
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(subjectStats).map(([sub, stat]) => {
+                const subAcc = Math.round((stat.correct / stat.total) * 100);
+                return (
+                  <div key={sub} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-slate-700">{sub}</span>
+                      <span className={subAcc >= 70 ? "text-emerald-600" : "text-slate-500"}>
+                        {subAcc}% ({stat.correct}/{stat.total})
+                      </span>
                     </div>
-
-                    {/* Expand Icon */}
-                    <div className="shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                      {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-slate-500" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-500" />
-                      )}
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          subAcc >= 75 ? "bg-emerald-500" : subAcc >= 50 ? "bg-amber-500" : "bg-rose-500"
+                        }`}
+                        style={{ width: `${subAcc}%` }}
+                      />
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-100/90 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <Target className="w-4 h-4 text-emerald-600" /> Syllabus Weaknesses & Strengths
+            </h3>
+            <div className="space-y-2.5 text-xs">
+              {weakTopics.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
+                    <TrendingDown className="w-3.5 h-3.5" /> Needs Practice (&lt;60%)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {weakTopics.map(w => (
+                      <span key={w.topic} className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
+                        {w.topic} ({w.accuracy}%)
+                      </span>
+                    ))}
+                  </div>
                 </div>
+              )}
 
-                {/* Expanded Content */}
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="border-t border-slate-100"
-                    >
-                      <div className="p-4 space-y-3">
-                        {/* Options */}
-                        {(() => {
-                          const q = answer.questions;
-                          return ['A', 'B', 'C', 'D'].map(option => {
-                            const isCorrect = option === q?.correct_answer;
-                            const isSelected = option === answer?.selected_answer;
-                            const optionText = q ? (q[`option_${option.toLowerCase()}` as keyof Question] as string) : "Option not available";
-
-                            return (
-                              <div
-                                key={option}
-                                className={`p-3.5 rounded-xl border-2 ${isCorrect
-                                  ? 'bg-emerald-50 border-emerald-400'
-                                  : isSelected
-                                    ? 'bg-red-50 border-red-400'
-                                    : 'bg-slate-50 border-slate-200'
-                                  }`}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${isCorrect
-                                    ? 'bg-emerald-500 text-white'
-                                    : isSelected
-                                      ? 'bg-red-500 text-white'
-                                      : 'bg-slate-200 text-slate-600'
-                                    }`}>
-                                    {option}
-                                  </span>
-                                  <div className="flex-1">
-                                    <p className={`text-sm ${isCorrect ? 'text-emerald-800' : isSelected ? 'text-red-800' : 'text-slate-700'
-                                      }`}>
-                                      {optionText}
-                                    </p>
-                                    {isCorrect && (
-                                      <span className="text-[10px] text-emerald-600 font-semibold mt-1 inline-block">
-                                        ✓ Correct Answer
-                                      </span>
-                                    )}
-                                    {isSelected && !isCorrect && (
-                                      <span className="text-[10px] text-red-600 font-semibold mt-1 inline-block">
-                                        ✗ Your Answer
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-
-                        {/* Explanation - Premium Glassmorphism Style */}
-                        {(() => {
-                          const q = answer.questions;
-                          console.log("[ReviewTest] Question explanation:", { questionId: q?.id, explanation: q?.explanation });
-                          if (!q?.explanation) return null;
-
-                          return (
-                            <div className="relative overflow-hidden rounded-2xl border border-indigo-200/50"
-                              style={{
-                                background: 'linear-gradient(135deg, rgba(238, 242, 255, 0.9) 0%, rgba(224, 231, 255, 0.7) 100%)',
-                                boxShadow: '0 4px 16px rgba(99, 102, 241, 0.1)'
-                              }}
-                            >
-                              <div className="absolute inset-0 opacity-30">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-400/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-                              </div>
-                              <div className="relative p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shrink-0"
-                                    style={{ boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
-                                  >
-                                    <Lightbulb className="w-5 h-5 text-white" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-indigo-900 text-sm mb-1.5">Short Notes</h4>
-                                    <p className="text-indigo-800/90 text-sm whitespace-pre-line leading-relaxed">
-                                      {q.explanation}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            );
-          })}
+              {strongTopics.length > 0 && (
+                <div className="space-y-1 pt-1">
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                    <TrendingUp className="w-3.5 h-3.5" /> Strong Command (≥60%)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {strongTopics.map(s => (
+                      <span key={s.topic} className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                        {s.topic} ({s.accuracy}%)
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="pt-4 space-y-3 pb-8">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => attempt?.mock_tests?.id && navigate(`/student/take-test/${attempt.mock_tests.id}`)}
-            className="w-full btn-native bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/25"
+        {/* Question Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-2">
+          <button
+            onClick={() => setFilter("all")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              filter === "all" ? "bg-blue-600 text-white shadow-sm" : "bg-white border border-slate-200/90 text-slate-600 hover:text-slate-900"
+            }`}
           >
-            <RotateCw className="w-5 h-5" />
-            Retake This Test
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate("/student/exams")}
-            className="w-full btn-native bg-slate-100 text-slate-700"
+            All Questions ({answers.length})
+          </button>
+          <button
+            onClick={() => setFilter("correct")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              filter === "correct" ? "bg-emerald-600 text-white shadow-sm" : "bg-white border border-slate-200/90 text-slate-600 hover:text-slate-900"
+            }`}
           >
-            <Zap className="w-5 h-5" />
-            Try Another Test
-          </motion.button>
+            Correct ({correctCount})
+          </button>
+          <button
+            onClick={() => setFilter("incorrect")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              filter === "incorrect" ? "bg-rose-600 text-white shadow-sm" : "bg-white border border-slate-200/90 text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Incorrect ({wrongCount})
+          </button>
+          <button
+            onClick={() => setFilter("skipped")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              filter === "skipped" ? "bg-slate-700 text-white shadow-sm" : "bg-white border border-slate-200/90 text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Skipped ({skippedCount})
+          </button>
+        </div>
+
+        {/* Detailed Question Review List */}
+        <div className="space-y-4">
+          {filteredAnswers.map((a, idx) => {
+            const isExpanded = expandedQuestions.has(a.id);
+            const isBookmarked = bookmarkedIds.has(a.question_id);
+
+            return (
+              <div
+                key={a.id}
+                className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 font-mono font-black text-xs flex items-center justify-center">
+                      {String(idx + 1).padStart(2, '0')}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      a.is_correct
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : a.selected_answer
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
+                        : "bg-slate-100 text-slate-600"
+                    }`}>
+                      {a.is_correct ? "Correct (+1)" : a.selected_answer ? "Incorrect (0)" : "Skipped"}
+                    </span>
+                    {a.questions.subject && (
+                      <span className="text-xs text-slate-400 font-medium">
+                        {a.questions.subject} {a.questions.topic ? `• ${a.questions.topic}` : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => toggleBookmark(a.question_id)}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-amber-500 transition-colors"
+                  >
+                    {isBookmarked ? (
+                      <BookmarkCheck className="w-5 h-5 text-amber-500 fill-amber-500" />
+                    ) : (
+                      <Bookmark className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="text-slate-900 font-bold text-base leading-relaxed font-bengali">
+                  <MathText text={a.questions.question_text} />
+                </div>
+
+                {/* Options List */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    { key: "A", text: a.questions.option_a },
+                    { key: "B", text: a.questions.option_b },
+                    { key: "C", text: a.questions.option_c },
+                    { key: "D", text: a.questions.option_d },
+                  ].map(opt => {
+                    const isCorrectOption = opt.key === a.questions.correct_answer.toUpperCase();
+                    const isUserSelected = opt.key === a.selected_answer?.toUpperCase();
+
+                    let style = "bg-slate-50/60 border-slate-200/80 text-slate-700";
+                    if (isCorrectOption) style = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs";
+                    if (isUserSelected && !isCorrectOption) style = "bg-rose-50 border-rose-400 text-rose-950 font-bold";
+
+                    return (
+                      <div
+                        key={opt.key}
+                        className={`p-3 rounded-xl border text-xs sm:text-sm font-medium flex items-center gap-2.5 ${style}`}
+                      >
+                        <span
+                          className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
+                            isCorrectOption
+                              ? "bg-emerald-600 text-white"
+                              : isUserSelected
+                              ? "bg-rose-600 text-white"
+                              : "bg-white border border-slate-200 text-slate-600"
+                          }`}
+                        >
+                          {opt.key}
+                        </span>
+                        <span className="flex-1 font-bengali">
+                          <MathText text={opt.text} />
+                        </span>
+                        {isCorrectOption && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        {isUserSelected && !isCorrectOption && <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Explanation Toggle */}
+                <div className="pt-1">
+                  <button
+                    onClick={() => toggleQuestion(a.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    {isExpanded ? (
+                      <>
+                        <ChevronUp className="w-3.5 h-3.5" /> Hide Solution & Explanation
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-3.5 h-3.5" /> View Solution & Explanation
+                      </>
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm leading-relaxed font-bengali mt-2 space-y-1 border border-slate-200/80">
+                      {(() => {
+                        const ans = (a.questions.correct_answer || '').toUpperCase().trim();
+                        const correctText = ans === 'A' ? a.questions.option_a : ans === 'B' ? a.questions.option_b : ans === 'C' ? a.questions.option_c : ans === 'D' ? a.questions.option_d : null;
+                        return (
+                          <div className="font-bold text-emerald-800 flex items-center flex-wrap gap-1.5">
+                            <span>✓ Correct Answer: ({ans})</span>
+                            {correctText && (
+                              <span className="font-semibold text-emerald-950">
+                                <MathText text={correctText} formatBullets={false} />
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {a.questions.explanation ? (
+                        <div className="text-slate-700 pt-1 border-t border-slate-200/60">
+                          <strong className="text-slate-900 block mb-0.5">ব্যাখ্যা (Explanation):</strong>
+                          <MathText text={a.questions.explanation} />
+                        </div>
+                      ) : (
+                        <p className="text-slate-400 text-xs italic">Standard syllabus solution applies for this question.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>

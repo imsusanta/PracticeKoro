@@ -1,731 +1,1219 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import StudentChat from "@/components/StudentChat";
 import {
-  BookOpen,
-  Lock,
-  MessageSquare,
+  Bell,
+  Crown,
   ArrowRight,
-  GraduationCap,
-  TrendingUp,
-  Zap,
-  Star,
-  Trophy,
-  Target,
-  FileText,
+  ChevronLeft,
   ChevronRight,
   Flame,
   Clock,
+  Target,
+  BookOpen,
+  Bookmark,
+  Calendar,
+  RotateCcw,
+  Sparkles,
+  Zap,
   CheckCircle2,
-  BarChart3,
-  Sparkles
+  AlertCircle,
+  RefreshCw,
+  Landmark,
+  Award,
+  Play,
+  Lock,
+  FileText,
 } from "lucide-react";
 import StudentLayout from "@/components/student/StudentLayout";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { TestDetailsModal } from "@/components/student/TestDetailsModal";
 import { initRazorpayPayment } from "@/utils/payment";
+import { useStudentAuth } from "@/contexts/StudentContext";
+import {
+  useExams,
+  useMockTests,
+  useTodayMetrics,
+  useUnfinishedPractice,
+  useWeakestSubjectRecommendation,
+  useUnreadNotificationsCount,
+  useRecentAttempts,
+  useUserAttempts,
+} from "@/hooks/useStudentData";
+import { formatDistanceToNow } from "date-fns";
 
-interface Statistics {
-  totalTestsTaken: number;
-  averageScore: number;
-  testsPassed: number;
-  availableExams: number;
-}
+// Ashoka Emblem SVG for State Govt Exams
+const AshokaEmblem = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 48 48" fill="currentColor">
+    <rect x="8" y="41" width="32" height="3.5" rx="1" fill="#1e293b" />
+    <path d="M12 41L15 36h18l3 5H12z" fill="#334155" />
+    <circle cx="24" cy="38.5" r="2.2" fill="none" stroke="#2563eb" strokeWidth="1" />
+    <rect x="15" y="34" width="18" height="2" rx="0.5" fill="#475569" />
+    <path d="M20 34c-1.5-4-1-12 0-16 1.5-3 4-4.5 4-4.5s2.5 1.5 4 4.5c1 4 1.5 12 0 16H20z" fill="#1e293b" />
+    <path d="M15 33c-2.5-3-3-9-1.5-12 1-1.5 2.5-2 4-2v14h-2.5z" fill="#334155" />
+    <path d="M33 33c2.5-3 3-9 1.5-12-1-1.5-2.5-2-4-2v14h2.5z" fill="#334155" />
+    <circle cx="24" cy="15" r="2.5" fill="#64748b" />
+  </svg>
+);
 
-interface Exam {
-  id: string;
-  name: string;
-  order_index?: number;
-}
-
-// Get time-based greeting
-const getGreeting = () => {
+// Time-based greeting helper
+function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 5) return { text: "Good Night", emoji: "🌙", color: "from-indigo-600 to-purple-700" };
-  if (hour < 12) return { text: "Good Morning", emoji: "☀️", color: "from-amber-500 to-orange-600" };
-  if (hour < 17) return { text: "Good Afternoon", emoji: "🌤️", color: "from-blue-500 to-cyan-600" };
-  if (hour < 21) return { text: "Good Evening", emoji: "🌅", color: "from-orange-500 to-rose-600" };
-  return { text: "Good Night", emoji: "🌙", color: "from-indigo-600 to-purple-700" };
-};
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
 
-// Motivational quotes
-const quotes = [
-  "Success is not final, failure is not fatal.",
-  "The secret of getting ahead is getting started.",
-  "Believe you can and you're halfway there.",
-  "Every expert was once a beginner.",
-  "Your only limit is your mind."
-];
+interface BannerSlide {
+  image: string;
+  badge: string;
+  title: React.ReactNode;
+  subtitle: string;
+  buttonText: string;
+  buttonLink: string;
+  buttonStyle?: string;
+  badgeColor?: string;
+}
+
+// 3-Image Swipeable Hero Banner Carousel
+const HeroBannerCarousel = ({
+  greeting,
+  firstName,
+  onNavigate,
+}: {
+  greeting: string;
+  firstName: string;
+  onNavigate: (path: string) => void;
+}) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  const slides: BannerSlide[] = [
+    {
+      image: "/images/student_hero_banner.jpg",
+      badge: "Daily Practice",
+      title: (
+        <>
+          Turn Preparation Into{" "}
+          <span className="text-[#FBBF24]">Success</span>
+        </>
+      ),
+      subtitle: `${greeting}, ${firstName}! Practice • Analyze • Improve • Crack`,
+      buttonText: "Start Practicing",
+      buttonLink: "/student/practice",
+      buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
+      badgeColor: "bg-blue-500/30 border-blue-300/40 text-blue-100",
+    },
+    {
+      image: "/images/student_hero_himalaya.jpg",
+      badge: "Target Exams",
+      title: (
+        <>
+          Crack WB & <span className="text-[#60A5FA]">Central Exams</span>
+        </>
+      ),
+      subtitle: "Full-length WBCS, WBP, SSC & Rail mock tests with live ranks.",
+      buttonText: "Explore Exams",
+      buttonLink: "/student/exam",
+      buttonStyle: "bg-[#0066FF] hover:bg-blue-600 text-white font-bold shadow-blue-500/30",
+      badgeColor: "bg-indigo-500/30 border-indigo-300/40 text-indigo-100",
+    },
+    {
+      image: "/images/student_mountains.jpg",
+      badge: "Speed Challenge",
+      title: (
+        <>
+          Daily 10 <span className="text-[#FBBF24]">Speed Test</span>
+        </>
+      ),
+      subtitle: "10 high-yield questions in 5 minutes to sharpen your speed.",
+      buttonText: "Start Daily 10",
+      buttonLink: "/student/daily",
+      buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
+      badgeColor: "bg-amber-500/30 border-amber-300/40 text-amber-100",
+    },
+  ];
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  }, [slides.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  }, [slides.length]);
+
+  // Autoplay timer every 5 seconds
+  useEffect(() => {
+    if (isPaused) return;
+    const timer = setInterval(() => {
+      nextSlide();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [isPaused, nextSlide]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsPaused(true);
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    setIsPaused(false);
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const diff = touchStartX.current - touchEndX.current;
+    if (diff > 45) {
+      nextSlide();
+    } else if (diff < -45) {
+      prevSlide();
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-3xl h-44 sm:h-52 md:h-56 shadow-sm border border-slate-200/80 group select-none"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Sliding Track */}
+      <div
+        className="flex h-full transition-transform duration-500 ease-out"
+        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+      >
+        {slides.map((slide, idx) => (
+          <div key={idx} className="relative w-full h-full shrink-0">
+            {/* Background Image */}
+            <img
+              src={slide.image}
+              alt={typeof slide.title === "string" ? slide.title : "PracticeKoro Banner"}
+              className="absolute inset-0 w-full h-full object-cover object-center"
+              loading={idx === 0 ? "eager" : "lazy"}
+            />
+
+            {/* Dark & Gradient Overlays with Brand Navy for crystal clear contrast */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628]/95 via-[#0A1628]/75 to-[#0A1628]/30 sm:to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628]/85 via-transparent to-transparent sm:hidden" />
+
+            {/* Content */}
+            <div className="relative z-10 h-full flex flex-col justify-between p-4 sm:p-6 text-white max-w-lg">
+              <div>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider backdrop-blur-md border ${slide.badgeColor}`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  {slide.badge}
+                </span>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight mt-1.5 leading-snug drop-shadow-sm">
+                  {slide.title}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-200 font-medium mt-1 leading-relaxed line-clamp-2 max-w-md drop-shadow-sm">
+                  {slide.subtitle}
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => onNavigate(slide.buttonLink)}
+                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer ${slide.buttonStyle}`}
+                >
+                  <span>{slide.buttonText}</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Prev / Next Buttons */}
+      <button
+        onClick={prevSlide}
+        aria-label="Previous slide"
+        className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/65 text-white items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <button
+        onClick={nextSlide}
+        aria-label="Next slide"
+        className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/65 text-white items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+
+      {/* Pagination Indicators / Dots */}
+      <div className="absolute bottom-3.5 right-4 z-20 flex items-center gap-1.5">
+        {slides.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrentSlide(idx)}
+            aria-label={`Go to slide ${idx + 1}`}
+            className={`transition-all duration-300 rounded-full cursor-pointer ${
+              currentSlide === idx
+                ? "w-6 h-1.5 bg-white shadow-xs"
+                : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [authChecked, setAuthChecked] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
-  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [statistics, setStatistics] = useState<Statistics>({
-    totalTestsTaken: 0,
-    averageScore: 0,
-    testsPassed: 0,
-    availableExams: 0
-  });
-  const [showChat, setShowChat] = useState(false);
-  const [dailyQuote] = useState(quotes[Math.floor(Math.random() * quotes.length)]);
-  const [studyStreak, setStudyStreak] = useState(0);
-  const [recentActivity, setRecentActivity] = useState<Array<{
-    id: string;
-    testName: string;
-    score: number;
-    passed: boolean;
-    date: string;
-  }>>([]);
-  const [subscriptionFee, setSubscriptionFee] = useState<number>(0);
-  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
 
-  const loadDashboardData = useCallback(async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/login"); return; }
+  const {
+    user,
+    profile,
+    hasSubscription,
+    subscriptionFee,
+    refreshSubscription,
+    isLoading: authLoading,
+  } = useStudentAuth();
 
-      const [roleResult, profileResult, approvalResult, examsResult, attemptsResult, recentAttemptsResult, settingsResult] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "student").maybeSingle(),
-        supabase.from("profiles").select("*").eq("id", session.user.id).single(),
-        supabase.from("approval_status").select("status").eq("user_id", session.user.id).single(),
-        supabase.from("exams").select("id, name").order("created_at", { ascending: true }),  // Removed is_active filter
-        supabase.from("test_attempts").select("percentage, passed, created_at").eq("user_id", session.user.id),
-        supabase.from("test_attempts")
-          .select("id, percentage, passed, created_at, mock_test_id, mock_tests(name)")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase.from("site_settings").select("*")
-      ]);
+  // Queries
+  const {
+    data: exams = [],
+    isLoading: loadingExams,
+    isError: errorExams,
+    refetch: refetchExams,
+  } = useExams();
 
-      if (!roleResult.data) {
-        // Redirection only, no signOut() to avoid transient logout issues
-        navigate("/login");
-        return;
-      }
+  const {
+    data: dbTests = [],
+    isLoading: loadingTests,
+    isError: errorTests,
+    refetch: refetchTests,
+  } = useMockTests();
 
-      setProfile(profileResult.data);
+  const {
+    data: todayMetrics = {
+      questions: 0,
+      accuracy: 0,
+      studyTimeMinutes: 0,
+      streakDays: 0,
+    },
+    isLoading: loadingToday,
+    isError: errorToday,
+    refetch: refetchToday,
+  } = useTodayMetrics(user?.id);
 
-      const yearlyFee = (settingsResult.data as any[])?.find(s => s.key === "yearly_subscription_fee")?.value;
-      if (yearlyFee) setSubscriptionFee(Number(yearlyFee));
+  const {
+    data: unfinishedPractice,
+    isLoading: loadingUnfinished,
+    isError: errorUnfinished,
+    refetch: refetchUnfinished,
+  } = useUnfinishedPractice(user?.id);
 
-      // Check for active subscription
-      const oneYearAgo = new Date();
-      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-      const { data: purchaseData } = await (supabase
-        .from("purchases" as any)
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("content_type", "subscription")
-        .eq("status", "completed")
-        .gt("created_at", oneYearAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle() as any);
+  const {
+    data: recommendation,
+    isLoading: loadingRec,
+    isError: errorRec,
+    refetch: refetchRec,
+  } = useWeakestSubjectRecommendation(user?.id);
 
-      const userHasSubscription = !!purchaseData;
-      setHasSubscription(userHasSubscription);
+  const {
+    data: unreadCount = 0,
+    refetch: refetchNotifs,
+  } = useUnreadNotificationsCount(user?.id);
 
-      // If they have an active subscription, we treat them as approved regardless of manual status
-      setApprovalStatus(userHasSubscription ? "approved" : (approvalResult.data?.status || "pending"));
-      setExams((examsResult.data as any) || []);
+  const {
+    data: recentAttempts = [],
+    isLoading: loadingRecent,
+    isError: errorRecent,
+    refetch: refetchRecent,
+  } = useRecentAttempts(user?.id);
 
-      const attempts = attemptsResult.data || [];
-      setStatistics({
-        totalTestsTaken: attempts.length,
-        averageScore: attempts.length > 0 ? Math.round(attempts.reduce((s, a) => s + a.percentage, 0) / attempts.length) : 0,
-        testsPassed: attempts.filter(a => a.passed).length,
-        availableExams: examsResult.data?.length || 0
-      });
+  const {
+    data: testAttempts = {},
+    refetch: refetchAttempts,
+  } = useUserAttempts(user?.id);
 
-      // Calculate study streak (consecutive days with activity)
-      if (attempts.length > 0) {
-        const sortedDates = attempts
-          .map(a => new Date(a.created_at).toDateString())
-          .filter((value, index, self) => self.indexOf(value) === index)
-          .map(d => new Date(d))
-          .sort((a, b) => b.getTime() - a.getTime());
+  const [selectedTestForModal, setSelectedTestForModal] = useState<any | null>(null);
 
-        let streak = 0;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+  // Overall Loading & Error States - resilient against secondary metric failures
+  const isLoading = authLoading || (loadingExams && exams.length === 0);
 
-        for (let i = 0; i < sortedDates.length; i++) {
-          const expectedDate = new Date(today);
-          expectedDate.setDate(today.getDate() - i);
-          expectedDate.setHours(0, 0, 0, 0);
+  const isError = errorExams && exams.length === 0 && errorTests && dbTests.length === 0;
 
-          const attemptDate = new Date(sortedDates[i]);
-          attemptDate.setHours(0, 0, 0, 0);
-
-          if (attemptDate.getTime() === expectedDate.getTime()) {
-            streak++;
-          } else if (i === 0 && attemptDate.getTime() === expectedDate.getTime() - 86400000) {
-            // Yesterday was last activity, count from yesterday
-            streak++;
-          } else {
-            break;
-          }
-        }
-        setStudyStreak(streak);
-      }
-
-      // Set recent activity
-      if (recentAttemptsResult.data) {
-        setRecentActivity(recentAttemptsResult.data.map((a: any) => ({
-          id: a.id,
-          testName: a.mock_tests?.name || "Unknown Test",
-          score: Math.round(a.percentage),
-          passed: a.passed,
-          date: a.created_at
-        })));
-      }
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-      toast({
-        title: "Error loading data",
-        description: "Please refresh the page and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setAuthChecked(true); // Always set to true to exit loading state
-    }
-  }, [navigate, toast]);
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-    localStorage.clear();
-    navigate("/");
+  // Refetch all queries on error retry
+  const handleRetryAll = () => {
+    refetchExams();
+    refetchTests();
+    refetchToday();
+    refetchUnfinished();
+    refetchRec();
+    refetchNotifs();
+    refetchRecent();
+    refetchAttempts();
   };
 
-  // Loading State
-  if (!authChecked) {
+  // Student details
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || "Aspirant";
+  const firstName = displayName.split(" ")[0] || "Aspirant";
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const initials = (firstName[0] || "A").toUpperCase();
+  const greeting = getGreeting();
+
+  // Map mock tests count by exam_id
+  const examMockCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    dbTests.forEach((t) => {
+      if (t.exam_id) {
+        counts[t.exam_id] = (counts[t.exam_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [dbTests]);
+
+  // Handle Pro Plan Subscription Click
+  const handleProPlanClick = async () => {
+    if (hasSubscription) {
+      toast({
+        title: "Pro Plan Active! 👑",
+        description: "You have unlimited access to all mock tests and materials.",
+      });
+      return;
+    }
+
+    try {
+      await initRazorpayPayment({
+        amount: subscriptionFee,
+        contentId: "site_yearly_subscription",
+        contentType: "subscription",
+        title: "PracticeKoro Yearly Pro Plan",
+      });
+      await refreshSubscription();
+      toast({ title: "Success!", description: "PracticeKoro Pro Plan activated!" });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Opening upgrade portal...";
+      if (errorMsg !== "Payment cancelled") {
+        toast({
+          title: "Pro Plan Upgrade",
+          description: errorMsg,
+        });
+      }
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // SKELETON LOADING STATE (Mirrors Dashboard Structure)
+  // ═══════════════════════════════════════════════════════════════
+  if (isLoading) {
     return (
-      <StudentLayout title="Dashboard" subtitle="Your learning hub">
-        <div className="w-full md:max-w-4xl md:mx-auto flex items-center justify-center min-h-[50vh]">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center gap-4"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-indigo-500/30">
-              <Zap className="w-8 h-8 text-white" />
+      <StudentLayout title="PracticeKoro" subtitle="Your Exam Preparation Partner">
+        <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 space-y-4 md:space-y-5 animate-pulse">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-slate-200" />
+              <div className="h-5 w-28 bg-slate-200 rounded-md" />
             </div>
-            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          </motion.div>
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-slate-200" />
+              <div className="w-9 h-9 rounded-full bg-slate-200" />
+            </div>
+          </div>
+
+          {/* Hero Skeleton */}
+          <div className="rounded-3xl bg-slate-200/80 h-36 sm:h-40 w-full" />
+
+          {/* Today's Progress Skeleton */}
+          <div className="rounded-3xl bg-white border border-slate-100 p-4 space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="h-4 w-32 bg-slate-200 rounded" />
+              <div className="h-3 w-20 bg-slate-200 rounded" />
+            </div>
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-16 bg-slate-100 rounded-2xl" />
+              ))}
+            </div>
+          </div>
+
+          {/* Popular Exams Skeleton */}
+          <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="w-[155px] sm:w-[170px] h-28 bg-slate-100 rounded-2xl shrink-0" />
+            ))}
+          </div>
+
+          {/* Continue Practice Skeleton */}
+          <div className="rounded-2xl bg-white border border-slate-100 p-4 h-20" />
+
+          {/* Recommended Skeleton */}
+          <div className="rounded-2xl bg-slate-100 h-20" />
+
+          {/* Quick Actions Skeleton */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-20 bg-slate-100 rounded-2xl" />
+            ))}
+          </div>
         </div>
       </StudentLayout>
     );
   }
 
-  // Payment Locked State
-
-  const isApproved = approvalStatus === 'approved';
-  const firstName = profile?.full_name?.split(' ')[0] || "Student";
-  const greeting = getGreeting();
-  const passRate = statistics.totalTestsTaken > 0 ? Math.round((statistics.testsPassed / statistics.totalTestsTaken) * 100) : 0;
+  // ═══════════════════════════════════════════════════════════════
+  // BENGALI ERROR STATE (Graceful Failure with Retry)
+  // ═══════════════════════════════════════════════════════════════
+  if (isError) {
+    return (
+      <StudentLayout title="PracticeKoro" subtitle="Your Exam Preparation Partner">
+        <div className="w-full max-w-md mx-auto px-4 py-16 text-center">
+          <div className="rounded-3xl bg-white border border-rose-200 p-6 sm:p-8 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+              <AlertCircle className="w-6 h-6 stroke-[2.2]" />
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 mb-1">
+              কিছু সমস্যা হয়েছে। আবার চেষ্টা করুন।
+            </h3>
+            <p className="text-xs text-slate-500 mb-5">
+              তথ্য লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে পুনরায় চেষ্টা করুন।
+            </p>
+            <button
+              onClick={handleRetryAll}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+            >
+              <RefreshCw className="w-4 h-4 stroke-[2.2]" />
+              <span>আবার চেষ্টা করুন</span>
+            </button>
+          </div>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
-    <StudentLayout title="Dashboard" subtitle="Your learning hub" hideNavbar={showChat}>
-      <div className="w-full mx-auto space-y-3 pb-4 px-1">
+    <StudentLayout title="PracticeKoro" subtitle="Your Exam Preparation Partner">
+      <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-2 md:py-4 pb-24 md:pb-10 space-y-4 md:space-y-5">
+        
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 1: HEADER (Logo Left + Pro Plan Badge + Bell + Avatar Right)
+            ═══════════════════════════════════════════════════════════════ */}
+        <header className="flex items-center justify-between gap-2.5 pt-1 pb-1">
+          {/* Left: PracticeKoro Brand */}
+          <div
+            onClick={() => navigate("/student/dashboard")}
+            className="flex items-center gap-2.5 cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-xs border border-slate-200/80 group-hover:scale-105 transition-transform bg-white">
+              <img src="/logo-circle.png" alt="PracticeKoro" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center leading-none">
+                <span className="text-lg font-black tracking-tight text-[#0F172A]">Practice</span>
+                <span className="text-lg font-black tracking-tight text-[#0066FF]">Koro</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium tracking-tight mt-0.5 hidden sm:block">
+                Your Exam Preparation Partner
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Pro Plan Badge + Notifications Bell + Avatar */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Pro Plan pill button */}
+            <button
+              onClick={handleProPlanClick}
+              className={`h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border ${
+                hasSubscription
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                  : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-200/80"
+              }`}
+              title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
+            >
+              <Crown className={`w-3.5 h-3.5 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
+              <span className="text-[11px] sm:text-xs font-bold">
+                {hasSubscription ? "Pro Plan" : "Upgrade to Pro"}
+              </span>
+            </button>
+
+            {/* Notifications */}
+            <button
+              onClick={() => navigate("/student/notifications")}
+              className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 hover:text-[#0066FF] hover:border-[#0066FF]/40 shadow-xs transition-colors cursor-pointer"
+              aria-label="Notifications"
+            >
+              <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9.5px] font-black flex items-center justify-center ring-2 ring-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Avatar */}
+            <button
+              onClick={() => navigate("/student/profile")}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white shadow-xs border border-slate-200 overflow-hidden hover:ring-2 hover:ring-[#0066FF]/30 transition-all flex items-center justify-center cursor-pointer shrink-0"
+              aria-label="Student Profile"
+            >
+              <img
+                src={avatarUrl || "/logo-circle.png"}
+                alt={displayName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/logo-circle.png";
+                }}
+              />
+            </button>
+          </div>
+        </header>
 
         {/* ═══════════════════════════════════════════════════════════════
-            PREMIUM HERO CARD - Standardized Size
+            SECTION 2: HERO CAROUSEL (3 Swipeable Image Slides)
             ═══════════════════════════════════════════════════════════════ */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 bg-gradient-to-br ${greeting.color}`}
-        >
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-3xl -ml-20 -mb-20" />
-          <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/5 rounded-full blur-2xl" />
+        <HeroBannerCarousel
+          greeting={greeting}
+          firstName={firstName}
+          onNavigate={(path) => navigate(path)}
+        />
 
-          <div className="relative z-10">
-            {/* User Info */}
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div className="flex items-center gap-4 min-w-0 flex-1">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shrink-0 overflow-hidden"
-                >
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl sm:text-3xl font-bold text-white">{firstName[0]}</span>
-                  )}
-                </motion.div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-white/70 text-xs sm:text-sm font-medium mb-1">{greeting.text} {greeting.emoji}</p>
-                  <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{firstName}</h1>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    {hasSubscription ? (
-                      <button className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold flex items-center gap-1 shadow-lg shadow-amber-500/30">
-                        ⚡ Premium
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 3: TODAY'S PROGRESS (Questions, Accuracy, Study Time, Streak)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-sm text-slate-900 tracking-tight">Today's Progress</h3>
+              {todayMetrics.streakDays > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                  <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  Active Streak
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => navigate("/student/results")}
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
+            >
+              <span>View Details</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+            {/* Metric 1: Questions */}
+            <div className="p-2 sm:p-3 rounded-2xl bg-slate-50/80 border border-slate-100">
+              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                {todayMetrics.questions}
+              </p>
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Questions
+              </p>
+            </div>
+
+            {/* Metric 2: Accuracy */}
+            <div className="p-2 sm:p-3 rounded-2xl bg-slate-50/80 border border-slate-100">
+              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                {todayMetrics.accuracy}%
+              </p>
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Accuracy
+              </p>
+            </div>
+
+            {/* Metric 3: Study Time */}
+            <div className="p-2 sm:p-3 rounded-2xl bg-slate-50/80 border border-slate-100">
+              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                {todayMetrics.studyTimeMinutes}m
+              </p>
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Study Time
+              </p>
+            </div>
+
+            {/* Metric 4: Day Streak */}
+            <div className="p-2 sm:p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100/80">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-xl sm:text-2xl font-black text-emerald-700 leading-tight">
+                  {todayMetrics.streakDays}
+                </span>
+                <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+              </div>
+              <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-0.5">
+                Day Streak
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 4: POPULAR EXAMS (Side-scrollable, right below Today's Progress)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight">
+              Popular Exams
+            </h3>
+            <button
+              onClick={() => navigate("/student/exam")}
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
+            </button>
+          </div>
+
+          {exams && exams.length > 0 ? (
+            <div className="flex items-stretch gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar scroll-native pb-2 pt-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">
+              {exams.map((exam) => {
+                const count = examMockCounts[exam.id] || 0;
+                const region = exam.name.toLowerCase().includes("wb")
+                  ? "West Bengal"
+                  : exam.name.toLowerCase().includes("railway")
+                  ? "National / RRB"
+                  : "State Govt";
+
+                return (
+                  <div
+                    key={exam.id}
+                    onClick={() =>
+                      navigate(`/student/exam?exam=${encodeURIComponent(exam.id)}`)
+                    }
+                    className="w-[155px] sm:w-[170px] shrink-0 bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex flex-col items-center text-center shadow-xs hover:shadow-sm hover:border-[#0066FF]/40 transition-all cursor-pointer group select-none"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                      {exam.name.toLowerCase().includes("wb") ? (
+                        <AshokaEmblem className="w-6 h-6 text-slate-800" />
+                      ) : (
+                        <Landmark className="w-6 h-6 text-[#0066FF]" />
+                      )}
+                    </div>
+                    <h4 className="text-[11.5px] sm:text-xs font-bold text-slate-900 leading-tight line-clamp-1">
+                      {exam.name}
+                    </h4>
+                    <span className="text-[9.5px] sm:text-[10px] text-slate-400 font-medium mt-0.5">
+                      {region}
+                    </span>
+                    <div className="mt-auto pt-2.5 w-full">
+                      <div className="w-full py-0.5 px-1.5 rounded-full bg-blue-50 text-[#0066FF] text-[9.5px] sm:text-[10px] font-bold text-center">
+                        {count > 0 ? `${count} Mock Tests` : "New Tests"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-500">
+              No exams found.
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION: MOCK TEST SERIES (Directly below Popular Exams)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight">
+                Mock Test Series
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
+                Simulated exam mocks with detailed solutions & analysis
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/student/exam")}
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors shrink-0"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
+            </button>
+          </div>
+
+          {dbTests && dbTests.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              {dbTests.slice(0, 4).map((test) => {
+                const attempt = testAttempts[test.id];
+                const isTopic = test.test_type === "topic_wise";
+                const tagLabel = isTopic
+                  ? (test.subjects?.name || "Topic Test")
+                  : (test.exams?.name || "Full Mock");
+
+                return (
+                  <div
+                    key={test.id}
+                    className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 hover:border-[#0066FF]/40 hover:shadow-sm transition-all flex items-center justify-between gap-3 group"
+                  >
+                    {/* Left Icon / Score Badge */}
+                    <div
+                      className={`w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-all ${
+                        attempt
+                          ? attempt.passed
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-rose-50 text-rose-700 border-rose-200"
+                          : isTopic
+                          ? "bg-purple-50 text-purple-700 border-purple-100"
+                          : "bg-blue-50 text-[#0066FF] border-blue-100"
+                      }`}
+                    >
+                      {attempt ? (
+                        <>
+                          <span className="text-xs sm:text-sm font-black leading-none">{attempt.best_percentage}%</span>
+                          <span className="text-[8.5px] font-bold uppercase mt-1">
+                            {attempt.passed ? "Passed" : "Retry"}
+                          </span>
+                        </>
+                      ) : isTopic ? (
+                        <>
+                          <Target className="w-5 h-5 stroke-[2.2]" />
+                          <span className="text-[8.5px] font-black uppercase tracking-wider mt-0.5">Topic</span>
+                        </>
+                      ) : (
+                        <>
+                          <Award className="w-5 h-5 stroke-[2.2]" />
+                          <span className="text-[8.5px] font-black uppercase tracking-wider mt-0.5">Mock</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Middle Info - Click opens modal */}
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => {
+                        setSelectedTestForModal({
+                          id: test.id,
+                          title: test.title,
+                          examName: test.exams?.name || test.subjects?.name || "West Bengal Mock Test",
+                          totalQuestions: (test as any).total_questions || 100,
+                          durationMinutes: test.duration_minutes || 90,
+                          totalMarks: test.total_marks || 100,
+                          negativeMarking: (test as any).negative_marks ? `-${(test as any).negative_marks}` : "-0.25",
+                          isPaid: test.is_paid,
+                          language: "Bengali & English",
+                          attemptsAllowed: "Unlimited",
+                          validity: "1 Year",
+                        });
+                      }}
+                    >
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`text-[9.5px] font-black px-1.5 py-0.5 rounded-md border ${
+                            isTopic
+                              ? "bg-purple-50 text-purple-700 border-purple-200"
+                              : "bg-blue-50 text-[#0066FF] border-blue-200"
+                          }`}
+                        >
+                          {tagLabel}
+                        </span>
+
+                        {test.is_paid ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-[8.5px] px-1 py-0 font-bold ${
+                              hasSubscription
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-amber-50 text-amber-800 border-amber-200"
+                            }`}
+                          >
+                            {hasSubscription ? "PRO" : "PRO"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[8.5px] px-1 py-0 font-bold bg-slate-50 text-slate-600 border-slate-200">
+                            FREE
+                          </Badge>
+                        )}
+                      </div>
+
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate mt-1 group-hover:text-[#0066FF] transition-colors">
+                        {test.title}
+                      </h4>
+
+                      <div className="flex items-center gap-2.5 text-slate-500 text-[11px] mt-1 flex-wrap font-medium">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          {test.duration_minutes} Mins
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-slate-400" />
+                          {test.total_marks} Marks
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right Button */}
+                    <div className="flex flex-col items-end shrink-0">
+                      <button
+                        onClick={() => {
+                          if (test.is_paid && !hasSubscription) {
+                            handleProPlanClick();
+                          } else {
+                            navigate(`/student/take-test/${test.id}`);
+                          }
+                        }}
+                        className={`h-9 px-3.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+                          attempt
+                            ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            : test.is_paid && !hasSubscription
+                            ? "bg-[#FEF3C7] hover:bg-amber-200 text-amber-900 border border-amber-200"
+                            : "bg-[#0066FF] hover:bg-blue-700 text-white"
+                        }`}
+                      >
+                        {attempt ? (
+                          <>
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Retry</span>
+                          </>
+                        ) : test.is_paid && !hasSubscription ? (
+                          <>
+                            <Lock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Unlock</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>Start</span>
+                          </>
+                        )}
                       </button>
-                    ) : (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-emerald-400/50" />
-                        <p className="text-white/80 text-xs font-semibold">Active Student</p>
-                      </>
-                    )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-500">
+              No mock tests available at the moment.
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 5: CONTINUE PRACTICE (Unfinished test or empty state)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-sm text-slate-900 tracking-tight">Continue Practice</h3>
+            <button
+              onClick={() => navigate("/student/practice")}
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
+            </button>
+          </div>
+
+          {unfinishedPractice ? (
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-[#0066FF] flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                    {unfinishedPractice.testTitle}
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                    {unfinishedPractice.questionCount} Questions • {unfinishedPractice.completedPercentage}% completed
+                  </p>
+                  <div className="w-full max-w-xs h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full bg-[#0066FF] rounded-full transition-all duration-300"
+                      style={{ width: `${unfinishedPractice.completedPercentage}%` }}
+                    />
                   </div>
                 </div>
               </div>
+              <button
+                onClick={() => navigate(`/student/take-test/${unfinishedPractice.testId}`)}
+                className="px-4 py-2 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+              >
+                Resume
+              </button>
             </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-500 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 stroke-[2]" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+                    Ready to practice?
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                    Start your first practice session.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/student/practice")}
+                className="px-4 py-2 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+              >
+                Start Practice
+              </button>
+            </div>
+          )}
+        </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{statistics.totalTestsTaken}</p>
-                <p className="text-white/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-1">Tests Taken</p>
-              </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{statistics.averageScore}%</p>
-                <p className="text-white/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-1">Avg Score</p>
-              </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{passRate}%</p>
-                <p className="text-white/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-1">Pass Rate</p>
-              </div>
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 5: RECOMMENDED FOR YOU (AI-powered Weakest Subject)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-sm text-slate-900 tracking-tight">Recommended For You</h3>
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300/70">
+                <Sparkles className="w-3 h-3 text-amber-600 fill-amber-500" />
+                AI Powered
+              </span>
             </div>
           </div>
-        </motion.div>
 
-        {/* ═══════════════════════════════════════════════════════════════
-            PREMIUM UPGRADE CARD (If not subscribed)
-            ═══════════════════════════════════════════════════════════════ */}
-        {
-          !hasSubscription && isApproved && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="p-1 rounded-[2rem] bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 shadow-lg shadow-orange-200/50"
-            >
-              <div className="bg-white rounded-[1.8rem] p-5 flex items-center gap-4 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full -mr-16 -mt-16 opacity-50" />
-
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-200">
-                  <Sparkles className="w-7 h-7 text-white" />
+          {recommendation?.hasSufficientData && recommendation.subjectName ? (
+            <div className="bg-amber-50/70 rounded-2xl border border-amber-200/80 p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5 sm:mt-0">
+                  <Target className="w-5 h-5" />
                 </div>
-
-                <div className="flex-1 min-w-0 pr-2">
-                  <h4 className="text-base font-black text-slate-900 leading-tight">Upgrade to Premium</h4>
-                  <p className="text-xs font-bold text-slate-500 mt-0.5">Unlock all tests & study notes for ₹{subscriptionFee}/yr</p>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+                    Focus on {recommendation.subjectName}
+                  </h4>
+                  <p className="text-[11px] text-amber-950 font-medium mt-0.5">
+                    Your accuracy in <strong>{recommendation.subjectName}</strong> is lower than your recent average. Practice these topics to improve.
+                  </p>
                 </div>
-
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={async () => {
-                    try {
-                      await initRazorpayPayment({
-                        amount: subscriptionFee,
-                        contentId: "site_yearly_subscription",
-                        contentType: "subscription" as any,
-                        title: "Yearly Premium Subscription",
-                      });
-                      toast({ title: "Success!", description: "Subscription activated!" });
-                      window.location.reload();
-                    } catch (err: any) {
-                      toast({ title: "Payment Failed", description: err.message, variant: "destructive" });
-                    }
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black shadow-lg shadow-slate-200 active:bg-black transition-colors whitespace-nowrap"
-                >
-                  Buy Now
-                </motion.button>
               </div>
-            </motion.div>
-          )
-        }
+              <button
+                onClick={() =>
+                  navigate(`/student/practice?subject=${encodeURIComponent(recommendation.subjectName || "")}`)
+                }
+                className="self-start sm:self-auto px-4 py-2 bg-[#FBBF24] hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-2xs transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Start Practice</span>
+                <ArrowRight className="w-3.5 h-3.5 stroke-[2.4]" />
+              </button>
+            </div>
+          ) : (
+            <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0066FF] border border-blue-100 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                  <Target className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+                    Personalized Recommendations
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    Take a few practice tests to unlock personalized recommendations.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/student/exam")}
+                className="self-start sm:self-auto px-4 py-2 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Take a Test</span>
+                <ArrowRight className="w-3.5 h-3.5 stroke-[2.4]" />
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            QUICK ACTIONS - Native App Style Cards
+            SECTION 6: QUICK ACTIONS (6 Practice & Study Tools)
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider px-1">Quick Actions</h3>
-
-          {/* Primary CTA */}
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate("/student/exams?type=full_mock")}
-            className="w-full p-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 text-left flex items-center gap-4 shadow-indigo-500/25 active:shadow-md transition-all"
-          >
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <GraduationCap className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-base font-bold text-white">Start Mock Test</h4>
-              <p className="text-sm text-indigo-200">Full exam simulation with timer</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
-          </motion.button>
-
-          {/* Secondary Actions Grid */}
-          <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <h3 className="font-black text-sm text-slate-900 tracking-tight">Quick Actions</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
             {[
               {
-                title: "Results",
-                subtitle: "View analytics",
-                icon: BarChart3,
-                path: "/student/results",
-                gradient: "from-emerald-500 to-teal-600",
-                bg: "bg-emerald-50",
-                iconColor: "text-emerald-600"
+                title: "Daily Challenge",
+                icon: Zap,
+                bg: "bg-amber-50 border-amber-200/80 text-amber-600",
+                path: "/student/daily",
               },
               {
-                title: "Topic Tests",
-                subtitle: "Practice by topic",
+                title: "Topic Practice",
                 icon: Target,
-                path: "/student/exams?type=topic_wise",
-                gradient: "from-blue-500 to-cyan-600",
-                bg: "bg-blue-50",
-                iconColor: "text-blue-600"
+                bg: "bg-purple-50 border-purple-200/80 text-purple-600",
+                path: "/student/practice/subject",
+              },
+              {
+                title: "Previous Year",
+                icon: Calendar,
+                bg: "bg-emerald-50 border-emerald-200/80 text-emerald-600",
+                path: "/student/pyq",
+              },
+              {
+                title: "Mistake Book",
+                icon: RotateCcw,
+                bg: "bg-rose-50 border-rose-200/80 text-rose-600",
+                path: "/student/mistakes",
               },
               {
                 title: "Study Notes",
-                subtitle: "Read materials",
-                icon: FileText,
+                icon: BookOpen,
+                bg: "bg-blue-50 border-blue-200/80 text-[#0066FF]",
                 path: "/student/notes",
-                gradient: "from-amber-500 to-orange-600",
-                bg: "bg-amber-50",
-                iconColor: "text-amber-600"
               },
               {
-                title: "All Exams",
-                subtitle: `${statistics.availableExams} available`,
-                icon: BookOpen,
-                path: "/student/exams",
-                gradient: "from-purple-500 to-pink-600",
-                bg: "bg-purple-50",
-                iconColor: "text-purple-600"
-              }
+                title: "Saved Bookmarks",
+                icon: Bookmark,
+                bg: "bg-cyan-50 border-cyan-200/80 text-cyan-600",
+                path: "/student/bookmarks",
+              },
             ].map((action, idx) => (
               <motion.button
-                key={action.title}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 + idx * 0.05 }}
-                whileTap={{ scale: 0.96 }}
+                key={idx}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => navigate(action.path)}
-                className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md text-left transition-all active:bg-slate-50"
+                className="bg-white rounded-2xl border border-slate-200/90 p-2.5 sm:p-3.5 flex flex-col items-center justify-center text-center shadow-xs hover:border-[#0066FF]/40 hover:shadow-sm transition-all cursor-pointer"
               >
-                <div className={`w-11 h-11 rounded-xl ${action.bg} flex items-center justify-center mb-3`}>
-                  <action.icon className={`w-5 h-5 ${action.iconColor}`} />
+                <div
+                  className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-1.5 border ${action.bg}`}
+                >
+                  <action.icon className="w-5 h-5 stroke-[2.2]" />
                 </div>
-                <h4 className="font-bold text-slate-900 text-sm">{action.title}</h4>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">{action.subtitle}</p>
+                <span className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight">
+                  {action.title}
+                </span>
               </motion.button>
             ))}
           </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            STUDY STREAK - Gamification Element
+            SECTION 7: RECENT ACTIVITY (Up to 4 recent test attempts)
             ═══════════════════════════════════════════════════════════════ */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
-          className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12" />
-          <div className="relative z-10 flex items-center gap-4">
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight">
+              Recent Activity
+            </h3>
+            <button
+              onClick={() => navigate("/student/results")}
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
             >
-              <Flame className="w-7 h-7 text-white" />
-            </motion.div>
-            <div className="flex-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-white">{studyStreak}</span>
-                <span className="text-white/80 font-semibold text-sm">day streak</span>
-              </div>
-              <p className="text-amber-100 text-xs mt-0.5">
-                {studyStreak === 0 ? "Take a test to start your streak!" :
-                  studyStreak === 1 ? "Great start! Keep it going!" :
-                    `You're on fire! ${studyStreak} days in a row!`}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            RECENT ACTIVITY - Activity Feed
-            ═══════════════════════════════════════════════════════════════ */}
-        {
-          recentActivity.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.13 }}
-              className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">Recent Activity</h3>
-                  <p className="text-xs text-slate-500">Your latest test attempts</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {recentActivity.map((activity, idx) => {
-                  const date = new Date(activity.date);
-                  const timeAgo = (() => {
-                    const diff = Date.now() - date.getTime();
-                    const mins = Math.floor(diff / 60000);
-                    const hours = Math.floor(mins / 60);
-                    const days = Math.floor(hours / 24);
-                    if (mins < 60) return `${mins}m ago`;
-                    if (hours < 24) return `${hours}h ago`;
-                    if (days < 7) return `${days}d ago`;
-                    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-                  })();
-
-                  return (
-                    <motion.div
-                      key={activity.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + idx * 0.05 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate(`/student/test-review/${activity.id}`)}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-indigo-100 group"
-                    >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${activity.passed ? 'bg-emerald-100' : 'bg-red-100'
-                        }`}>
-                        {activity.passed ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <Target className="w-5 h-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors">{activity.testName}</p>
-                        <p className="text-xs text-slate-500">{timeAgo}</p>
-                      </div>
-                      <div className={`px-3 py-1 rounded-lg font-bold text-sm ${activity.passed
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-red-100 text-red-600'
-                        }`}>
-                        {activity.score}%
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )
-        }
-
-        {/* ═══════════════════════════════════════════════════════════════
-            PROGRESS OVERVIEW - Detailed Stats
-            ═══════════════════════════════════════════════════════════════ */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-indigo-600" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900">Your Progress</h3>
-              <p className="text-xs text-slate-500">Keep up the great work!</p>
-            </div>
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
+            </button>
           </div>
 
-          <div className="space-y-4">
-            {/* Tests Progress */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-slate-600">Tests Completed</span>
-                <span className="font-bold text-slate-900">{Math.min(statistics.totalTestsTaken, 10)}/10</span>
-              </div>
-              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(statistics.totalTestsTaken * 10, 100)}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
-                />
-              </div>
-            </div>
-
-            {/* Pass Rate Progress */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-slate-600">Pass Rate</span>
-                <span className="font-bold text-slate-900">{passRate}%</span>
-              </div>
-              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${passRate}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                  className={`h-full rounded-full ${passRate >= 60 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'}`}
-                />
-              </div>
-            </div>
-
-            {/* Average Score */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-slate-600">Average Score</span>
-                <span className="font-bold text-slate-900">{statistics.averageScore}%</span>
-              </div>
-              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${statistics.averageScore}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
-                />
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            DAILY MOTIVATION
-            ═══════════════════════════════════════════════════════════════ */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="relative p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-violet-500/20 rounded-full blur-2xl" />
-
-          <div className="relative z-10 flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-amber-500/30">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-white font-bold text-base mb-1">Daily Inspiration</h4>
-              <p className="text-slate-300 text-sm leading-relaxed italic">"{dailyQuote}"</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            EXAM CATEGORIES - Horizontal Scroll
-            ═══════════════════════════════════════════════════════════════ */}
-        {
-          isApproved && exams.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Exam</h3>
-                <button
-                  onClick={() => navigate("/student/exams")}
-                  className="text-indigo-600 text-xs font-bold flex items-center gap-1"
+          {recentAttempts && recentAttempts.length > 0 ? (
+            <div className="space-y-2">
+              {recentAttempts.map((attempt) => (
+                <div
+                  key={attempt.id}
+                  onClick={() => navigate(`/student/test-review/${attempt.id}`)}
+                  className="bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 shadow-xs hover:border-[#0066FF]/40 hover:bg-blue-50/20 flex items-center justify-between gap-3 cursor-pointer transition-all"
                 >
-                  See All <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-2 px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-                {exams.map((exam, idx) => (
-                  <motion.button
-                    key={exam.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.25 + idx * 0.05 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => navigate(`/student/exams?exam=${exam.id}`)}
-                    className="flex-shrink-0 min-w-fit px-4 py-3 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center gap-2.5 active:bg-slate-50 transition-all"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center">
-                      <GraduationCap className="w-4 h-4 text-indigo-600" />
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        attempt.passed
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                          : "bg-blue-50 text-[#0066FF] border border-blue-100"
+                      }`}
+                    >
+                      {attempt.passed ? (
+                        <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
+                      ) : (
+                        <Clock className="w-5 h-5 stroke-[2.2]" />
+                      )}
                     </div>
-                    <span className="font-bold text-slate-900 text-xs whitespace-nowrap">{exam.name}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          )
-        }
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                        {attempt.testTitle}
+                      </h4>
+                      <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                        Completed • {attempt.score}/{attempt.totalMarks} ({attempt.percentage}%)
+                        {" • "}
+                        {formatDistanceToNow(new Date(attempt.completedAt), {
+                          addSuffix: true,
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 text-center shadow-xs">
+              <p className="text-xs font-bold text-slate-900">No activity yet.</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Start your first practice test.
+              </p>
+              <button
+                onClick={() => navigate("/student/exam")}
+                className="mt-3 px-4 py-1.5 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                Take a Test
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            SUPPORT CHAT SECTION - Inline Card
+            SECTION 9: PREMIUM / PRO BANNER (Upgrade banner or Pro Active)
             ═══════════════════════════════════════════════════════════════ */}
-        {
-          isApproved && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Support</h3>
+        {!hasSubscription && (
+          <div className="bg-[#0A1628] rounded-2xl p-4 sm:p-5 text-white flex items-center justify-between gap-3 shadow-md relative overflow-hidden">
+            <div className="absolute left-0 top-0 w-28 h-28 bg-[#F6C344]/15 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute right-10 bottom-0 w-32 h-32 bg-[#0066FF]/10 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F6C344] to-amber-500 flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/30">
+                <Crown className="w-5 h-5 text-slate-950 fill-slate-950" />
               </div>
 
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowChat(true)}
-                className="w-full p-5 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 text-left flex items-center gap-4 shadow-indigo-500/25 active:shadow-md transition-all relative overflow-hidden"
-              >
-                {/* Background decorations */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
-                <div className="absolute bottom-0 left-1/2 w-20 h-20 bg-white/5 rounded-full blur-xl" />
+              <div className="flex flex-col">
+                <h4 className="text-xs sm:text-sm font-bold text-white leading-tight">
+                  Upgrade to PracticeKoro Pro
+                </h4>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 leading-tight mt-0.5 max-w-[200px] sm:max-w-xs md:max-w-md">
+                  Unlock mock tests, previous year papers and advanced analysis.
+                </p>
+              </div>
+            </div>
 
-                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/30 relative z-10">
-                  <MessageSquare className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0 relative z-10">
-                  <h4 className="text-base font-bold text-white">Chat with Support</h4>
-                  <p className="text-sm text-indigo-200">Get help from our team</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-white/70 shrink-0 relative z-10" />
-              </motion.button>
-            </motion.div>
-          )
-        }
-      </div >
+            <button
+              onClick={handleProPlanClick}
+              className="bg-[#F6C344] hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-[11px] sm:text-xs px-4 py-2 rounded-xl flex items-center gap-1 whitespace-nowrap transition-all shrink-0 relative z-10 shadow-xs cursor-pointer"
+            >
+              <span>View Plans</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.4]" />
+            </button>
+          </div>
+        )}
 
-      {/* Chat Component */}
-      {
-        isApproved && profile?.id && (
-          <StudentChat
-            studentId={profile.id}
-            studentName={profile.full_name || "Student"}
-            isOpen={showChat}
-            onOpenChange={setShowChat}
-          />
-        )
-      }
-    </StudentLayout >
+        {/* Test Details Modal if clicked */}
+        <TestDetailsModal
+          test={selectedTestForModal}
+          isOpen={!!selectedTestForModal}
+          onClose={() => setSelectedTestForModal(null)}
+          onStartTest={(testId) => {
+            navigate(`/student/take-test/${testId}`);
+            setSelectedTestForModal(null);
+          }}
+          hasSubscription={hasSubscription}
+          onUpgrade={handleProPlanClick}
+        />
+
+      </div>
+    </StudentLayout>
   );
 };
 

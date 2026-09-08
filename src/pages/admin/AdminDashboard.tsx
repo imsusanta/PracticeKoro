@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { checkIsAdmin } from "@/utils/adminAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, FileQuestion, Clock, TrendingUp, ArrowUpRight, CheckCircle, XCircle, Activity, Calendar, Sparkles, BarChart3, Zap, Shield } from "lucide-react";
+import { Users, FileQuestion, Clock, TrendingUp, ArrowUpRight, CheckCircle, XCircle, Activity, Calendar, Sparkles, BarChart3, Zap, Shield, Eye, Plus } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { motion } from "framer-motion";
 
@@ -32,10 +33,17 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalStudents: 0,
+    activePassStudents: 0,
     pendingApprovals: 0,
     totalQuestions: 0,
+    easyQuestions: 0,
+    mediumQuestions: 0,
+    hardQuestions: 0,
+    pyqQuestions: 0,
     totalTests: 0,
+    totalExams: 0,
     testsToday: 0,
+    totalRevenue: 0,
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [todayActivity, setTodayActivity] = useState<TodayActivity[]>([]);
@@ -44,46 +52,39 @@ const AdminDashboard = () => {
     return today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
   });
 
-  // Fast auth check - show UI immediately if session exists in localStorage
+  // Fast auth check - verify role and load data safely
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Check session quickly
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
-          navigate("/admin/login");
+          navigate("/admin/login", { replace: true });
           return;
         }
 
-        // Show UI immediately, check role in background
-        setAuthChecked(true);
-
-        // Start loading data immediately while checking role using RPC
-        const [adminRoleResult, superAdminRoleResult] = await Promise.all([
-          supabase.rpc('has_role', { _user_id: session.user.id, _role: 'admin' }),
-          supabase.rpc('has_role', { _user_id: session.user.id, _role: 'super_admin' }),
-          loadStats(),
-          loadRecentActivity()
-        ]);
-
-        const isAdmin = adminRoleResult.data === true || superAdminRoleResult.data === true;
+        const isAdmin = await checkIsAdmin(session.user.id);
 
         if (!isAdmin) {
-          console.error("Dashboard: Role check failed - user is not an admin:", {
-            userId: session.user.id,
-            hasAdminRole: adminRoleResult.data,
-            hasSuperAdminRole: superAdminRoleResult.data
-          });
-          // Removed signOut() here to prevent accidental logouts
+          console.error("Dashboard: Role check failed - user is not an admin:", session.user.id);
           toast({
             title: "Access Denied",
-            description: `No admin privileges found for user ID: ${session.user.id.substring(0, 8)}...`,
+            description: "No administrative privileges found for this account.",
             variant: "destructive",
           });
-          navigate("/admin/login");
+          navigate("/admin/login", { replace: true });
           return;
         }
+
+        setAuthChecked(true);
+
+        // Load stats and activity safely
+        Promise.all([
+          loadStats().catch((err) => console.error("Error loading stats:", err)),
+          loadRecentActivity().catch((err) => console.error("Error loading recent activity:", err)),
+        ]).finally(() => {
+          setLoading(false);
+        });
       } catch (error) {
         console.error("Error during admin auth check:", error);
         toast({
@@ -91,7 +92,6 @@ const AdminDashboard = () => {
           description: "Failed to verify admin access. Please try again.",
           variant: "destructive",
         });
-      } finally {
         setLoading(false);
       }
     };
@@ -103,21 +103,49 @@ const AdminDashboard = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [studentsResult, approvalsResult, questionsResult, testsResult, testsTodayResult] = await Promise.all([
-      // Count only students (not admins) by filtering with user_roles
-      supabase.from("profiles").select("id, user_roles!inner(role)", { count: "exact", head: true }).eq("user_roles.role", "student"),
-      supabase.from("approval_status").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("questions").select("id", { count: "exact", head: true }),
-      supabase.from("mock_tests").select("id", { count: "exact", head: true }),
-      supabase.from("test_attempts").select("id", { count: "exact", head: true }).gte("completed_at", today.toISOString()),
+    const [
+      studentsResult,
+      approvalsResult,
+      activePassResult,
+      questionsResult,
+      easyQResult,
+      medQResult,
+      hardQResult,
+      pyqResult,
+      testsResult,
+      examsResult,
+      testsTodayResult,
+      purchasesResult
+    ] = await Promise.all([
+      (supabase.from("profiles") as any).select("id, user_roles!inner(role)", { count: "exact", head: true }).eq("user_roles.role", "student"),
+      (supabase.from("approval_status") as any).select("id", { count: "exact", head: true }).eq("status", "pending"),
+      (supabase.from("approval_status") as any).select("id", { count: "exact", head: true }).eq("status", "approved"),
+      (supabase.from("questions") as any).select("id", { count: "exact", head: true }),
+      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).eq("difficulty", "easy"),
+      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).eq("difficulty", "medium"),
+      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).eq("difficulty", "hard"),
+      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).not("year", "is", null),
+      (supabase.from("mock_tests") as any).select("id", { count: "exact", head: true }),
+      (supabase.from("exams") as any).select("id", { count: "exact", head: true }),
+      (supabase.from("test_attempts") as any).select("id", { count: "exact", head: true }).gte("completed_at", today.toISOString()),
+      (supabase.from("purchases") as any).select("amount").eq("status", "completed"),
     ]);
+
+    const totalRevenue = (purchasesResult.data || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0);
 
     setStats({
       totalStudents: studentsResult.count || 0,
+      activePassStudents: activePassResult.count || 0,
       pendingApprovals: approvalsResult.count || 0,
       totalQuestions: questionsResult.count || 0,
+      easyQuestions: easyQResult.count || 0,
+      mediumQuestions: medQResult.count || 0,
+      hardQuestions: hardQResult.count || 0,
+      pyqQuestions: pyqResult.count || 0,
       totalTests: testsResult.count || 0,
+      totalExams: examsResult.count || 0,
       testsToday: testsTodayResult.count || 0,
+      totalRevenue,
     });
   };
 
@@ -246,12 +274,12 @@ const AdminDashboard = () => {
   // Show loading only if auth not checked yet
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-            <Shield className="w-6 h-6 text-white" />
+          <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-lg p-2 border border-slate-200">
+            <img src="/logo-circle.png" alt="Practice Koro" className="w-full h-full object-contain rounded-full" />
           </div>
-          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -260,112 +288,141 @@ const AdminDashboard = () => {
   const statCards = [
     {
       label: "Total Students",
-      value: stats.totalStudents,
+      value: stats.totalStudents.toLocaleString(),
+      subLabel: `${stats.activePassStudents} Pro Pass Active`,
       icon: Users,
-      trend: "+12%",
-      color: "emerald",
-      gradient: "from-emerald-500 to-teal-500"
-    },
-    {
-      label: "Pending Approvals",
-      value: stats.pendingApprovals,
-      icon: Clock,
-      trend: stats.pendingApprovals > 0 ? "Action needed" : "All clear",
-      color: stats.pendingApprovals > 0 ? "amber" : "emerald",
-      gradient: stats.pendingApprovals > 0 ? "from-amber-500 to-orange-500" : "from-emerald-500 to-teal-500"
-    },
-    {
-      label: "Total Questions",
-      value: stats.totalQuestions,
-      icon: FileQuestion,
-      trend: "+8%",
+      trend: "Registered",
       color: "blue",
-      gradient: "from-blue-500 to-cyan-500"
+      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+      iconBg: "bg-blue-600 text-white shadow-blue-500/20"
     },
     {
-      label: "Tests Today",
-      value: stats.testsToday,
+      label: "Question Bank",
+      value: stats.totalQuestions.toLocaleString(),
+      subLabel: `${stats.pyqQuestions} PYQ Papers Included`,
+      icon: FileQuestion,
+      trend: `${stats.easyQuestions}E / ${stats.mediumQuestions}M / ${stats.hardQuestions}H`,
+      color: "indigo",
+      badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+      iconBg: "bg-indigo-600 text-white shadow-indigo-500/20"
+    },
+    {
+      label: "Mock Tests & Exams",
+      value: stats.totalTests.toLocaleString(),
+      subLabel: `${stats.totalExams} Target Exams Active`,
+      icon: BarChart3,
+      trend: "Curated",
+      color: "amber",
+      badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+      iconBg: "bg-amber-500 text-white shadow-amber-500/20"
+    },
+    {
+      label: "Tests Taken Today",
+      value: stats.testsToday.toLocaleString(),
+      subLabel: "Live submissions",
       icon: Activity,
       trend: "Live",
-      color: "purple",
-      gradient: "from-purple-500 to-pink-500"
+      color: "emerald",
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      iconBg: "bg-emerald-600 text-white shadow-emerald-500/20"
+    },
+    {
+      label: "Total Revenue",
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      subLabel: "Completed student purchases",
+      icon: TrendingUp,
+      trend: "Real Payments",
+      color: "slate",
+      badgeColor: "bg-slate-100 text-slate-800 border-slate-300",
+      iconBg: "bg-slate-900 text-white shadow-slate-900/20"
     },
   ];
 
   return (
-    <AdminLayout title="Dashboard" subtitle="Welcome back, Admin">
-      <div className="space-y-6">
-        {/* Welcome Banner */}
+    <AdminLayout title="Platform Command Center" subtitle="Control exam papers, question bank, test series, and student access">
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Modern Executive Welcome Banner */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-6 md:p-8 text-white shadow-xl shadow-emerald-200/50"
+          transition={{ duration: 0.3 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 p-6 md:p-8 text-white shadow-xl shadow-slate-950/15 border border-slate-800"
         >
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform -translate-x-10 translate-y-10" />
+          {/* Subtle Glows */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-white" />
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-full bg-white/10 p-1 backdrop-blur-md border border-white/20 shadow-lg shrink-0">
+                <img src="/logo-circle.png" alt="Practice Koro" className="w-full h-full object-cover rounded-full" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Practice Koro Admin Studio</h1>
+                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs font-semibold px-2.5 py-0.5">
+                    Official Admin Portal
+                  </Badge>
                 </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold">Welcome back, Admin!</h1>
-                  <p className="text-emerald-100 text-sm md:text-base">Manage your platform with ease</p>
-                </div>
+                <p className="text-slate-300 text-sm md:text-base max-w-xl">
+                  Manage WB & National competitive exams, Previous Year Questions, AI-assisted drill tests, and verify student enrollment.
+                </p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
+
+            <div className="flex flex-wrap items-center gap-3">
               <Button
-                variant="secondary"
-                onClick={() => navigate("/admin/students")}
-                className="w-full sm:w-auto bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm rounded-xl font-medium"
+                variant="outline"
+                onClick={() => navigate("/student/dashboard")}
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm rounded-xl font-semibold text-sm transition-all"
               >
-                <Users className="w-4 h-4 mr-2" />
-                View Students
+                <Eye className="w-4 h-4 mr-2 text-blue-300" />
+                Student Portal View
               </Button>
               <Button
-                variant="secondary"
-                onClick={() => navigate("/admin/tests")}
-                className="w-full sm:w-auto bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm rounded-xl font-medium"
+                onClick={() => navigate("/admin/questions/add")}
+                className="bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-600/30 rounded-xl font-semibold text-sm"
               >
-                <Zap className="w-4 h-4 mr-2" />
-                Create Test
+                <Plus className="w-4 h-4 mr-2" />
+                Add Question
+              </Button>
+              <Button
+                onClick={() => navigate("/admin/tests")}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 border-0 shadow-lg shadow-amber-500/20 rounded-xl font-bold text-sm"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Create Mock Test
               </Button>
             </div>
           </div>
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid gap-4 md:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           {statCards.map((stat, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <Card className="border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-150 rounded-2xl overflow-hidden group">
-                <CardContent className="p-4 md:p-5">
+              <Card className="border border-slate-200 bg-white hover:border-blue-300 hover:shadow-lg transition-all duration-200 rounded-2xl overflow-hidden shadow-sm">
+                <CardContent className="p-5">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1 md:space-y-2">
-                      <p className="text-xs md:text-sm text-gray-500 font-medium">{stat.label}</p>
-                      <p className="text-2xl md:text-3xl font-bold text-gray-900">{stat.value}</p>
-                      <div className={`flex items-center gap-1 text-[10px] md:text-xs font-semibold ${stat.color === "amber" ? "text-amber-600" :
-                        stat.color === "blue" ? "text-blue-600" :
-                          stat.color === "purple" ? "text-purple-600" :
-                            "text-emerald-600"
-                        }`}>
-                        <TrendingUp className="w-3 h-3" />
-                        <span>{stat.trend}</span>
-                      </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+                      <p className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">{stat.value}</p>
+                      <p className="text-xs text-slate-600 font-medium">{stat.subLabel}</p>
                     </div>
-                    <div className={`w-11 h-11 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-150`}>
-                      <stat.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    <div className={`w-11 h-11 rounded-xl ${stat.iconBg} flex items-center justify-center shadow-md shrink-0`}>
+                      <stat.icon className="w-5 h-5" />
                     </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-500">Status</span>
+                    <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${stat.badgeColor}`}>
+                      {stat.trend}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -373,23 +430,66 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Today's Student Tests - NEW SECTION */}
+        {/* Question Bank & Difficulty Breakdown Bar */}
+        <Card className="border border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <CardContent className="p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <FileQuestion className="w-4 h-4 text-blue-600" />
+                  Database Question Distribution & Difficulty Matrix
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Real-time breakdown of difficulty ratings, PYQ papers, and syllabus coverage
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Easy: {stats.easyQuestions}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Medium: {stats.mediumQuestions}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  Hard: {stats.hardQuestions}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                  <Calendar className="w-3 h-3 text-purple-600" />
+                  PYQ Papers: {stats.pyqQuestions}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate("/admin/questions")}
+                  className="rounded-xl border-slate-200 text-xs font-bold hover:bg-slate-50 text-slate-700"
+                >
+                  Manage Questions &rarr;
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Today's Student Tests Activity */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.35 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between bg-gradient-to-r from-purple-50/50 to-pink-50/50 border-b border-purple-100/50">
+          <Card className="border border-slate-200 bg-white rounded-2xl overflow-hidden shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between bg-slate-50/80 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                  <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-base md:text-lg font-bold text-gray-900">
-                    Daily Test Activity
+                  <CardTitle className="text-base md:text-lg font-bold text-slate-900">
+                    Daily Student Submissions
                   </CardTitle>
-                  <p className="text-xs text-gray-500">Students who gave tests</p>
+                  <p className="text-xs text-slate-500">Live monitor of tests completed by students</p>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -397,21 +497,21 @@ const AdminDashboard = () => {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white w-full sm:w-auto"
+                  className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent bg-white text-slate-800"
                 />
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 rounded-full px-3 py-1 text-xs font-semibold shadow-md whitespace-nowrap self-start sm:self-auto">
-                  {todayActivity.length} tests
+                <Badge className="bg-blue-600 text-white border-0 rounded-full px-3 py-1 text-xs font-bold shadow-sm whitespace-nowrap self-start sm:self-auto">
+                  {todayActivity.length} Submissions
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 sm:p-6">
               {todayActivity.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                    <Calendar className="w-8 h-8 text-gray-300" />
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3 text-slate-400">
+                    <Calendar className="w-8 h-8" />
                   </div>
-                  <p className="text-gray-500 font-medium">No tests on this date</p>
-                  <p className="text-gray-400 text-sm">Select a different date to view activity</p>
+                  <p className="text-slate-700 font-bold text-sm">No tests submitted on this date</p>
+                  <p className="text-slate-400 text-xs mt-1">Select another date to review student attempt history</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -419,54 +519,51 @@ const AdminDashboard = () => {
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-left border-b border-gray-100">
-                          <th className="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Student</th>
-                          <th className="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Name</th>
-                          <th className="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
-                          <th className="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Score</th>
-                          <th className="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Status</th>
+                        <tr className="text-left border-b border-slate-200">
+                          <th className="pb-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Student</th>
+                          <th className="pb-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Test Name</th>
+                          <th className="pb-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
+                          <th className="pb-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Score</th>
+                          <th className="pb-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-slate-100">
                         {todayActivity.map((activity, index) => (
-                          <motion.tr
+                          <tr
                             key={activity.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: index * 0.03 }}
-                            className="hover:bg-gray-50/50 transition-colors"
+                            className="hover:bg-slate-50/80 transition-colors"
                           >
                             <td className="py-3">
                               <div>
-                                <p className="font-medium text-gray-900 text-sm">{activity.student_name}</p>
+                                <p className="font-bold text-slate-900 text-sm">{activity.student_name}</p>
                                 {activity.whatsapp_number && (
-                                  <p className="text-xs text-gray-400">{activity.whatsapp_number}</p>
+                                  <p className="text-xs text-slate-500 font-medium">{activity.whatsapp_number}</p>
                                 )}
                               </div>
                             </td>
                             <td className="py-3">
-                              <p className="text-sm text-gray-600 truncate max-w-[200px]">{activity.test_title}</p>
+                              <p className="text-sm text-slate-700 font-medium truncate max-w-[240px]">{activity.test_title}</p>
                             </td>
                             <td className="py-3">
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-slate-500">
                                 {new Date(activity.completed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </td>
                             <td className="py-3 text-center">
-                              <span className="font-bold text-gray-900 text-sm">{activity.score}/{activity.total_marks}</span>
-                              <span className="text-[10px] text-gray-400 ml-1">({activity.percentage}%)</span>
+                              <span className="font-extrabold text-slate-900 text-sm">{activity.score}/{activity.total_marks}</span>
+                              <span className="text-[11px] text-slate-500 ml-1">({activity.percentage}%)</span>
                             </td>
                             <td className="py-3 text-center">
                               <Badge
-                                className={`text-[10px] px-2 py-0.5 border-0 rounded-full ${activity.passed
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700"
+                                className={`text-[10px] px-2.5 py-0.5 border font-bold rounded-full ${activity.passed
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-rose-50 text-rose-700 border-rose-200"
                                   }`}
                               >
                                 {activity.passed ? "PASSED" : "FAILED"}
                               </Badge>
                             </td>
-                          </motion.tr>
+                          </tr>
                         ))}
                       </tbody>
                     </table>
@@ -474,38 +571,35 @@ const AdminDashboard = () => {
 
                   {/* Mobile Card View */}
                   <div className="md:hidden space-y-3">
-                    {todayActivity.map((activity, index) => (
-                      <motion.div
+                    {todayActivity.map((activity) => (
+                      <div
                         key={activity.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: index * 0.03 }}
-                        className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2"
+                        className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="font-bold text-gray-900 text-sm">{activity.student_name}</p>
-                            <p className="text-[10px] text-gray-500">{activity.whatsapp_number}</p>
+                            <p className="font-bold text-slate-900 text-sm">{activity.student_name}</p>
+                            <p className="text-[11px] text-slate-500">{activity.whatsapp_number}</p>
                           </div>
                           <Badge
-                            className={`text-[9px] px-2 py-0 border-0 rounded-full ${activity.passed
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
+                            className={`text-[9px] px-2 py-0.5 border font-bold rounded-full ${activity.passed
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
                               }`}
                           >
                             {activity.passed ? "PASSED" : "FAILED"}
                           </Badge>
                         </div>
-                        <p className="text-xs text-gray-600 line-clamp-1">{activity.test_title}</p>
-                        <div className="flex justify-between items-center pt-1 border-t border-gray-200/50">
-                          <span className="text-[10px] text-gray-400">
+                        <p className="text-xs text-slate-700 font-medium line-clamp-1">{activity.test_title}</p>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                          <span className="text-[10px] text-slate-500">
                             {new Date(activity.completed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          <span className="text-xs font-bold text-gray-900">
+                          <span className="text-xs font-bold text-slate-900">
                             {activity.score}/{activity.total_marks} ({activity.percentage}%)
                           </span>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -514,160 +608,171 @@ const AdminDashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Recent Activity & Quick Actions */}
+        {/* Quick Actions & Recent Submissions Grid */}
         <div className="grid gap-5 grid-cols-1 lg:grid-cols-3">
-          {/* Recent Student Activity */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-            className="lg:col-span-2"
-          >
-            <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
-              <CardHeader className="pb-3 flex flex-row items-center justify-between bg-gradient-to-r from-emerald-50/50 to-teal-50/50 border-b border-emerald-100/50">
-                <div>
-                  <CardTitle className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                      <Activity className="w-4 h-4 text-white" />
-                    </div>
-                    Recent Activity
-                  </CardTitle>
-                  <p className="text-xs text-gray-500 mt-1 ml-10">Latest test submissions</p>
+          {/* Recent Submissions Feed */}
+          <div className="lg:col-span-2">
+            <Card className="border border-slate-200 bg-white rounded-2xl overflow-hidden shadow-sm h-full flex flex-col">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between bg-slate-50/80 border-b border-slate-200 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-slate-900">
+                      Recent Activity Stream
+                    </CardTitle>
+                    <p className="text-xs text-slate-500">Last 10 student evaluations</p>
+                  </div>
                 </div>
-                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 rounded-full px-3 py-1 text-xs font-semibold shadow-md">
+                <Badge className="bg-slate-200 text-slate-800 border-0 rounded-full px-2.5 py-0.5 text-xs font-semibold">
                   {stats.testsToday} today
                 </Badge>
               </CardHeader>
-              <CardContent className="p-4">
+              <CardContent className="p-4 flex-1">
                 {recentActivity.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                      <Activity className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <p className="text-gray-500 font-medium">No test submissions yet</p>
-                    <p className="text-gray-400 text-sm">Activity will appear here</p>
+                    <p className="text-slate-500 font-medium text-sm">No test submissions yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    {recentActivity.map((activity, index) => (
-                      <motion.div
+                  <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    {recentActivity.map((activity) => (
+                      <div
                         key={activity.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all duration-200"
+                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/60 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-150"
                       >
-                        {/* Status Icon */}
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${activity.passed
-                          ? "bg-gradient-to-br from-emerald-100 to-green-100"
-                          : "bg-gradient-to-br from-red-100 to-rose-100"
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${activity.passed
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-rose-100 text-rose-700"
                           }`}>
                           {activity.passed ? (
-                            <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
+                            <CheckCircle className="w-4 h-4" />
                           ) : (
-                            <XCircle className="w-5 h-5 md:w-6 md:h-6 text-red-500" />
+                            <XCircle className="w-4 h-4" />
                           )}
                         </div>
-
-                        {/* Details */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <p className="font-semibold text-gray-900 truncate text-sm md:text-base">{activity.student_name}</p>
+                            <p className="font-bold text-slate-900 truncate text-xs sm:text-sm">{activity.student_name}</p>
                             <Badge
-                              className={`text-[9px] md:text-[10px] px-1.5 py-0 border-0 rounded-full ${activity.passed
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-red-100 text-red-700"
+                              className={`text-[9px] px-1.5 py-0 border font-bold rounded-md ${activity.passed
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200"
                                 }`}
                             >
-                              {activity.passed ? "PASSED" : "FAILED"}
+                              {activity.passed ? "PASS" : "FAIL"}
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-500 truncate">{activity.test_title}</p>
+                          <p className="text-xs text-slate-500 truncate">{activity.test_title}</p>
                         </div>
-
-                        {/* Score & Time */}
                         <div className="text-right shrink-0">
-                          <p className="font-bold text-gray-900 text-lg md:text-xl">{activity.percentage}%</p>
-                          <p className="text-[10px] text-gray-400 flex items-center justify-end gap-1">
-                            <Calendar className="w-3 h-3" />
+                          <p className="font-extrabold text-slate-900 text-base">{activity.percentage}%</p>
+                          <p className="text-[10px] text-slate-400">
                             {formatTimeAgo(activity.completed_at)}
                           </p>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
 
-          {/* Quick Actions Panel */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.5 }}
-            className="space-y-5"
-          >
-            {/* Quick Stats */}
-            <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
-              <CardHeader className="pb-2 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 border-b border-blue-100/50">
-                <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-blue-600" />
-                  Quick Stats
+          {/* Direct Platform Quick Actions */}
+          <div className="space-y-4">
+            <Card className="border border-slate-200 bg-white rounded-2xl overflow-hidden shadow-sm">
+              <CardHeader className="pb-3 bg-slate-50/80 border-b border-slate-200 px-5 py-4">
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  Management Shortcuts
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                  <span className="text-sm text-gray-600 font-medium">Total Tests</span>
-                  <span className="font-bold text-emerald-700 text-lg">{stats.totalTests}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100">
-                  <span className="text-sm text-gray-600 font-medium">Total Questions</span>
-                  <span className="font-bold text-blue-700 text-lg">{stats.totalQuestions}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
-                  <span className="text-sm text-gray-600 font-medium">Active Students</span>
-                  <span className="font-bold text-purple-700 text-lg">{stats.totalStudents}</span>
-                </div>
+              <CardContent className="p-4 space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-11 rounded-xl border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800 font-semibold text-xs"
+                  onClick={() => navigate("/admin/questions")}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <FileQuestion className="w-4 h-4 text-blue-600" />
+                    Question Bank & PYQs
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">{stats.totalQuestions}</Badge>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-11 rounded-xl border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800 font-semibold text-xs"
+                  onClick={() => navigate("/admin/tests")}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <BarChart3 className="w-4 h-4 text-amber-600" />
+                    Mock Test Series
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">{stats.totalTests}</Badge>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-11 rounded-xl border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800 font-semibold text-xs"
+                  onClick={() => navigate("/admin/exams")}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Shield className="w-4 h-4 text-emerald-600" />
+                    Exam Categories & Syllabus
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">{stats.totalExams}</Badge>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-11 rounded-xl border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800 font-semibold text-xs"
+                  onClick={() => navigate("/admin/students")}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    Students & Approvals
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">{stats.totalStudents}</Badge>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-11 rounded-xl border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800 font-semibold text-xs"
+                  onClick={() => navigate("/admin/broadcast")}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Activity className="w-4 h-4 text-purple-600" />
+                    Push Notification Center
+                  </span>
+                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Quick Actions Card */}
-            <Card className="border-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white rounded-2xl overflow-hidden relative">
-              {/* Decorative */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-xl transform translate-x-8 -translate-y-8" />
-
-              <CardContent className="p-6 relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Quick Actions</h3>
-                <p className="text-emerald-100 text-sm leading-relaxed mb-4">
-                  Access frequently used features
+            {/* Quick Bulk MCQ Add Callout */}
+            <div className="rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 p-5 text-white shadow-md border border-blue-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-amber-400 text-slate-950 font-bold text-[10px] px-2 py-0.5">
+                  FAST UPLOAD
+                </Badge>
+                <Sparkles className="w-4 h-4 text-amber-300" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-white">Bulk Question Import</h4>
+                <p className="text-xs text-blue-200 mt-1 leading-relaxed">
+                  Paste entire Question Papers with Bengali/English text, difficulty ratings, and answer keys.
                 </p>
-                <div className="space-y-2">
-                  <Button
-                    variant="secondary"
-                    className="w-full bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm rounded-xl font-medium justify-start"
-                    onClick={() => navigate("/admin/students")}
-                  >
-                    <Users className="w-4 h-4 mr-3" />
-                    Manage Students
-                    <ArrowUpRight className="w-4 h-4 ml-auto" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="w-full bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm rounded-xl font-medium justify-start"
-                    onClick={() => navigate("/admin/ai-generator")}
-                  >
-                    <Sparkles className="w-4 h-4 mr-3" />
-                    AI Generator
-                    <ArrowUpRight className="w-4 h-4 ml-auto" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+              </div>
+              <Button
+                onClick={() => navigate("/admin/questions/bulk")}
+                className="w-full bg-white hover:bg-slate-100 text-blue-950 font-bold text-xs h-9 rounded-xl shadow-sm"
+              >
+                Launch Bulk MCQ Importer &rarr;
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </AdminLayout>

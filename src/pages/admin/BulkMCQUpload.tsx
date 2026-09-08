@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Eye, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { MathText } from "@/components/ui/MathText";
 
 interface Subject {
   id: string;
@@ -46,12 +48,20 @@ const BulkMCQUpload = () => {
   const [saving, setSaving] = useState(false);
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState("");
+  const [mockTests, setMockTests] = useState<any[]>([]);
+  const [selectedMockTestId, setSelectedMockTestId] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuestion[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  // Upload Type: 'exam' or 'subject' — strictly mutually exclusive
+  const [uploadType, setUploadType] = useState<'exam' | 'subject'>('subject');
 
   const [defaultSubject, setDefaultSubject] = useState({ id: "" as string | null, name: "" as string | null });
   const [defaultTopic, setDefaultTopic] = useState({ id: "" as string | null, name: "" as string | null });
+  const [defaultDifficulty, setDefaultDifficulty] = useState<string>("medium");
+  const [defaultYear, setDefaultYear] = useState<string>("");
+  const [defaultLanguage, setDefaultLanguage] = useState<string>("bn");
+  const [defaultSource, setDefaultSource] = useState<string>("");
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
 
@@ -119,12 +129,36 @@ Short Notes:
       .eq("is_active", true)
       .order("name");
 
-    if (data && data.length > 0) {
+    if (data) {
       setExams(data);
-      setSelectedExamId(data[0].id);
     }
     // Load subjects for questions category
     await loadSubjects();
+  };
+
+  const loadMockTests = async (examId: string) => {
+    if (!examId) {
+      setMockTests([]);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("mock_tests")
+      .select("id, title")
+      .eq("exam_id", examId)
+      .order("title");
+    
+    setMockTests(data || []);
+    if (data && data.length > 0) {
+      setSelectedMockTestId(data[0].id);
+    } else {
+      setSelectedMockTestId("");
+    }
+  };
+
+  const handleExamChange = (examId: string) => {
+    setSelectedExamId(examId);
+    loadMockTests(examId);
   };
 
   const loadSubjects = async () => {
@@ -304,50 +338,126 @@ Short Notes:
       return;
     }
 
-    // Exam selection is optional for Question Bank
-    const finalExamId = selectedExamId || (exams.length > 0 ? exams[0].id : null);
-
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    if (!defaultSubject.id || !defaultTopic.id) {
-      toast({
-        title: "Error",
-        description: "Please select both a Default Subject and a Default Topic",
-        variant: "destructive",
-      });
-      return;
+    // STRICT VALIDATION based on upload type
+    if (uploadType === 'exam') {
+      if (!selectedExamId) {
+        toast({
+          title: "Error",
+          description: "Please select an Exam Category",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // uploadType === 'subject'
+      if (!defaultSubject.id || !defaultTopic.id) {
+        toast({
+          title: "Error",
+          description: "Please select both a Subject and a Topic",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setSaving(true);
 
     try {
-      // Map questions for insert - only use text-based subject/topic (no subject_id/topic_id)
+      // STRICT MUTUAL EXCLUSIVITY:
+      // - Upload Type 'exam' → exam_id is set, subject/topic from text only
+      // - Upload Type 'subject' → exam_id is ALWAYS NULL, subject/topic from defaults
       const questionsToInsert = parsedQuestions.map(q => {
-        const subName = q.subject || defaultSubject.name || "General";
-        const topName = q.topic || (subName === defaultSubject.name ? defaultTopic.name : null);
-
-        return {
-          exam_id: finalExamId,
-          question_text: q.question_text,
-          option_a: q.option_a,
-          option_b: q.option_b,
-          option_c: q.option_c,
-          option_d: q.option_d,
-          correct_answer: q.correct_answer,
-          subject: subName,
-          topic: topName,
-          explanation: q.explanation || null,
-          created_by: session.user.id,
+        const commonMetadata = {
+          difficulty: defaultDifficulty || "medium",
+          year: defaultYear ? parseInt(defaultYear, 10) || null : null,
+          language: defaultLanguage || "bn",
+          source: defaultSource || null,
+          status: "published",
         };
+
+        if (uploadType === 'exam') {
+          // Exam mode: set exam_id, subject/topic come from question text if provided
+          return {
+            exam_id: selectedExamId,
+            question_text: q.question_text,
+            option_a: q.option_a,
+            option_b: q.option_b,
+            option_c: q.option_c,
+            option_d: q.option_d,
+            correct_answer: q.correct_answer,
+            subject: q.subject || null,
+            topic: q.topic || null,
+            explanation: q.explanation || null,
+            created_by: session.user.id,
+            ...commonMetadata,
+          };
+        } else {
+          // Subject mode: exam_id is NULL, subject/topic from defaults
+          const subName = q.subject || defaultSubject.name || null;
+          const topName = q.topic || (subName && subName === defaultSubject.name ? defaultTopic.name : null);
+          return {
+            exam_id: null,
+            question_text: q.question_text,
+            option_a: q.option_a,
+            option_b: q.option_b,
+            option_c: q.option_c,
+            option_d: q.option_d,
+            correct_answer: q.correct_answer,
+            subject: subName,
+            topic: topName,
+            explanation: q.explanation || null,
+            created_by: session.user.id,
+            ...commonMetadata,
+          };
+        }
       });
 
-      const { error } = await supabase.from("questions").insert(questionsToInsert);
+      const { data: insertedQuestions, error } = await supabase
+        .from("questions")
+        .insert(questionsToInsert)
+        .select("id");
+
       if (error) throw error;
+
+      // If a mock test is selected, link the questions to it
+      if (uploadType === 'exam' && selectedMockTestId && selectedMockTestId !== "none" && insertedQuestions) {
+        // Get current max order for the test
+        const { data: currentQuestions } = await supabase
+          .from("test_questions")
+          .select("question_order")
+          .eq("test_id", selectedMockTestId)
+          .order("question_order", { ascending: false })
+          .limit(1);
+
+        const nextOrder = (currentQuestions?.[0]?.question_order || 0) + 1;
+
+        const testQuestionsLinks = insertedQuestions.map((q, idx) => ({
+          test_id: selectedMockTestId,
+          question_id: q.id,
+          marks: 1, // Default marks
+          question_order: nextOrder + idx,
+        }));
+
+        const { error: linkError } = await supabase
+          .from("test_questions")
+          .insert(testQuestionsLinks);
+
+        if (linkError) {
+          console.error("Error linking questions to mock test:", linkError);
+          toast({
+            title: "Warning",
+            description: "Questions saved to Bank, but failed to link to Mock Test.",
+            variant: "destructive",
+          });
+        }
+      }
 
       toast({
         title: "Success",
-        description: `Successfully added ${parsedQuestions.length} questions to Question Bank`,
+        description: `Successfully added ${parsedQuestions.length} questions to Question Bank${selectedMockTestId ? " and linked to Mock Test" : ""}`,
       });
 
       setBulkText("");
@@ -388,60 +498,188 @@ Short Notes:
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Default Subject</Label>
-                <Select value={defaultSubject.id || ""} onValueChange={handleSubjectChange}>
-                  <SelectTrigger className="h-12 rounded-xl">
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">Applied to questions without explicit subject</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Default Topic</Label>
-                <Select
-                  value={defaultTopic.id || ""}
-                  onValueChange={handleTopicChange}
-                  disabled={!defaultSubject.id}
+            {/* STRICT Upload Type Selector */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Upload Type *</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setUploadType('subject'); setSelectedExamId(''); setSelectedMockTestId(''); }}
+                  className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                    uploadType === 'subject'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
                 >
-                  <SelectTrigger className="h-12 rounded-xl">
-                    <SelectValue placeholder={defaultSubject.id ? "Select topic" : "Select subject first"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {topics.map((topic) => (
-                      <SelectItem key={topic.id} value={topic.id}>
-                        {topic.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">Applied to questions without explicit topic</p>
+                  📚 Subject / Topic
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setUploadType('exam'); setDefaultSubject({ id: null, name: null }); setDefaultTopic({ id: null, name: null }); }}
+                  className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                    uploadType === 'exam'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  📝 Exam / Mock Test
+                </button>
+              </div>
+              <p className="text-xs text-amber-600 font-medium">⚠️ Questions will ONLY appear in the selected category — never in both.</p>
+            </div>
+
+            {/* EXAM MODE selectors */}
+            {uploadType === 'exam' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Exam Category *</Label>
+                  <Select value={selectedExamId} onValueChange={handleExamChange}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue placeholder="Select exam" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {exams.map((exam) => (
+                        <SelectItem key={exam.id} value={exam.id}>
+                          {exam.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Full Mock Test (Optional)</Label>
+                  <Select value={selectedMockTestId} onValueChange={setSelectedMockTestId} disabled={!selectedExamId}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue placeholder={selectedExamId ? "Select mock test" : "Select exam first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Don't link to mock test</SelectItem>
+                      {mockTests.map((test) => (
+                        <SelectItem key={test.id} value={test.id}>
+                          {test.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">Automatically links questions to this test</p>
+                </div>
+              </div>
+            )}
+
+            {/* SUBJECT MODE selectors */}
+            {uploadType === 'subject' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Subject *</Label>
+                  <Select value={defaultSubject.id || ""} onValueChange={handleSubjectChange}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Topic *</Label>
+                  <Select
+                    value={defaultTopic.id || ""}
+                    onValueChange={handleTopicChange}
+                    disabled={!defaultSubject.id}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue placeholder={defaultSubject.id ? "Select topic" : "Select subject first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {topics.map((topic) => (
+                        <SelectItem key={topic.id} value={topic.id}>
+                          {topic.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Batch Question Properties */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  ⚙️ Default MCQ Properties (Applied to all parsed questions)
+                </Label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-600">Difficulty</Label>
+                  <Select value={defaultDifficulty} onValueChange={setDefaultDifficulty}>
+                    <SelectTrigger className="h-10 rounded-xl bg-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">🟢 Easy</SelectItem>
+                      <SelectItem value="medium">🟡 Medium</SelectItem>
+                      <SelectItem value="hard">🔴 Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-600">PYQ Year (Optional)</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 2024"
+                    value={defaultYear}
+                    onChange={(e) => setDefaultYear(e.target.value)}
+                    className="h-10 rounded-xl bg-white text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-600">Language</Label>
+                  <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
+                    <SelectTrigger className="h-10 rounded-xl bg-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-600">Source / Paper Name</Label>
+                  <Input
+                    placeholder="e.g. WBP Constable 2019"
+                    value={defaultSource}
+                    onChange={(e) => setDefaultSource(e.target.value)}
+                    className="h-10 rounded-xl bg-white text-xs"
+                  />
+                </div>
               </div>
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Paste Questions (Format below)</Label>
+              <Label className="text-sm font-semibold text-slate-800">Paste Questions (Format below)</Label>
               <Textarea
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
                 placeholder="Paste your questions here..."
                 rows={15}
-                className="font-mono text-sm rounded-xl shadow-none focus-visible:ring-emerald-500"
+                className="font-mono text-sm rounded-xl border-slate-200 mt-1 shadow-none focus-visible:ring-blue-600"
               />
             </div>
 
             <div>
-              <Button onClick={parseQuestions} disabled={!bulkText.trim()} className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
+              <Button onClick={parseQuestions} disabled={!bulkText.trim()} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 px-5 shadow-md shadow-blue-600/20">
                 <Eye className="w-4 h-4 mr-2" />
-                Parse & Preview
+                Parse & Preview Questions
               </Button>
             </div>
           </CardContent>
@@ -467,7 +705,7 @@ Short Notes:
           <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <CardTitle>Preview ({parsedQuestions.length} questions)</CardTitle>
-              <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-11">
+              <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 px-5 shadow-md shadow-blue-600/20">
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? "Saving..." : `Save All ${parsedQuestions.length} Questions`}
               </Button>
@@ -478,9 +716,11 @@ Short Notes:
                   <Card key={index} className="p-4 rounded-xl border-gray-100 bg-gray-50/30">
                     <div className="flex flex-wrap gap-2 mb-2">
                       <Badge className="bg-emerald-100 text-emerald-700">Q{index + 1}</Badge>
-                      <Badge variant="secondary" className="bg-blue-50 text-blue-600">
-                        Subject: {q.subject || defaultSubject.name || "Non-Category"}
-                      </Badge>
+                      {(q.subject || defaultSubject.name) && (
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-600">
+                          Subject: {q.subject || defaultSubject.name}
+                        </Badge>
+                      )}
                       {(q.topic || (q.subject ? undefined : defaultTopic.name)) && (
                         <Badge variant="secondary" className="bg-violet-50 text-violet-600">
                           Topic: {q.topic || (q.subject ? "" : defaultTopic.name)}
@@ -488,17 +728,17 @@ Short Notes:
                       )}
                       <Badge className="bg-emerald-600">Ans: {q.correct_answer}</Badge>
                     </div>
-                    <p className="font-medium mb-3 text-gray-900">{q.question_text}</p>
+                    <div className="font-medium mb-3 text-gray-900"><MathText text={q.question_text} /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-3">
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">A. {q.option_a}</div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">B. {q.option_b}</div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">C. {q.option_c}</div>
-                      <div className="bg-white p-3 rounded-lg border border-gray-200">D. {q.option_d}</div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 flex gap-2"><span className="font-bold">A.</span> <MathText text={q.option_a} /></div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 flex gap-2"><span className="font-bold">B.</span> <MathText text={q.option_b} /></div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 flex gap-2"><span className="font-bold">C.</span> <MathText text={q.option_c} /></div>
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 flex gap-2"><span className="font-bold">D.</span> <MathText text={q.option_d} /></div>
                     </div>
                     {q.explanation && (
-                      <div className="mt-3 p-3 bg-white border border-gray-200 rounded-xl text-sm italic text-gray-600">
-                        <span className="font-bold not-italic text-gray-900">Short Notes: </span>
-                        {q.explanation}
+                      <div className="mt-3 p-3 bg-white border border-gray-200 rounded-xl text-sm italic text-gray-600 flex gap-2">
+                        <span className="font-bold not-italic text-gray-900 whitespace-nowrap">Short Notes:</span>
+                        <MathText text={q.explanation} />
                       </div>
                     )}
                   </Card>

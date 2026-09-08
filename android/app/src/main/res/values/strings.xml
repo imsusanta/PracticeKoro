@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Practice Koro</string>
+    <string name="title_activity_main">Practice Koro</string>
+    <string name="package_name">com.practicekoro</string>
+    <string name="custom_url_scheme">com.practicekoro</string>
+</resources>

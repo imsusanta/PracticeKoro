@@ -4,747 +4,904 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff, ChevronRight, GripVertical, Clock, Target, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
 import { isExamVisibleOnLanding, toggleExamLandingVisibility } from "@/config/landingVisibility";
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
 } from '@dnd-kit/core';
 import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from "lucide-react";
 
 interface Exam {
-  id: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-  is_paid: boolean;
-  price: number;
-  created_at: string;
-  created_by: string;
-  order_index?: number;
+    id: string;
+    name: string;
+    description: string | null;
+    category?: string | null;
+    is_active: boolean;
+    is_paid: boolean;
+    price: number;
+    created_at: string;
+    created_by: string;
+    order_index?: number;
 }
 
-const SortableExamRow = ({
-  exam,
-  onEdit,
-  onDelete,
-  onToggleActive,
-  onToggleVisibility,
-  visibility
+interface MockTest {
+    id: string;
+    exam_id: string;
+    title: string;
+    description: string | null;
+    duration_minutes: number;
+    total_marks: number;
+    passing_marks: number;
+    test_type: "full_mock" | "topic_wise" | "pyq";
+    negative_marking?: boolean;
+    negative_marks_per_question?: number;
+    is_published: boolean;
+    is_paid: boolean;
+    price: number;
+    created_at: string;
+    test_questions?: { count: number }[];
+}
+
+// Sortable Exam Item Component
+const SortableExamItem = ({
+    exam,
+    isSelected,
+    onClick,
+    onEdit,
+    onDelete,
+    onToggleActive,
+    onToggleVisibility,
+    visibility
 }: {
-  exam: Exam,
-  onEdit: (e: Exam) => void,
-  onDelete: (id: string) => void,
-  onToggleActive: (e: Exam) => void,
-  onToggleVisibility: (id: string, name: string) => void,
-  visibility: boolean
+    exam: Exam;
+    isSelected: boolean;
+    onClick: () => void;
+    onEdit: (e: Exam) => void;
+    onDelete: (id: string) => void;
+    onToggleActive: (e: Exam) => void;
+    onToggleVisibility: (id: string, name: string) => void;
+    visibility: boolean;
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: exam.id });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: exam.id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 10 : 1,
+    };
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 0,
-    position: 'relative' as const,
-    opacity: isDragging ? 0.6 : 1,
-    backgroundColor: isDragging ? '#f8fafc' : undefined,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className={`hover:bg-gray-50/50 transition-colors ${isDragging ? "shadow-2xl border-2 border-emerald-200 rounded-xl" : ""}`}>
-      {/* Desktop Row */}
-      <div className="hidden md:grid md:grid-cols-[40px_2fr_2fr_1fr_1fr_80px] gap-4 px-4 py-3 items-center">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded">
-          <GripVertical className="w-4 h-4 text-gray-400" />
-        </div>
-
-        {/* Exam Name & Icon */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${exam.is_active
-            ? "bg-gradient-to-br from-emerald-100 to-teal-100"
-            : "bg-gray-100"
-            }`}>
-            <BookOpen className={`w-5 h-5 ${exam.is_active ? "text-emerald-600" : "text-gray-400"}`} />
-          </div>
-          <div className="min-w-0">
-            <p className="font-medium text-gray-900 truncate">{exam.name}</p>
-            {exam.is_paid ? (
-              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200">
-                PAYMENT REQUIRED: ₹{exam.price}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
-                FREE ACCESS
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="min-w-0">
-          <p className="text-sm text-gray-500 truncate">{exam.description || "—"}</p>
-        </div>
-
-        {/* Status */}
-        <div>
-          <Badge
-            variant="secondary"
-            className={`text-[10px] px-2 py-0.5 ${exam.is_active
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-gray-100 text-gray-500"
-              }`}
-          >
-            {exam.is_active ? "ACTIVE" : "INACTIVE"}
-          </Badge>
-        </div>
-
-        {/* Created Date */}
-        <div className="text-sm text-gray-600">
-          {new Date(exam.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-emerald-50">
-                <MoreVertical className="w-4 h-4 text-gray-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl min-w-[180px]">
-              <DropdownMenuItem onClick={() => onEdit(exam)} className="gap-2">
-                <Pencil className="w-4 h-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleActive(exam)} className="gap-2">
-                {exam.is_active ? (
-                  <>
-                    <PowerOff className="w-4 h-4" />
-                    Deactivate
-                  </>
-                ) : (
-                  <>
-                    <Power className="w-4 h-4" />
-                    Activate
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onToggleVisibility(exam.id, exam.name)}
-                className={`gap-2 ${visibility ? "text-emerald-600" : ""}`}
-              >
-                {visibility ? (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    On Landing ✓
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="w-4 h-4" />
-                    Show on Landing
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete(exam.id)}
-                className="gap-2 text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Mobile Row */}
-      <div className="md:hidden p-3">
-        <div className="flex items-center gap-3">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1">
-            <GripVertical className="w-4 h-4 text-gray-400" />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-gray-900 truncate text-sm">{exam.name}</p>
-              <Badge
-                variant="secondary"
-                className={`text-[9px] px-1.5 py-0 shrink-0 ${exam.is_active
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-gray-100 text-gray-500"
-                  }`}
-              >
-                {exam.is_active ? "ACTIVE" : "INACTIVE"}
-              </Badge>
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            onClick={onClick}
+            className={`p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
+                ? "bg-blue-50/70 border-2 border-blue-600 shadow-sm"
+                : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
+                }`}
+        >
+            <div className="flex items-center gap-3 min-w-0">
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded shrink-0" onClick={e => e.stopPropagation()}>
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${exam.is_active
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-gray-200 text-gray-400"
+                    }`}>
+                    <BookOpen className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{exam.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {exam.category && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                                {exam.category}
+                            </Badge>
+                        )}
+                        {!exam.is_active && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-200 text-gray-600">INACTIVE</Badge>
+                        )}
+                        {exam.is_paid ? (
+                            <span className="text-[10px] font-semibold text-blue-600">₹{exam.price}</span>
+                        ) : (
+                            <span className="text-[10px] font-semibold text-emerald-600">FREE</span>
+                        )}
+                        {visibility && <Eye className="w-3 h-3 text-blue-600" />}
+                    </div>
+                </div>
             </div>
-            {exam.description && (
-              <p className="text-xs text-gray-500 truncate mt-0.5">{exam.description}</p>
-            )}
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-emerald-50 shrink-0">
-                <MoreVertical className="w-4 h-4 text-gray-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl min-w-[180px]">
-              <DropdownMenuItem onClick={() => onEdit(exam)} className="gap-2">
-                <Pencil className="w-4 h-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleActive(exam)} className="gap-2">
-                {exam.is_active ? (
-                  <>
-                    <PowerOff className="w-4 h-4" />
-                    Deactivate
-                  </>
-                ) : (
-                  <>
-                    <Power className="w-4 h-4" />
-                    Activate
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onToggleVisibility(exam.id, exam.name)}
-                className={`gap-2 ${visibility ? "text-emerald-600" : ""}`}
-              >
-                {visibility ? (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    On Landing ✓
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="w-4 h-4" />
-                    Show on Landing
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete(exam.id)}
-                className="gap-2 text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-blue-50">
+                            <MoreVertical className="w-4 h-4 text-gray-400" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl min-w-[160px]">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(exam); }}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit Exam
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleActive(exam); }}>
+                            {exam.is_active ? <PowerOff className="w-4 h-4 mr-2" /> : <Power className="w-4 h-4 mr-2" />}
+                            {exam.is_active ? "Deactivate" : "Activate"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleVisibility(exam.id, exam.name); }}>
+                            {visibility ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                            {visibility ? "Hide from Landing" : "Show on Landing"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(exam.id); }} className="text-red-600 focus:text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete Exam
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? "text-blue-600 translate-x-1" : "text-gray-300"}`} />
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
+};
+
+// Sortable Mock Test Item Component
+const SortableMockTestItem = ({ mockTest, index, onEdit, onDelete }: {
+    mockTest: MockTest;
+    index: number;
+    onEdit: () => void;
+    onDelete: () => void;
+}) => {
+    return (
+        <div className="p-4 rounded-xl bg-gray-50 hover:bg-blue-50/20 transition-all border border-gray-100 flex items-center justify-between group">
+            <div className="flex items-center gap-4 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shrink-0 shadow-sm text-blue-600 font-bold text-xs">
+                    {index + 1}
+                </div>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-semibold text-gray-900 text-sm truncate">{mockTest.title}</h4>
+                        {mockTest.test_type === "pyq" ? (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                                PYQ
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                                Full Mock
+                            </Badge>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2.5 mt-1">
+                        <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                            <Clock className="w-3 h-3 text-blue-500" />
+                            {mockTest.duration_minutes}m
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                            <Target className="w-3 h-3 text-blue-500" />
+                            {mockTest.total_marks} Marks
+                        </div>
+                        {mockTest.negative_marking ? (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-rose-50 text-rose-700 border-rose-200">
+                                -{mockTest.negative_marks_per_question ?? 0.25} Neg
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
+                                No Neg
+                            </Badge>
+                        )}
+                        <div className="flex items-center gap-1 text-[11px] text-purple-600 font-medium">
+                            <FileText className="w-3 h-3" />
+                            {mockTest.test_questions?.[0]?.count || 0} Qs
+                        </div>
+                        <Badge variant="outline" className={`text-[9px] px-1.5 py-0 font-medium ${mockTest.is_published ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-100 text-gray-500"}`}>
+                            {mockTest.is_published ? "PUBLISHED" : "DRAFT"}
+                        </Badge>
+                    </div>
+                </div>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" onClick={onEdit} className="w-8 h-8 rounded-lg hover:bg-white hover:shadow-sm">
+                    <Pencil className="w-4 h-4 text-blue-600" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onDelete} className="w-8 h-8 rounded-lg hover:bg-white hover:shadow-sm">
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                </Button>
+            </div>
+        </div>
+    );
 };
 
 const ExamManagement = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<Exam | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    is_active: true,
-    is_paid: false,
-    price: 0
-  });
-  const [landingVisibility, setLandingVisibility] = useState<{ [key: string]: boolean }>({});
-  const [examToDelete, setExamToDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [mockTests, setMockTests] = useState<MockTest[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [testsLoading, setTestsLoading] = useState(false);
+    const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
 
-  // Refresh landing visibility state
-  const refreshLandingVisibility = () => {
-    const visibility: { [key: string]: boolean } = {};
-    exams.forEach(exam => {
-      visibility[exam.id] = isExamVisibleOnLanding(exam.id);
+    // Dialog states
+    const [examDialogOpen, setExamDialogOpen] = useState(false);
+    const [mockTestDialogOpen, setMockTestDialogOpen] = useState(false);
+    const [editingExam, setEditingExam] = useState<Exam | null>(null);
+    const [editingMockTest, setEditingMockTest] = useState<MockTest | null>(null);
+
+    // Form states
+    const [examFormData, setExamFormData] = useState({
+        name: "",
+        description: "",
+        category: "State Govt.",
+        is_active: true,
+        is_paid: false,
+        price: 0
     });
-    setLandingVisibility(visibility);
-  };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setExams((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id);
-        const newIndex = items.findIndex((i) => i.id === over.id);
-        const newItems = arrayMove(items, oldIndex, newIndex);
-
-        // Persist to database
-        persistOrder(newItems);
-
-        return newItems;
-      });
-    }
-  };
-
-  const persistOrder = async (newExams: Exam[]) => {
-    try {
-      const updates = newExams.map((exam, index) => ({
-        id: exam.id,
-        order_index: index,
-        name: exam.name, // Supabase update sometimes requires non-null fields or we can just send ID and order_index
-        created_by: exam.created_by
-      }));
-
-      // We only update order_index and ID
-      for (const [index, exam] of newExams.entries()) {
-        await supabase
-          .from("exams")
-          .update({ order_index: index } as any)
-          .eq("id", exam.id);
-      }
-
-      toast({
-        title: "Order Updated",
-        description: "Exam sequence saved successfully",
-      });
-    } catch (error) {
-      console.error("Error persisting order:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save exam order",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleToggleLandingVisibility = (examId: string, examName: string) => {
-    const newValue = toggleExamLandingVisibility(examId);
-    setLandingVisibility(prev => ({ ...prev, [examId]: newValue }));
-    toast({
-      title: newValue ? "Visible on Landing" : "Hidden from Landing",
-      description: `"${examName}" ${newValue ? "will now show" : "is now hidden"} on landing page for visitors`,
+    const [mockTestFormData, setMockTestFormData] = useState({
+        title: "",
+        description: "",
+        duration_minutes: 60,
+        total_marks: 100,
+        passing_marks: 33,
+        test_type: "full_mock" as "full_mock" | "topic_wise" | "pyq",
+        negative_marking: false,
+        negative_marks_per_question: 0.25,
+        is_published: true,
+        is_paid: false
     });
-  };
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+    const [landingVisibility, setLandingVisibility] = useState<{ [key: string]: boolean }>({});
+    const [examToDelete, setExamToDelete] = useState<string | null>(null);
+    const [mockTestToDelete, setMockTestToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setLoading(false);
-      navigate("/admin/login");
-      return;
-    }
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!roleData) {
-      setLoading(false);
-      await supabase.auth.signOut();
-      toast({
-        title: "Access Denied",
-        description: "You do not have admin privileges",
-        variant: "destructive"
-      });
-      navigate("/admin/login");
-      return;
-    }
-    await loadExams();
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    refreshLandingVisibility();
-  }, [exams]);
-
-  const loadExams = async () => {
-    try {
-      // First try to load with order_index (new feature)
-      let { data, error } = await supabase
-        .from("exams")
-        .select("*")
-        .order("order_index", { ascending: true });
-
-      // If it fails with "column does not exist", fallback to created_at
-      if (error) {
-        if (error.code === '42703') { // PostgreSQL error code for undefined_column
-          console.warn("order_index column missing, falling back to created_at");
-          const fallback = await supabase
-            .from("exams")
-            .select("*")
-            .order("created_at", { ascending: true });
-
-          if (fallback.error) throw fallback.error;
-          data = fallback.data;
-        } else {
-          throw error;
-        }
-      }
-
-      setExams((data as any) || []);
-    } catch (error) {
-      console.error("Error loading exams:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load exams",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleCreateExam = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    // First try with all fields
-    const fullPayload = {
-      name: formData.name,
-      description: formData.description || null,
-      is_active: formData.is_active,
-      is_paid: formData.is_paid,
-      price: formData.price,
-      created_by: session.user.id
-    };
-
-    let { error } = await supabase.from("exams").insert(fullPayload);
-
-    // Fallback if pricing columns are missing
-    if (error && error.code === '42703') {
-      console.warn("Pricing columns missing, retrying basic create");
-      const { name, description, is_active, created_by } = fullPayload;
-      const basicResult = await supabase.from("exams").insert({
-        name, description, is_active, created_by
-      });
-      error = basicResult.error;
-    }
-
-    if (error) {
-      console.error("Create exam error:", error);
-      toast({ title: "Error", description: `Failed to create exam: ${error.message}`, variant: "destructive" });
-      return;
-    }
-
-    toast({ title: "Success", description: "Exam created successfully" });
-    setDialogOpen(false);
-    setFormData({ name: "", description: "", is_active: true, is_paid: false, price: 0 });
-    await loadExams();
-  };
-
-  const handleUpdateExam = async () => {
-    if (!editingExam) return;
-
-    const fullPayload = {
-      name: formData.name,
-      description: formData.description || null,
-      is_active: formData.is_active,
-      is_paid: formData.is_paid,
-      price: formData.price
-    };
-
-    let { error } = await supabase
-      .from("exams")
-      .update(fullPayload)
-      .eq("id", editingExam.id);
-
-    // Fallback if pricing columns are missing
-    if (error && error.code === '42703') {
-      console.warn("Pricing columns missing, retrying basic update");
-      const { name, description, is_active } = fullPayload;
-      const basicResult = await supabase
-        .from("exams")
-        .update({ name, description, is_active })
-        .eq("id", editingExam.id);
-      error = basicResult.error;
-    }
-
-    if (error) {
-      console.error("Update exam error:", error);
-      toast({ title: "Error", description: `Failed to update exam: ${error.message}`, variant: "destructive" });
-      return;
-    }
-
-    toast({ title: "Success", description: "Exam updated successfully" });
-    setDialogOpen(false);
-    setEditingExam(null);
-    setFormData({ name: "", description: "", is_active: true, is_paid: false, price: 0 });
-    await loadExams();
-  };
-
-  const handleDeleteExam = async (id: string) => {
-    setExamToDelete(id);
-  };
-
-  const confirmDelete = async () => {
-    if (!examToDelete) return;
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase.from("exams").delete().eq("id", examToDelete);
-      if (error) throw error;
-      toast({ title: "Success", description: "Exam deleted successfully" });
-      await loadExams();
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Failed to delete exam", variant: "destructive" });
-    } finally {
-      setIsDeleting(false);
-      setExamToDelete(null);
-    }
-  };
-
-  const handleToggleActive = async (exam: Exam) => {
-    const { error } = await supabase
-      .from("exams")
-      .update({ is_active: !exam.is_active })
-      .eq("id", exam.id);
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
-      return;
-    }
-
-    toast({ title: "Success", description: exam.is_active ? "Exam deactivated" : "Exam activated" });
-    await loadExams();
-  };
-
-  const openEditDialog = (exam: Exam) => {
-    setEditingExam(exam);
-    setFormData({
-      name: exam.name,
-      description: exam.description || "",
-      is_active: exam.is_active,
-      is_paid: exam.is_paid || false,
-      price: exam.price || 0
-    });
-    setDialogOpen(true);
-  };
-
-  const openCreateDialog = () => {
-    setEditingExam(null);
-    setFormData({ name: "", description: "", is_active: true, is_paid: false, price: 0 });
-    setDialogOpen(true);
-  };
-
-  const CreateButton = (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild>
-        <Button
-          onClick={openCreateDialog}
-          size="icon"
-          className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border border-white/20"
-        >
-          <Plus className="w-5 h-5" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>{editingExam ? "Edit Exam" : "Create Exam"}</DialogTitle>
-          <DialogDescription>
-            {editingExam ? "Update exam details" : "Add a new exam category"}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Exam Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., UPSC, SSC, Banking"
-              className="h-12 rounded-xl"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Brief description"
-              rows={3}
-              className="rounded-xl"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
-                className="w-5 h-5 rounded-lg border-emerald-300 text-emerald-600 focus:ring-emerald-500"
-              />
-              <Label htmlFor="is_active" className="text-sm cursor-pointer font-bold">Active</Label>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="is_paid"
-                checked={formData.is_paid}
-                onChange={e => setFormData({ ...formData, is_paid: e.target.checked })}
-                className="w-5 h-5 rounded-lg border-emerald-300 text-emerald-600 focus:ring-emerald-500"
-              />
-              <Label htmlFor="is_paid" className="text-sm cursor-pointer font-bold">Paid Exam</Label>
-            </div>
-          </div>
-          {formData.is_paid && (
-            <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-              <Label htmlFor="price">Price (INR) *</Label>
-              <Input
-                id="price"
-                type="number"
-                value={formData.price}
-                onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="h-12 rounded-xl"
-              />
-            </div>
-          )}
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl h-12 flex-1 sm:flex-none">
-            Cancel
-          </Button>
-          <Button
-            onClick={editingExam ? handleUpdateExam : handleCreateExam}
-            disabled={!formData.name.trim()}
-            className="rounded-xl h-12 bg-gradient-to-r from-emerald-500 to-teal-600 flex-1 sm:flex-none"
-          >
-            {editingExam ? "Update" : "Create"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
-  if (loading) {
-    return (
-      <AdminLayout title="Exam Management" subtitle="Manage exam categories">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-emerald-600 text-sm">Loading exams...</p>
-          </div>
-        </div>
-      </AdminLayout>
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
-  }
 
-  return (
-    <AdminLayout title="Exam Management" subtitle="Manage exam categories" headerActions={CreateButton}>
-      <div className="space-y-4">
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm">
-            <p className="text-2xl font-bold text-gray-900">{exams.length}</p>
-            <p className="text-xs text-gray-500">Total Exams</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-sm">
-            <p className="text-2xl font-bold text-emerald-600">{exams.filter(e => e.is_active).length}</p>
-            <p className="text-xs text-gray-500">Active Exams</p>
-          </div>
-        </div>
+    useEffect(() => {
+        checkAuth();
+    }, []);
 
-        {/* Exams List - Row Based */}
-        {exams.length === 0 ? (
-          <Card className="border-0 bg-white rounded-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="w-8 h-8 text-emerald-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No Exams Yet</h3>
-              <p className="text-gray-500 text-sm mb-4">Create your first exam category to get started</p>
-              <Button onClick={openCreateDialog} className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Exam
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-0 bg-white rounded-2xl overflow-hidden">
-            {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[40px_2fr_2fr_1fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <span className="w-10"></span>
-              <span>Exam Name</span>
-              <span>Description</span>
-              <span>Status</span>
-              <span>Created</span>
-              <span className="text-center">Actions</span>
+    const checkAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { navigate("/admin/login"); return; }
+
+        const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .maybeSingle();
+
+        if (!roleData) {
+            await supabase.auth.signOut();
+            toast({ title: "Access Denied", description: "You do not have admin privileges", variant: "destructive" });
+            navigate("/admin/login");
+            return;
+        }
+        await loadExams();
+        setLoading(false);
+    };
+
+    const loadExams = async () => {
+        try {
+            let { data, error } = await supabase
+                .from("exams")
+                .select("*")
+                .order("order_index", { ascending: true });
+
+            if (error) {
+                if (error.code === '42703') {
+                    const fallback = await supabase.from("exams").select("*").order("created_at", { ascending: true });
+                    if (fallback.error) throw fallback.error;
+                    data = fallback.data;
+                } else throw error;
+            }
+
+            const examsList = (data as any) || [];
+            setExams(examsList);
+
+            // Update landing visibility
+            const visibility: { [key: string]: boolean } = {};
+            examsList.forEach((exam: Exam) => {
+                visibility[exam.id] = isExamVisibleOnLanding(exam.id);
+            });
+            setLandingVisibility(visibility);
+
+            // Select first exam if none selected
+            if (examsList.length > 0 && !selectedExamId) {
+                selectExam(examsList[0].id);
+            }
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to load exams", variant: "destructive" });
+        }
+    };
+
+    const loadMockTests = async (examId: string) => {
+        setTestsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("mock_tests")
+                .select("*, test_questions(count)")
+                .eq("exam_id", examId)
+                .order("created_at", { ascending: true });
+
+            if (error) throw error;
+            setMockTests((data as any) || []);
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to load mock tests", variant: "destructive" });
+        } finally {
+            setTestsLoading(false);
+        }
+    };
+
+    const selectExam = (id: string) => {
+        setSelectedExamId(id);
+        loadMockTests(id);
+    };
+
+    // Exam CRUD
+    const handleSaveExam = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const payload = {
+            name: examFormData.name,
+            description: examFormData.description || null,
+            category: examFormData.category || "State Govt.",
+            is_active: examFormData.is_active,
+            is_paid: examFormData.is_paid,
+            price: examFormData.price,
+            created_by: session.user.id
+        };
+
+        let error;
+        if (editingExam) {
+            const { error: updateError } = await supabase.from("exams").update(payload).eq("id", editingExam.id);
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabase.from("exams").insert([payload]);
+            error = insertError;
+        }
+
+        if (error && error.message?.includes("category")) {
+            console.warn("Retrying exam save without category column");
+            const fallbackPayload = { ...payload };
+            delete (fallbackPayload as any).category;
+            const res = editingExam
+                ? await supabase.from("exams").update(fallbackPayload).eq("id", editingExam.id)
+                : await supabase.from("exams").insert([fallbackPayload]);
+            error = res.error;
+        }
+
+        if (error) {
+            toast({ title: "Error", description: "Failed to save exam", variant: "destructive" });
+            return;
+        }
+
+        toast({ title: "Success", description: `Exam ${editingExam ? "updated" : "created"} successfully` });
+        setExamDialogOpen(false);
+        await loadExams();
+    };
+
+    const handleDeleteExam = async () => {
+        if (!examToDelete) return;
+        setIsDeleting(true);
+        const { error } = await supabase.from("exams").delete().eq("id", examToDelete);
+        if (error) {
+            toast({ title: "Error", description: "Failed to delete exam", variant: "destructive" });
+        } else {
+            toast({ title: "Success", description: "Exam deleted successfully" });
+            if (selectedExamId === examToDelete) setSelectedExamId(null);
+            await loadExams();
+        }
+        setIsDeleting(false);
+        setExamToDelete(null);
+    };
+
+    const handleToggleActive = async (exam: Exam) => {
+        const { error } = await supabase.from("exams").update({ is_active: !exam.is_active }).eq("id", exam.id);
+        if (error) {
+            toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+        } else {
+            toast({ title: "Success", description: `Exam ${exam.is_active ? "deactivated" : "activated"}` });
+            await loadExams();
+        }
+    };
+
+    const handleToggleLandingVisibility = (examId: string, examName: string) => {
+        const newValue = toggleExamLandingVisibility(examId);
+        setLandingVisibility(prev => ({ ...prev, [examId]: newValue }));
+        toast({ title: newValue ? "Visible on Landing" : "Hidden from Landing", description: `"${examName}" visibility updated` });
+    };
+
+    const handleExamDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = exams.findIndex(e => e.id === active.id);
+        const newIndex = exams.findIndex(e => e.id === over.id);
+
+        const reordered = arrayMove(exams, oldIndex, newIndex);
+        setExams(reordered);
+
+        for (let i = 0; i < reordered.length; i++) {
+            await supabase.from("exams").update({ order_index: i } as any).eq("id", reordered[i].id);
+        }
+        toast({ title: "Order Updated", description: "Exam sequence saved" });
+    };
+
+    // Mock Test CRUD
+    const openCreateMockTest = () => {
+        if (!selectedExamId) {
+            toast({ title: "Error", description: "Please select an exam first", variant: "destructive" });
+            return;
+        }
+        setEditingMockTest(null);
+        setMockTestFormData({
+            title: "",
+            description: "",
+            duration_minutes: 60,
+            total_marks: 100,
+            passing_marks: 33,
+            test_type: "full_mock",
+            negative_marking: false,
+            negative_marks_per_question: 0.25,
+            is_published: true,
+            is_paid: false
+        });
+        setMockTestDialogOpen(true);
+    };
+
+    const openEditMockTest = (test: MockTest) => {
+        setEditingMockTest(test);
+        setMockTestFormData({
+            title: test.title,
+            description: test.description || "",
+            duration_minutes: test.duration_minutes,
+            total_marks: test.total_marks,
+            passing_marks: test.passing_marks,
+            test_type: test.test_type,
+            negative_marking: test.negative_marking ?? false,
+            negative_marks_per_question: test.negative_marks_per_question ?? 0.25,
+            is_published: test.is_published,
+            is_paid: test.is_paid || false
+        });
+        setMockTestDialogOpen(true);
+    };
+
+    const handleSaveMockTest = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !selectedExamId) return;
+
+        const payload = {
+            exam_id: selectedExamId,
+            title: mockTestFormData.title,
+            description: mockTestFormData.description || null,
+            duration_minutes: mockTestFormData.duration_minutes,
+            total_marks: mockTestFormData.total_marks,
+            passing_marks: mockTestFormData.passing_marks,
+            test_type: mockTestFormData.test_type,
+            negative_marking: mockTestFormData.negative_marking,
+            negative_marks_per_question: mockTestFormData.negative_marking ? mockTestFormData.negative_marks_per_question : 0,
+            is_published: mockTestFormData.is_published,
+            is_paid: mockTestFormData.is_paid,
+            created_by: session.user.id
+        };
+
+        let error;
+        if (editingMockTest) {
+            const { error: updateError } = await (supabase.from("mock_tests") as any).update(payload).eq("id", editingMockTest.id);
+            error = updateError;
+        } else {
+            const { error: insertError } = await (supabase.from("mock_tests") as any).insert([payload]);
+            error = insertError;
+        }
+
+        if (error && error.message?.includes("column")) {
+            console.warn("Retrying mock test save without negative marking columns");
+            const fallbackPayload = { ...payload };
+            delete (fallbackPayload as any).negative_marking;
+            delete (fallbackPayload as any).negative_marks_per_question;
+            const res = editingMockTest
+                ? await (supabase.from("mock_tests") as any).update(fallbackPayload).eq("id", editingMockTest.id)
+                : await (supabase.from("mock_tests") as any).insert([fallbackPayload]);
+            error = res.error;
+        }
+
+        if (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to save mock test", variant: "destructive" });
+            return;
+        }
+
+        toast({ title: "Success", description: `Mock Test ${editingMockTest ? "updated" : "created"} successfully` });
+        setMockTestDialogOpen(false);
+        await loadMockTests(selectedExamId);
+    };
+
+    const handleDeleteMockTest = async () => {
+        if (!mockTestToDelete || !selectedExamId) return;
+        setIsDeleting(true);
+        const { error } = await supabase.from("mock_tests").delete().eq("id", mockTestToDelete);
+        if (error) {
+            toast({ title: "Error", description: "Failed to delete mock test", variant: "destructive" });
+        } else {
+            toast({ title: "Success", description: "Mock Test deleted successfully" });
+            await loadMockTests(selectedExamId);
+        }
+        setIsDeleting(false);
+        setMockTestToDelete(null);
+    };
+
+    const selectedExamName = exams.find(e => e.id === selectedExamId)?.name;
+
+    if (loading) {
+        return (
+            <AdminLayout title="Exam Management" subtitle="Manage exams and mock tests">
+                <div className="flex items-center justify-center h-64">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-blue-600 text-sm font-medium">Initializing...</p>
+                    </div>
+                </div>
+            </AdminLayout>
+        );
+    }
+
+    return (
+        <AdminLayout title="Exam Management" subtitle="Manage exams, categories, and mock tests">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-10">
+                {/* Left Column: Exams */}
+                <div className="lg:col-span-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <BookOpen className="w-5 h-5 text-blue-600" />
+                            Exam Categories
+                        </h3>
+                        <Button
+                            onClick={() => {
+                                setEditingExam(null);
+                                setExamFormData({ name: "", description: "", category: "State Govt.", is_active: true, is_paid: false, price: 0 });
+                                setExamDialogOpen(true);
+                            }}
+                            size="sm"
+                            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 h-9"
+                        >
+                            <Plus className="w-4 h-4 mr-1.5" /> Add Exam
+                        </Button>
+                    </div>
+
+                    <Card className="border-0 shadow-sm bg-white rounded-2xl overflow-hidden">
+                        <CardContent className="p-3">
+                            {exams.length === 0 ? (
+                                <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                    <p className="text-sm text-gray-500">No exams yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleExamDragEnd}>
+                                        <SortableContext items={exams.map(e => e.id)} strategy={verticalListSortingStrategy}>
+                                            {exams.map(exam => (
+                                                <SortableExamItem
+                                                    key={exam.id}
+                                                    exam={exam}
+                                                    isSelected={selectedExamId === exam.id}
+                                                    onClick={() => selectExam(exam.id)}
+                                                    onEdit={(e) => {
+                                                        setEditingExam(e);
+                                                        setExamFormData({
+                                                            name: e.name,
+                                                            description: e.description || "",
+                                                            category: e.category || "State Govt.",
+                                                            is_active: e.is_active,
+                                                            is_paid: e.is_paid,
+                                                            price: e.price
+                                                        });
+                                                        setExamDialogOpen(true);
+                                                    }}
+                                                    onDelete={(id) => setExamToDelete(id)}
+                                                    onToggleActive={handleToggleActive}
+                                                    onToggleVisibility={handleToggleLandingVisibility}
+                                                    visibility={landingVisibility[exam.id]}
+                                                />
+                                            ))}
+                                        </SortableContext>
+                                    </DndContext>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Right Column: Mock Tests */}
+                <div className="lg:col-span-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                            {selectedExamId ? `Mock Tests for ${selectedExamName}` : "Select an Exam"}
+                        </h3>
+                        {selectedExamId && (
+                            <Button onClick={openCreateMockTest} size="sm" className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 h-9">
+                                <Plus className="w-4 h-4 mr-1.5" /> Add Test
+                            </Button>
+                        )}
+                    </div>
+
+                    <Card className="border-0 shadow-sm bg-white rounded-2xl min-h-[400px]">
+                        <CardContent className="p-4">
+                            {!selectedExamId ? (
+                                <div className="flex flex-col items-center justify-center h-[350px] text-center">
+                                    <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                                        <BookOpen className="w-8 h-8" />
+                                    </div>
+                                    <h4 className="text-gray-900 font-semibold mb-1">No Exam Selected</h4>
+                                    <p className="text-gray-500 text-sm max-w-[250px]">Choose an exam from the left to manage its full mock tests and PYQs.</p>
+                                </div>
+                            ) : testsLoading ? (
+                                <div className="flex flex-col items-center justify-center h-[350px]">
+                                    <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+                                    <p className="text-gray-500 text-sm font-medium">Loading tests...</p>
+                                </div>
+                            ) : mockTests.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-[350px] text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                    <FileText className="w-10 h-10 text-gray-300 mb-3" />
+                                    <h4 className="text-gray-900 font-semibold mb-1">No Mock Tests Yet</h4>
+                                    <p className="text-gray-500 text-sm mb-6">Create the first comprehensive mock test or PYQ for this exam.</p>
+                                    <Button onClick={openCreateMockTest} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white">
+                                        <Plus className="w-4 h-4 mr-2" /> Create Mock Test
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {mockTests.map((test, idx) => (
+                                        <SortableMockTestItem
+                                            key={test.id}
+                                            mockTest={test}
+                                            index={idx}
+                                            onEdit={() => openEditMockTest(test)}
+                                            onDelete={() => setMockTestToDelete(test.id)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
-            <div className="divide-y divide-gray-100">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={exams.map(e => e.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {exams.map(exam => (
-                    <SortableExamRow
-                      key={exam.id}
-                      exam={exam}
-                      onEdit={openEditDialog}
-                      onDelete={handleDeleteExam}
-                      onToggleActive={handleToggleActive}
-                      onToggleVisibility={handleToggleLandingVisibility}
-                      visibility={landingVisibility[exam.id]}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </div>
-          </Card>
-        )}
-      </div>
-      <DeleteAlertDialog
-        isOpen={!!examToDelete}
-        onClose={() => setExamToDelete(null)}
-        onConfirm={confirmDelete}
-        itemName={exams.find(e => e.id === examToDelete)?.name}
-        isDeleting={isDeleting}
-      />
-    </AdminLayout>
-  );
+            {/* Exam Dialog */}
+            <Dialog open={examDialogOpen} onOpenChange={setExamDialogOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{editingExam ? "Edit Exam" : "Create Exam"}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label>Exam Name *</Label>
+                            <Input
+                                value={examFormData.name}
+                                onChange={e => setExamFormData({ ...examFormData, name: e.target.value })}
+                                placeholder="e.g., WBPSC Clerkship, WBP Constable"
+                                className="h-11 rounded-xl"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Category *</Label>
+                            <Select value={examFormData.category} onValueChange={(v) => setExamFormData({ ...examFormData, category: v })}>
+                                <SelectTrigger className="h-11 rounded-xl">
+                                    <SelectValue placeholder="Select Category" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="State Govt.">State Govt. (WBPSC, WBCS, etc.)</SelectItem>
+                                    <SelectItem value="Central Govt.">Central Govt. (SSC, Railway, etc.)</SelectItem>
+                                    <SelectItem value="Teaching">Teaching (TET, Primary, SSC)</SelectItem>
+                                    <SelectItem value="Police">Police (WBP, KP, SI, Constable)</SelectItem>
+                                    <SelectItem value="Defence">Defence (Army, Navy, Airforce)</SelectItem>
+                                    <SelectItem value="Banking">Banking (IBPS, SBI, RRB)</SelectItem>
+                                    <SelectItem value="Other">Other Exams</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Textarea
+                                value={examFormData.description}
+                                onChange={e => setExamFormData({ ...examFormData, description: e.target.value })}
+                                placeholder="Details about this exam"
+                                rows={2}
+                                className="rounded-xl resize-none"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="e_active" checked={examFormData.is_active} onChange={e => setExamFormData({ ...examFormData, is_active: e.target.checked })} className="w-5 h-5 rounded-lg border-blue-300 text-blue-600" />
+                                <Label htmlFor="e_active" className="text-sm font-semibold cursor-pointer">Active</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="e_paid" checked={examFormData.is_paid} onChange={e => setExamFormData({ ...examFormData, is_paid: e.target.checked })} className="w-5 h-5 rounded-lg border-blue-300 text-blue-600" />
+                                <Label htmlFor="e_paid" className="text-sm font-semibold cursor-pointer">Paid</Label>
+                            </div>
+                        </div>
+                        {examFormData.is_paid && (
+                            <div className="space-y-2">
+                                <Label>Price (₹)</Label>
+                                <Input type="number" value={examFormData.price} onChange={e => setExamFormData({ ...examFormData, price: Number(e.target.value) })} className="h-11 rounded-xl" />
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setExamDialogOpen(false)} className="rounded-xl h-11 flex-1">Cancel</Button>
+                        <Button onClick={handleSaveExam} disabled={!examFormData.name} className="rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white flex-1">Save Exam</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Mock Test Dialog */}
+            <Dialog open={mockTestDialogOpen} onOpenChange={setMockTestDialogOpen}>
+                <DialogContent className="sm:max-w-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{editingMockTest ? "Edit Mock Test" : "Create New Mock Test"}</DialogTitle>
+                        <DialogDescription>Setup test details and negative marking for {selectedExamName}</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                        <div className="md:col-span-2 space-y-2">
+                            <Label>Test Title *</Label>
+                            <Input
+                                value={mockTestFormData.title}
+                                onChange={e => setMockTestFormData({ ...mockTestFormData, title: e.target.value })}
+                                placeholder="e.g., Full Mock Test 01 or 2024 PYQ Official Paper"
+                                className="h-11 rounded-xl"
+                            />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                            <Label>Description</Label>
+                            <Textarea
+                                value={mockTestFormData.description}
+                                onChange={e => setMockTestFormData({ ...mockTestFormData, description: e.target.value })}
+                                placeholder="Introduction or instructions for this test"
+                                rows={2}
+                                className="rounded-xl"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Duration (Minutes)</Label>
+                            <div className="relative">
+                                <Input type="number" value={mockTestFormData.duration_minutes} onChange={e => setMockTestFormData({ ...mockTestFormData, duration_minutes: Number(e.target.value) })} className="h-11 rounded-xl pr-10" />
+                                <Clock className="w-4 h-4 text-gray-400 absolute right-3 top-3.5" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Test Type</Label>
+                            <Select value={mockTestFormData.test_type} onValueChange={(v: any) => setMockTestFormData({ ...mockTestFormData, test_type: v })}>
+                                <SelectTrigger className="h-11 rounded-xl">
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="full_mock">Full Mock Test</SelectItem>
+                                    <SelectItem value="pyq">Previous Year Question (PYQ)</SelectItem>
+                                    <SelectItem value="topic_wise">Topic Wise Test</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Total Marks</Label>
+                            <Input type="number" value={mockTestFormData.total_marks} onChange={e => setMockTestFormData({ ...mockTestFormData, total_marks: Number(e.target.value) })} className="h-11 rounded-xl" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Passing Marks</Label>
+                            <Input type="number" value={mockTestFormData.passing_marks} onChange={e => setMockTestFormData({ ...mockTestFormData, passing_marks: Number(e.target.value) })} className="h-11 rounded-xl" />
+                        </div>
+
+                        {/* Negative Marking Configuration */}
+                        <div className="md:col-span-2 p-3.5 rounded-xl border border-blue-100 bg-blue-50/40 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label htmlFor="m_neg_marking" className="font-semibold text-slate-800 cursor-pointer text-sm">
+                                        Negative Marking
+                                    </Label>
+                                    <p className="text-xs text-slate-500">Deduct marks for incorrect answers in this test</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    id="m_neg_marking"
+                                    checked={mockTestFormData.negative_marking}
+                                    onChange={(e) => setMockTestFormData({ ...mockTestFormData, negative_marking: e.target.checked })}
+                                    className="w-5 h-5 rounded-lg border-blue-300 text-blue-600"
+                                />
+                            </div>
+
+                            {mockTestFormData.negative_marking && (
+                                <div className="pt-2 border-t border-blue-100/80 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-medium text-slate-600">Deduction per incorrect MCQ</Label>
+                                        <span className="text-xs font-bold text-rose-600">-{mockTestFormData.negative_marks_per_question} marks</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={mockTestFormData.negative_marks_per_question}
+                                            onChange={e => setMockTestFormData({ ...mockTestFormData, negative_marks_per_question: parseFloat(e.target.value) || 0 })}
+                                            className="h-9 rounded-lg bg-white"
+                                        />
+                                        <div className="flex items-center gap-1">
+                                            {[0.25, 0.33, 0.50, 1.0].map((val) => (
+                                                <button
+                                                    key={val}
+                                                    type="button"
+                                                    onClick={() => setMockTestFormData({ ...mockTestFormData, negative_marks_per_question: val })}
+                                                    className={`text-xs px-2 py-1 rounded-md border font-medium transition-colors whitespace-nowrap ${
+                                                        mockTestFormData.negative_marks_per_question === val
+                                                            ? "bg-blue-600 text-white border-blue-600"
+                                                            : "bg-white text-slate-600 border-slate-200 hover:bg-blue-50"
+                                                    }`}
+                                                >
+                                                    -{val}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="md:col-span-2 flex items-center gap-4 p-3.5 bg-blue-50/50 rounded-2xl border border-blue-100">
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="m_published" checked={mockTestFormData.is_published} onChange={e => setMockTestFormData({ ...mockTestFormData, is_published: e.target.checked })} className="w-5 h-5 rounded-lg border-blue-300 text-blue-600" />
+                                <Label htmlFor="m_published" className="text-sm font-semibold cursor-pointer">Published to Students</Label>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setMockTestDialogOpen(false)} className="rounded-xl h-11 flex-1">Cancel</Button>
+                        <Button onClick={handleSaveMockTest} disabled={!mockTestFormData.title} className="rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white flex-1">
+                            {editingMockTest ? "Update Mock Test" : "Create Mock Test"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Deletion Dialogs */}
+            <DeleteAlertDialog
+                isOpen={!!examToDelete}
+                onClose={() => setExamToDelete(null)}
+                onConfirm={handleDeleteExam}
+                itemName={exams.find(e => e.id === examToDelete)?.name}
+                isDeleting={isDeleting}
+            />
+
+            <DeleteAlertDialog
+                isOpen={!!mockTestToDelete}
+                onClose={() => setMockTestToDelete(null)}
+                onConfirm={handleDeleteMockTest}
+                itemName={mockTests.find(t => t.id === mockTestToDelete)?.title}
+                isDeleting={isDeleting}
+            />
+        </AdminLayout>
+    );
 };
 
 export default ExamManagement;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Download, Smartphone, Zap, CheckCircle, Share, Plus } from "lucide-react";
+import { X, Download, Smartphone, Zap, CheckCircle, Share, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -165,8 +165,8 @@ const PWAInstallPrompt = () => {
                                 /* iOS Installation Guide */
                                 <div className="px-6 pb-8">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center" style={{ filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3))' }}>
-                                            <Zap className="w-6 h-6 text-white" />
+                                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center p-2" style={{ filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.15))' }}>
+                                            <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-gray-900">Install on iPhone</h3>
@@ -218,8 +218,8 @@ const PWAInstallPrompt = () => {
                                 /* Android Installation Guide */
                                 <div className="px-6 pb-8">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center" style={{ filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3))' }}>
-                                            <Zap className="w-6 h-6 text-white" />
+                                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center p-2" style={{ filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.15))' }}>
+                                            <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-gray-900">Install on Android</h3>
@@ -276,10 +276,10 @@ const PWAInstallPrompt = () => {
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
                                             transition={{ type: "spring", delay: 0.1 }}
-                                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 flex items-center justify-center"
-                                            style={{ boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)' }}
+                                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-slate-100 flex items-center justify-center p-3"
+                                            style={{ boxShadow: '0 8px 24px rgba(16, 185, 129, 0.15)' }}
                                         >
-                                            <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+                                            <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
                                         </motion.div>
                                         <div className="flex-1">
                                             <h3 className="text-xl font-bold text-gray-900">Practice Koro</h3>
@@ -291,7 +291,7 @@ const PWAInstallPrompt = () => {
                                     <div className="grid grid-cols-2 gap-3 mb-6">
                                         {[
                                             { icon: Smartphone, text: "Works offline", color: "from-blue-500 to-blue-600" },
-                                            { icon: Zap, text: "Faster loading", color: "from-amber-500 to-orange-500" },
+                                            { icon: Sparkles, text: "Faster loading", color: "from-amber-500 to-orange-500" },
                                             { icon: Download, text: "No app store", color: "from-purple-500 to-pink-500" },
                                             { icon: CheckCircle, text: "Push notifications", color: "from-emerald-500 to-teal-500" },
                                         ].map((feature, index) => (

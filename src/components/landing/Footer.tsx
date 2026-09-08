@@ -15,10 +15,10 @@ const Footer = () => {
                     <div className="sm:col-span-2 lg:col-span-1 space-y-6 flex flex-col items-center sm:items-start text-center sm:text-left">
                         <div className="flex items-center gap-3">
                             <div
-                                className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500"
-                                style={{ filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3))' }}
+                                className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white border border-slate-700/50 p-2"
+                                style={{ filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.15))' }}
                             >
-                                <Zap className="w-6 h-6 text-white" />
+                                <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-white tracking-tight">Practice Koro</h3>
@@ -59,7 +59,8 @@ const Footer = () => {
                                 { label: "Register", to: "/register" },
                                 { label: "Login", to: "/login" },
                                 { label: "Dashboard", to: "/student/dashboard" },
-                                { label: "Browse Exams", to: "/student/exams" },
+                                { label: "Exams", to: "/student/exam" },
+                                { label: "Admin Portal", to: "/admin" },
                             ].map((link) => (
                                 <li key={link.label}>
                                     <Link
@@ -146,6 +147,7 @@ const Footer = () => {
                         <Link to="/terms-of-service" className="text-slate-500 hover:text-emerald-400 transition-colors">Terms of Service</Link>
                         <Link to="/refund-policy" className="text-slate-500 hover:text-emerald-400 transition-colors">Refund Policy</Link>
                         <Link to="/cookie-policy" className="text-slate-500 hover:text-emerald-400 transition-colors">Cookie Policy</Link>
+                        <Link to="/admin" className="text-slate-500 hover:text-emerald-400 transition-colors">Admin</Link>
                     </div>
 
                 </div>

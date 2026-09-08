@@ -4,7 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Users, CheckCircle, XCircle, Search, UserX, Key, UserCheck, Trash2, Clock, MoreVertical, Plus, Phone, Mail, User, Calendar, Shield, MessageSquare, Send, CreditCard, Edit, Sparkles } from "lucide-react";
+import { 
+  Users, CheckCircle, XCircle, Search, UserX, Key, UserCheck, Trash2, Clock, 
+  MoreVertical, Plus, Phone, Mail, User, Calendar, Shield, MessageSquare, 
+  Send, CreditCard, Edit, Sparkles, DollarSign, Copy, Check, FileText, 
+  ExternalLink, ArrowUpRight, CheckCheck, AlertCircle 
+} from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -34,9 +39,34 @@ interface Student {
   }[];
 }
 
+interface TransactionRecord {
+  id: string;
+  user_id: string;
+  content_type: string;
+  content_id: string | null;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  amount: number;
+  status: string;
+  created_at: string;
+  student?: {
+    full_name: string | null;
+    whatsapp_number: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  };
+}
+
 const StudentManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"students" | "transactions">("students");
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [transactionSearch, setTransactionSearch] = useState("");
+  const [transactionStatusFilter, setTransactionStatusFilter] = useState("all");
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
+  const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
+
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +127,7 @@ const StudentManagement = () => {
 
   const loadStudents = async () => {
     try {
-      console.log("Loading students...");
+      console.log("Loading students & transactions...");
       const { data: studentsData, error: studentError } = await supabase.from("profiles").select(`
         id, email, full_name, whatsapp_number, avatar_url, age, created_at,
         user_roles(role),
@@ -110,18 +140,38 @@ const StudentManagement = () => {
         return;
       }
 
-      console.log("Students loaded:", studentsData?.length);
-
-      // 2. Fetch completed purchases
+      // 2. Fetch all purchases (completed, pending, failed) for transactions tracking
       const { data: purchasesData, error: purchaseError } = await supabase
         .from("purchases")
-        .select("user_id, status, content_type, created_at")
-        .eq("status", "completed")
+        .select("id, user_id, content_type, content_id, razorpay_order_id, razorpay_payment_id, amount, status, created_at")
         .order("created_at", { ascending: false });
 
       if (purchaseError) {
         console.error("Error loading purchases:", purchaseError);
       }
+
+      // Build student profile lookup map
+      const studentMap = new Map((studentsData || []).map((s: any) => [s.id, {
+        full_name: s.full_name,
+        whatsapp_number: s.whatsapp_number,
+        email: s.email,
+        avatar_url: s.avatar_url,
+      }]));
+
+      // Build mapped transactions
+      const mappedTransactions: TransactionRecord[] = (purchasesData || []).map((p: any) => ({
+        id: p.id,
+        user_id: p.user_id,
+        content_type: p.content_type,
+        content_id: p.content_id,
+        razorpay_order_id: p.razorpay_order_id,
+        razorpay_payment_id: p.razorpay_payment_id,
+        amount: Number(p.amount) || 0,
+        status: p.status || 'pending',
+        created_at: p.created_at,
+        student: studentMap.get(p.user_id)
+      }));
+      setTransactions(mappedTransactions);
 
       const students = (studentsData || [])
         .filter((s: any) => {
@@ -137,12 +187,12 @@ const StudentManagement = () => {
           age: s.age,
           created_at: s.created_at,
           approval_status: Array.isArray(s.approval_status) ? s.approval_status[0] : s.approval_status,
-          purchases: (purchasesData || []).filter(p => p.user_id === s.id)
+          purchases: (purchasesData || []).filter((p: any) => p.user_id === s.id && p.status === 'completed')
         }));
       setStudents(students);
     } catch (err: any) {
       console.error("Critical error in loadStudents:", err);
-      toast({ title: "Error", description: "Critical error loading students: " + err.message, variant: "destructive" });
+      toast({ title: "Error", description: "Critical error loading data: " + err.message, variant: "destructive" });
     }
   };
 
@@ -262,6 +312,22 @@ const StudentManagement = () => {
       return;
     }
     toast({ title: "Success", description: "Student deactivated" });
+    await loadStudents();
+  };
+
+  const handlePaymentLock = async (studentId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { error } = await supabase.from("approval_status").update({
+      status: "payment_locked" as any,
+      reviewed_by: session.user.id,
+      reviewed_at: new Date().toISOString()
+    }).eq("user_id", studentId);
+    if (error) {
+      toast({ title: "Error", description: "Failed to lock for payment", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Success", description: "Student locked for payment" });
     await loadStudents();
   };
 
@@ -564,19 +630,60 @@ const StudentManagement = () => {
     })).length,
   };
 
-  const AddButton = (
-    <Button size="icon" onClick={() => setAddStudentDialogOpen(true)} className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 border border-white/20">
-      <Plus className="w-5 h-5" />
-    </Button>
+  const totalRevenue = transactions
+    .filter(t => t.status === 'completed')
+    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const completedCount = transactions.filter(t => t.status === 'completed').length;
+  const pendingCount = transactions.filter(t => t.status === 'pending').length;
+  const failedCount = transactions.filter(t => t.status === 'failed').length;
+
+  const filteredTransactions = transactions.filter(t => {
+    if (transactionSearch) {
+      const q = transactionSearch.toLowerCase();
+      const studentName = t.student?.full_name?.toLowerCase() || "";
+      const studentPhone = t.student?.whatsapp_number || "";
+      const payId = t.razorpay_payment_id?.toLowerCase() || "";
+      const orderId = t.razorpay_order_id?.toLowerCase() || "";
+      const matches = studentName.includes(q) || studentPhone.includes(q) || payId.includes(q) || orderId.includes(q);
+      if (!matches) return false;
+    }
+    if (transactionStatusFilter !== "all" && t.status !== transactionStatusFilter) {
+      return false;
+    }
+    if (transactionTypeFilter !== "all" && t.content_type !== transactionTypeFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedPaymentId(text);
+    toast({ title: "Copied", description: "Copied to clipboard" });
+    setTimeout(() => setCopiedPaymentId(null), 2000);
+  };
+
+  const HeaderActions = (
+    <div className="flex items-center gap-2">
+      {activeTab === "students" && (
+        <Button 
+          size="sm" 
+          onClick={() => setAddStudentDialogOpen(true)} 
+          className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 font-semibold text-xs px-3.5 h-9"
+        >
+          <Plus className="w-4 h-4 mr-1.5" /> Add Student
+        </Button>
+      )}
+    </div>
   );
 
   if (loading) {
     return (
-      <AdminLayout title="Student Management" subtitle="Manage student accounts">
+      <AdminLayout title="Student & Payments" subtitle="Manage student accounts and transactions">
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-emerald-600 text-sm">Loading students...</p>
+            <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-blue-600 text-sm font-medium">Loading students & transactions...</p>
           </div>
         </div>
       </AdminLayout>
@@ -584,18 +691,59 @@ const StudentManagement = () => {
   }
 
   return (
-    <AdminLayout title="Student Management" subtitle={`${students.length} students`} headerActions={AddButton}>
+    <AdminLayout 
+      title="Students & Payments" 
+      subtitle={activeTab === "students" ? `${students.length} registered students` : `₹${totalRevenue.toLocaleString('en-IN')} total revenue (${transactions.length} orders)`} 
+      headerActions={HeaderActions}
+    >
       <div className="space-y-6">
-        {/* Filter Tabs - Colored Card Style */}
-        <div className="flex overflow-x-auto gap-3 pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-6 md:gap-4 no-scrollbar">
-          {[
-            { key: "all", label: "All", count: statusCounts.all, bgColor: "bg-emerald-50", textColor: "text-emerald-600", borderColor: "border-emerald-400", ringColor: "ring-emerald-400" },
-            { key: "premium", label: "Premium", count: statusCounts.premium, bgColor: "bg-amber-50", textColor: "text-amber-600", borderColor: "border-amber-400", ringColor: "ring-amber-400" },
-            { key: "pending", label: "Pending", count: statusCounts.pending, bgColor: "bg-amber-50", textColor: "text-amber-600", borderColor: "border-amber-300", ringColor: "ring-amber-300" },
-            { key: "approved", label: "Approved", count: statusCounts.approved, bgColor: "bg-green-50", textColor: "text-green-600", borderColor: "border-green-300", ringColor: "ring-green-300" },
-            { key: "rejected", label: "Rejected", count: statusCounts.rejected, bgColor: "bg-red-50", textColor: "text-red-500", borderColor: "border-red-300", ringColor: "ring-red-300" },
-            { key: "deactivated", label: "Inactive", count: statusCounts.deactivated, bgColor: "bg-gray-50", textColor: "text-gray-500", borderColor: "border-gray-300", ringColor: "ring-gray-300" },
-          ].map((item) => (
+        {/* Navigation View Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-fit">
+            <button
+              onClick={() => setActiveTab("students")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === "students"
+                  ? "bg-white text-blue-600 shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Students Directory</span>
+              <Badge variant="secondary" className={`text-[11px] px-1.5 py-0 ${activeTab === "students" ? "bg-blue-50 text-blue-700" : "bg-slate-200/70 text-slate-600"}`}>
+                {students.length}
+              </Badge>
+            </button>
+            <button
+              onClick={() => setActiveTab("transactions")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === "transactions"
+                  ? "bg-white text-blue-600 shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Purchases & Transactions</span>
+              <Badge variant="secondary" className={`text-[11px] px-1.5 py-0 ${activeTab === "transactions" ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-slate-200/70 text-slate-600"}`}>
+                ₹{totalRevenue.toLocaleString('en-IN')}
+              </Badge>
+            </button>
+          </div>
+        </div>
+
+        {/* STUDENTS VIEW */}
+        {activeTab === "students" && (
+          <div className="space-y-6">
+            {/* Filter Tabs - Colored Card Style */}
+            <div className="flex overflow-x-auto gap-3 pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-6 md:gap-4 no-scrollbar">
+              {[
+                { key: "all", label: "All Students", count: statusCounts.all, bgColor: "bg-blue-50", textColor: "text-blue-700", borderColor: "border-blue-400", ringColor: "ring-blue-400" },
+                { key: "premium", label: "PRO PASS", count: statusCounts.premium, bgColor: "bg-amber-50", textColor: "text-amber-700", borderColor: "border-amber-400", ringColor: "ring-amber-400" },
+                { key: "pending", label: "Pending", count: statusCounts.pending, bgColor: "bg-amber-50", textColor: "text-amber-600", borderColor: "border-amber-300", ringColor: "ring-amber-300" },
+                { key: "approved", label: "Approved", count: statusCounts.approved, bgColor: "bg-emerald-50", textColor: "text-emerald-700", borderColor: "border-emerald-300", ringColor: "ring-emerald-300" },
+                { key: "rejected", label: "Rejected", count: statusCounts.rejected, bgColor: "bg-rose-50", textColor: "text-rose-600", borderColor: "border-rose-300", ringColor: "ring-rose-300" },
+                { key: "deactivated", label: "Inactive", count: statusCounts.deactivated, bgColor: "bg-slate-50", textColor: "text-slate-600", borderColor: "border-slate-300", ringColor: "ring-slate-300" },
+              ].map((item) => (
             <button
               key={item.key}
               onClick={() => {
@@ -1024,6 +1172,338 @@ const StudentManagement = () => {
           </Card>
         )}
       </div>
+    )}
+
+    {/* TRANSACTIONS VIEW */}
+    {activeTab === "transactions" && (
+      <div className="space-y-6">
+        {/* KPI Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 opacity-5 rounded-full -mr-8 -mt-8" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Revenue</p>
+                <p className="text-2xl font-bold text-slate-900 mt-0.5">₹{totalRevenue.toLocaleString('en-IN')}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-600 opacity-5 rounded-full -mr-8 -mt-8" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Orders</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-0.5">{completedCount}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 opacity-5 rounded-full -mr-8 -mt-8" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Orders</p>
+                <p className="text-2xl font-bold text-amber-600 mt-0.5">{pendingCount}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-400 to-rose-600 opacity-5 rounded-full -mr-8 -mt-8" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
+                <XCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Failed / Incomplete</p>
+                <p className="text-2xl font-bold text-rose-600 mt-0.5">{failedCount}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search & Filter Bar */}
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search student, WhatsApp, Razorpay payment ID or order ID..."
+              value={transactionSearch}
+              onChange={(e) => setTransactionSearch(e.target.value)}
+              className="pl-11 h-12 rounded-xl bg-white border-slate-200 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 overflow-x-auto">
+            {[
+              { key: "all", label: "All Status" },
+              { key: "completed", label: "Completed" },
+              { key: "pending", label: "Pending" },
+              { key: "failed", label: "Failed" },
+            ].map(item => (
+              <button
+                key={item.key}
+                onClick={() => setTransactionStatusFilter(item.key)}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  transactionStatusFilter === item.key
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Type Filter */}
+          <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 overflow-x-auto">
+            {[
+              { key: "all", label: "All Items" },
+              { key: "subscription", label: "PRO PASS" },
+              { key: "test", label: "Mock Test" },
+              { key: "note", label: "Notes" },
+            ].map(item => (
+              <button
+                key={item.key}
+                onClick={() => setTransactionTypeFilter(item.key)}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  transactionTypeFilter === item.key
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Transactions List */}
+        {filteredTransactions.length === 0 ? (
+          <Card className="border-0 bg-white rounded-2xl">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-1">No Transactions Found</h3>
+              <p className="text-slate-500 text-sm">
+                {transactionSearch || transactionStatusFilter !== "all" || transactionTypeFilter !== "all"
+                  ? "Try adjusting your search query or filters"
+                  : "No payment transactions recorded in the system yet"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 bg-white rounded-2xl overflow-hidden shadow-sm">
+            {/* Table Header for Desktop */}
+            <div className="hidden lg:grid lg:grid-cols-[1.8fr_1.2fr_1fr_1.8fr_1fr_80px] gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span>Student</span>
+              <span>Purchased Item</span>
+              <span>Amount</span>
+              <span>Payment / Order ID</span>
+              <span>Date & Status</span>
+              <span className="text-center">Action</span>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {filteredTransactions.map((tx) => {
+                const student = tx.student;
+                const phone = student?.whatsapp_number || (student?.email?.includes("@whatsapp") ? student.email.split("@")[0] : null);
+
+                return (
+                  <div key={tx.id} className="p-4 lg:p-0 hover:bg-slate-50/50 transition-colors">
+                    {/* Desktop Row */}
+                    <div className="hidden lg:grid lg:grid-cols-[1.8fr_1.2fr_1fr_1.8fr_1fr_80px] gap-4 px-5 py-4 items-center">
+                      {/* Student Details */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden">
+                          {student?.avatar_url ? (
+                            <img src={student.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            student?.full_name?.[0]?.toUpperCase() || "?"
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 text-sm truncate">{student?.full_name || "Unknown Student"}</p>
+                          {phone && (
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{phone}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Purchased Item */}
+                      <div>
+                        {tx.content_type === 'subscription' ? (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 text-xs px-2.5 py-0.5 shadow-sm font-semibold">
+                            <Sparkles className="w-3 h-3 mr-1" /> PRO PASS (Yearly)
+                          </Badge>
+                        ) : tx.content_type === 'test' ? (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5 font-semibold">
+                            <FileText className="w-3 h-3 mr-1" /> Mock Test
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-0.5 font-semibold">
+                            <FileText className="w-3 h-3 mr-1" /> Study Note
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Amount */}
+                      <div>
+                        <span className="font-bold text-slate-900 text-base">₹{tx.amount}</span>
+                      </div>
+
+                      {/* Razorpay IDs */}
+                      <div className="space-y-1 min-w-0">
+                        {tx.razorpay_payment_id ? (
+                          <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                            <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[140px]" title={tx.razorpay_payment_id}>
+                              {tx.razorpay_payment_id}
+                            </span>
+                            <button
+                              onClick={() => copyToClipboard(tx.razorpay_payment_id!)}
+                              className="text-slate-400 hover:text-slate-600 p-0.5"
+                              title="Copy Payment ID"
+                            >
+                              {copiedPaymentId === tx.razorpay_payment_id ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No Payment ID</span>
+                        )}
+
+                        {tx.razorpay_order_id && (
+                          <p className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]" title={tx.razorpay_order_id}>
+                            Ord: {tx.razorpay_order_id}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Date & Status */}
+                      <div className="space-y-1">
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
+                            tx.status === 'completed'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : tx.status === 'pending'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-red-100 text-red-800 border border-red-200'
+                          }`}
+                        >
+                          {tx.status}
+                        </Badge>
+                        <p className="text-[11px] text-slate-400">
+                          {new Date(tx.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+
+                      {/* Action */}
+                      <div className="flex justify-center">
+                        {phone && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              const msg = `Hi ${student?.full_name || 'there'}, regards from Practice Koro. Payment status for order #${tx.razorpay_order_id || tx.id.slice(0, 8)} of ₹${tx.amount}: ${tx.status.toUpperCase()}.`;
+                              window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                            }}
+                            className="w-8 h-8 rounded-lg text-emerald-600 hover:bg-emerald-50"
+                            title="Contact on WhatsApp"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Mobile Card */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                            {student?.avatar_url ? (
+                              <img src={student.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                              student?.full_name?.[0]?.toUpperCase() || "?"
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 text-sm truncate">{student?.full_name || "Unknown Student"}</p>
+                            {phone && <p className="text-xs text-slate-500">{phone}</p>}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-slate-900 text-base">₹{tx.amount}</p>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 ${
+                              tx.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : tx.status === 'pending'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {tx.status}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
+                        <div>
+                          {tx.content_type === 'subscription' ? (
+                            <span className="text-amber-600 font-semibold flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" /> PRO PASS
+                            </span>
+                          ) : (
+                            <span className="capitalize font-medium">{tx.content_type}</span>
+                          )}
+                        </div>
+                        <span>{new Date(tx.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+
+                      {phone && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const msg = `Hi ${student?.full_name || 'there'}, regards from Practice Koro. Payment status for order #${tx.razorpay_order_id || tx.id.slice(0, 8)} of ₹${tx.amount}: ${tx.status.toUpperCase()}.`;
+                            window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                          className="w-full h-8 text-xs font-semibold text-emerald-600 border-emerald-200 hover:bg-emerald-50 rounded-xl flex items-center justify-center gap-1.5"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> Send WhatsApp Update
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+      </div>
+    )}
+  </div>
 
       {/* View Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>

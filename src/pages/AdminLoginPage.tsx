@@ -5,8 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { checkIsAdmin } from "@/utils/adminAuth";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, EyeOff, Lock, Mail, Loader2, Shield, Zap, LayoutDashboard, Users, FileEdit, BarChart3, Sparkles } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Lock, Mail, Loader2, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 
 const AdminLoginPage = () => {
@@ -24,67 +25,64 @@ const AdminLoginPage = () => {
   const [pendingEmail, setPendingEmail] = useState("");
 
   const checkSession = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      // Check if user has admin role
-      const { data: hasAdminRole } = await supabase
-        .rpc('has_role', { _user_id: session.user.id, _role: 'admin' });
-      const { data: hasSuperAdminRole } = await supabase
-        .rpc('has_role', { _user_id: session.user.id, _role: 'super_admin' });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if user has admin role
+        const isAdmin = await checkIsAdmin(session.user.id);
 
-      if (hasAdminRole || hasSuperAdminRole) {
-        navigate("/admin/dashboard");
-        return;
-      }
-
-      // User logged in via Google but has no admin access
-      // Check if they already have a pending request
-      const { data: existingRequest } = await supabase
-        .from("admin_requests")
-        .select("status")
-        .eq("user_id", session.user.id)
-        .single();
-
-      if (existingRequest?.status === 'pending') {
-        // Request already pending
-        setPendingEmail(session.user.email || "");
-        setRequestPending(true);
-        await supabase.auth.signOut();
-      } else if (existingRequest?.status === 'rejected') {
-        // Request was rejected
-        toast({
-          title: "Request Rejected",
-          description: "Your admin access request was rejected. Contact support for more information.",
-          variant: "destructive",
-        });
-        await supabase.auth.signOut();
-      } else if (!existingRequest) {
-        // Create new admin request
-        const { error: insertError } = await supabase
-          .from("admin_requests")
-          .insert({
-            user_id: session.user.id,
-            email: session.user.email,
-            full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || null,
-          });
-
-        if (!insertError) {
-          setPendingEmail(session.user.email || "");
-          setRequestPending(true);
-          toast({
-            title: "Request Submitted!",
-            description: "Your admin access request has been submitted for approval.",
-          });
-        } else {
-          console.error("Error creating admin request:", insertError);
-          toast({
-            title: "Error",
-            description: "Failed to submit admin request. Please try again.",
-            variant: "destructive",
-          });
+        if (isAdmin) {
+          navigate("/admin/dashboard", { replace: true });
+          return;
         }
-        await supabase.auth.signOut();
+
+        // Only handle admin_requests if user specifically initiated Google login on the admin page
+        const isGoogleAdminLogin = sessionStorage.getItem("authRedirect") === "/admin/login";
+        if (isGoogleAdminLogin) {
+          sessionStorage.removeItem("authRedirect");
+          const { data: existingRequest } = await supabase
+            .from("admin_requests" as any)
+            .select("status")
+            .eq("user_id", session.user.id)
+            .single() as any;
+
+          if (existingRequest?.status === 'pending') {
+            setPendingEmail(session.user.email || "");
+            setRequestPending(true);
+            await supabase.auth.signOut();
+          } else if (existingRequest?.status === 'rejected') {
+            toast({
+              title: "Request Rejected",
+              description: "Your admin access request was rejected. Contact support for more information.",
+              variant: "destructive",
+            });
+            await supabase.auth.signOut();
+          } else if (!existingRequest) {
+            const { error: insertError } = await supabase
+              .from("admin_requests" as any)
+              .insert({
+                user_id: session.user.id,
+                email: session.user.email,
+                full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || null,
+              });
+
+            if (!insertError) {
+              setPendingEmail(session.user.email || "");
+              setRequestPending(true);
+              toast({
+                title: "Request Submitted!",
+                description: "Your admin access request has been submitted for approval.",
+              });
+            }
+            await supabase.auth.signOut();
+          }
+        } else {
+          // User was logged in as a normal student; sign out silently so they can sign into admin
+          await supabase.auth.signOut();
+        }
       }
+    } catch (err) {
+      console.error("Error in checkSession on AdminLoginPage:", err);
     }
   }, [navigate, toast]);
 
@@ -113,37 +111,14 @@ const AdminLoginPage = () => {
       }
 
       if (authData.user) {
-        // Check if user is admin using RPC to bypass RLS
-        const { data: hasAdminRole, error: rpcError } = await supabase
-          .rpc('has_role', {
-            _user_id: authData.user.id,
-            _role: 'admin'
-          });
-
-        // Also check for super_admin
-        const { data: hasSuperAdminRole } = await supabase
-          .rpc('has_role', {
-            _user_id: authData.user.id,
-            _role: 'super_admin'
-          });
-
-        const isAdmin = hasAdminRole === true || hasSuperAdminRole === true;
-
-        if (rpcError) {
-          console.error("RPC role check error:", rpcError);
-        }
+        const isAdmin = await checkIsAdmin(authData.user.id);
 
         if (!isAdmin) {
-          console.error("Role check failed - user is not an admin:", {
-            userId: authData.user.id,
-            hasAdminRole,
-            hasSuperAdminRole,
-            rpcError
-          });
+          console.error("Role check failed - user is not an admin:", authData.user.id);
           await supabase.auth.signOut();
           toast({
             title: "Access Denied",
-            description: `No admin privileges found for user ID: ${authData.user.id.substring(0, 8)}...`,
+            description: "No administrative privileges found for this account.",
             variant: "destructive",
           });
           setLoading(false);
@@ -154,7 +129,7 @@ const AdminLoginPage = () => {
           title: "Login Successful",
           description: "Welcome back, Admin.",
         });
-        navigate("/admin/dashboard");
+        navigate("/admin/dashboard", { replace: true });
       }
     } catch (error) {
       const err = error as { message?: string };
@@ -257,8 +232,8 @@ const AdminLoginPage = () => {
             className="mb-12"
           >
             <div className="flex items-center gap-4 mb-6 justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-white shadow-2xl flex items-center justify-center">
-                <Zap className="w-10 h-10 text-indigo-600" />
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-2xl flex items-center justify-center p-3">
+                <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
               </div>
               <div className="text-left">
                 <h2 className="text-4xl font-extrabold text-white tracking-tight">Practice Koro</h2>
@@ -315,9 +290,9 @@ const AdminLoginPage = () => {
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg mb-2"
+                className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg mb-2 p-2 border border-indigo-100"
               >
-                <Zap className="w-7 h-7 text-white" />
+                <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
               </motion.div>
               <h1 className="text-xl font-bold text-gray-900 leading-tight">Admin Portal</h1>
               <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Practice Koro Management</p>

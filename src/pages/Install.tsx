@@ -14,6 +14,7 @@ import {
   Bell,
   Shield,
   Chrome,
+  Sparkles,
   X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -121,7 +122,7 @@ const Install = () => {
 
   const features = [
     { icon: Wifi, title: "Works Offline", description: "Access tests without internet", color: "from-blue-500 to-cyan-500" },
-    { icon: Zap, title: "Speed+", description: "Native app-like performance", color: "from-amber-500 to-orange-500" },
+    { icon: Sparkles, title: "Speed+", description: "Native app-like performance", color: "from-amber-500 to-orange-500" },
     { icon: Bell, title: "Notifications", description: "Test & result alerts", color: "from-purple-500 to-pink-500" },
     { icon: Shield, title: "Premium UI", description: "Full-screen experience", color: "from-emerald-500 to-teal-500" },
   ];
@@ -149,10 +150,10 @@ const Install = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", delay: 0.1 }}
-            className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 flex items-center justify-center"
-            style={{ boxShadow: '0 12px 32px rgba(99, 102, 241, 0.3)' }}
           >
-            <Zap className="w-10 h-10 text-white" />
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-white flex items-center justify-center p-4 shadow-xl shadow-indigo-500/10">
+              <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
+            </div>
           </motion.div>
 
           <h1 className="text-2xl font-black text-slate-900 mb-1">Install App</h1>
@@ -379,7 +380,7 @@ const Install = () => {
 
                 <div className="mt-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100/50">
                   <p className="text-[10px] text-indigo-700 font-black flex items-center gap-2 uppercase tracking-tight">
-                    <Zap className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     Pro Tip
                   </p>
                   <p className="text-[11px] text-indigo-600 font-medium mt-1 leading-normal italic">

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { checkIsAdmin } from "@/utils/adminAuth";
 import { Shield } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -25,19 +26,13 @@ const AdminIndex = () => {
             }
 
             // Check if user has admin role
-            const { data: roleData } = await supabase
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", session.user.id)
-                .in("role", ["admin", "super_admin"]);
+            const isAdmin = await checkIsAdmin(session.user.id);
 
-            if (roleData && roleData.length > 0) {
+            if (isAdmin) {
                 // User is admin - go to dashboard
                 navigate("/admin/dashboard", { replace: true });
             } else {
                 // User is logged in but not admin - go to login
-                // We DON'T sign out here anymore to prevent unnecessary logouts
-                // if there's a transient query failure or if the user just isn't an admin
                 navigate("/admin/login", { replace: true });
             }
         } catch (error) {

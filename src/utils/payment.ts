@@ -23,6 +23,8 @@ export const initRazorpayPayment = async ({
         body: {
             action: 'create-order',
             amount: amount,
+            content_id: contentId,
+            content_type: contentType,
             receipt: `rcpt_${contentId.substring(0, 10)}_${Date.now().toString().slice(-6)}`
         }
     });

@@ -205,12 +205,12 @@ const Landing = () => {
             <header className="hidden md:block absolute top-0 left-0 right-0 z-50">
               <div className="container mx-auto px-4 py-4">
                 <div className="flex justify-between items-center bg-white/80 backdrop-blur-sm rounded-2xl px-6 py-3 border border-gray-200/50" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)' }}>
-                  <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/")}>
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center group-hover:scale-105 transition-transform" style={{ filter: 'drop-shadow(0 3px 8px rgba(16, 185, 129, 0.3))' }}>
-                      <Zap className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/")}>
+                      <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center group-hover:scale-105 transition-transform p-1.5 shadow-sm border border-gray-100">
+                        <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
+                      </div>
+                      <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">Practice Koro</h1>
                     </div>
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">Practice Koro</h1>
-                  </div>
 
                   {/* Right Side */}
                   {!loading && <div className="flex items-center gap-3">
@@ -253,15 +253,9 @@ const Landing = () => {
                       transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 flex items-center justify-center"
-                      style={{ filter: 'drop-shadow(0 6px 16px rgba(16, 185, 129, 0.4))' }}
+                      className="relative w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-2 shadow-sm border border-gray-100"
                     >
-                      <motion.div
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.1, 0.4] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute inset-0 rounded-2xl bg-emerald-400"
-                      />
-                      <Zap className="w-6 h-6 text-white relative z-10" />
+                      <img src="/favicon.svg" alt="Practice Koro" className="w-full h-full object-contain" />
                     </motion.div>
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
@@ -378,7 +372,7 @@ const Landing = () => {
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { icon: BookOpen, label: "Exams", color: "from-blue-500 to-indigo-600", bgLight: "bg-blue-50", path: "/student/exams" },
+                      { icon: BookOpen, label: "Exams", color: "from-blue-500 to-indigo-600", bgLight: "bg-blue-50", path: "/student/exam" },
                       { icon: FileText, label: "Notes", color: "from-orange-500 to-red-500", bgLight: "bg-orange-50", path: "/student/notes" },
                       { icon: Trophy, label: "Results", color: "from-purple-500 to-pink-600", bgLight: "bg-purple-50", path: "/student/results" },
                     ].map((item, index) => (
@@ -412,12 +406,12 @@ const Landing = () => {
                   className="grid grid-cols-2 gap-3 mb-6"
                 >
                   <div className="bg-gradient-to-br from-blue-50 via-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100/50">
-                    <div
-                      className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center"
-                      style={{ filter: 'drop-shadow(0 4px 10px rgba(59, 130, 246, 0.3))' }}
-                    >
-                      <Award className="w-5 h-5 text-white" />
-                    </div>
+                    <motion.div
+                                className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center"
+                                style={{ filter: 'drop-shadow(0 4px 10px rgba(59, 130, 246, 0.3))' }}
+                            >
+                                <img src="/favicon.svg" alt="Practice Koro Logo" className="w-full h-full object-contain" />
+                            </motion.div>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{featuredTests.length}+</p>
                     <p className="text-[11px] text-gray-600 font-bold uppercase mt-0.5">Tests</p>
                   </div>
@@ -442,7 +436,7 @@ const Landing = () => {
                 >
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-base font-bold text-gray-900">Featured Tests</h3>
-                    <button onClick={() => isLoggedIn ? navigate("/student/exams") : navigate("/login")} className="text-xs font-bold text-emerald-700 flex items-center gap-1 hover:text-emerald-800">
+                    <button onClick={() => isLoggedIn ? navigate("/student/exam") : navigate("/login")} className="text-xs font-bold text-emerald-700 flex items-center gap-1 hover:text-emerald-800">
                       View All <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -800,8 +794,8 @@ const Landing = () => {
                             viewport={{ once: true }}
                             whileHover={{ y: -6 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => isLoggedIn ? navigate("/student/exams") : navigate("/login")}
-                            className="w-full max-w-[280px] md:w-[240px] md:max-w-none cursor-pointer group"
+                            onClick={() => isLoggedIn ? navigate("/student/exam") : navigate("/login")}
+                            className="w-full max-w-[280px] md:w-[240px] md:max-w-none cursor-pointer group text-left"
                           >
                             <div className="bg-white rounded-2xl overflow-hidden h-full border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300">
                               {/* Top accent bar */}
@@ -842,7 +836,7 @@ const Landing = () => {
                       className="text-center mt-8"
                     >
                       <button
-                        onClick={() => isLoggedIn ? navigate("/student/exams") : navigate("/login")}
+                        onClick={() => isLoggedIn ? navigate("/student/exam") : navigate("/login")}
                         className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-bold text-sm transition-colors"
                       >
                         View All Exams
@@ -950,7 +944,7 @@ const Landing = () => {
                                 )}
                               </span>
                               <div className="flex items-center gap-1 text-emerald-600 text-xs">
-                                <Zap className="w-3.5 h-3.5" />
+                                <Sparkles className="w-3.5 h-3.5" />
                                 <span>Quick Start</span>
                               </div>
                             </div>

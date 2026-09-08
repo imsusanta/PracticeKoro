@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileQuestion, Search, Pencil, Trash2, Eye, ChevronLeft, ChevronRight, CheckSquare, Square, MoreVertical, Plus, Loader2 } from "lucide-react";
+import { FileQuestion, Search, Pencil, Trash2, Eye, ChevronLeft, ChevronRight, CheckSquare, Square, MoreVertical, Plus, Loader2, Calendar, Tag, Globe, Layers, Filter, BookOpen, Lock, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import AdminLayout from "@/components/admin/AdminLayout";
 import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
 import { SubjectTopicSelectors } from "@/components/admin/SubjectTopicSelectors";
+import { MathText } from "@/components/ui/MathText";
+import { fetchAllRows, buildSafeUpdateData } from "@/utils/questionSecurity";
 
 interface Question {
   id: string;
@@ -31,9 +33,16 @@ interface Question {
   subject_id: string | null;
   topic_id: string | null;
   exam_id: string;
+  difficulty?: "easy" | "medium" | "hard" | string | null;
+  year?: number | null;
+  language?: "bn" | "en" | "mixed" | string | null;
+  status?: "draft" | "review" | "approved" | "published" | "archived" | string | null;
+  source?: string | null;
+  tags?: string[] | string | null;
   exams?: { name: string };
   subjects?: { name: string };
   topics?: { name: string };
+  test_questions?: { mock_tests: { title: string } | null }[];
 }
 
 interface Exam {
@@ -50,6 +59,14 @@ const QuestionBank = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterExam, setFilterExam] = useState<string>("all");
+  const [filterMockTest, setFilterMockTest] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterSubcategory, setFilterSubcategory] = useState<string>("all");
+  const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<string>("all");
+  const [filterLanguage, setFilterLanguage] = useState<string>("all");
+  const [mockTests, setMockTests] = useState<any[]>([]);
+  const [mockTestQuestionIds, setMockTestQuestionIds] = useState<string[]>([]);
   const [filterSubject, setFilterSubject] = useState<string>("all");
   const [filterTopic, setFilterTopic] = useState<string>("all");
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -71,7 +88,13 @@ const QuestionBank = () => {
     subject_name: "" as string | null,
     topic_id: "",
     topic_name: "" as string | null,
+    exam_id: "",
+    mock_test_id: "",
+    difficulty: "all",
+    year: "",
+    language: "all",
   });
+  const [bulkEditMockTests, setBulkEditMockTests] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     question_text: "",
@@ -85,6 +108,12 @@ const QuestionBank = () => {
     subject_name: "" as string | null,
     topic_id: "",
     topic_name: "" as string | null,
+    difficulty: "medium",
+    year: "",
+    language: "bn",
+    status: "published",
+    source: "",
+    tags: "",
   });
 
   useEffect(() => {
@@ -93,7 +122,7 @@ const QuestionBank = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [searchQuery, filterExam, filterSubject, filterTopic, questions]);
+  }, [searchQuery, filterExam, filterMockTest, mockTestQuestionIds, filterSubject, filterTopic, filterDifficulty, filterYear, filterLanguage, questions]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -111,9 +140,36 @@ const QuestionBank = () => {
       return;
     }
     await loadExams();
+    await loadSubjectsAndTopics();
     await checkColumns();
     await loadQuestions();
     setLoading(false);
+  };
+
+  const loadSubjectsAndTopics = async () => {
+    try {
+      const { data: subjectsData } = await supabase
+        .from("subjects")
+        .select("id, name")
+        .eq("category", "questions")
+        .order("order_index", { ascending: true });
+        
+      if (subjectsData) {
+        setSubjectOptions(subjectsData);
+      }
+
+      const { data: topicsData } = await supabase
+        .from("topics")
+        .select("id, name, subject_id")
+        .eq("category", "questions")
+        .order("order_index", { ascending: true });
+        
+      if (topicsData) {
+        setTopicOptions(topicsData);
+      }
+    } catch (error) {
+      console.error("Error loading subjects/topics:", error);
+    }
   };
 
   const checkColumns = async () => {
@@ -130,25 +186,113 @@ const QuestionBank = () => {
   };
 
   const loadExams = async () => {
-    const { data } = await (supabase.from("exams").select("id, name, order_index").eq("is_active", true).order("order_index", { ascending: true }) as any);
-    if (data) setExams(data as Exam[]);
+    try {
+      const { data, error } = await supabase
+        .from("exams")
+        .select("*")
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      setExams(data || []);
+      
+      // Also load all mock tests here so they are available in the dropdown
+      // Only load tests that belong to an exam (exclude orphaned tests like Indus Valley test with null exam_id)
+      const { data: tests } = await supabase
+        .from("mock_tests")
+        .select("id, title, exam_id")
+        .not("exam_id", "is", null)
+        .order("title");
+      setMockTests(tests || []);
+    } catch (error) {
+      console.error("Error loading exams:", error);
+      // Fallback: try without order
+      const { data: fallbackData } = await supabase.from("exams").select("*");
+      setExams(fallbackData || []);
+    }
   };
 
-  const loadQuestions = async () => {
-    // Load questions with only the columns that exist and relationships that are valid
-    const { data, error } = await supabase
-      .from("questions")
-      .select("*, exams(name)")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Load Questions Error:", error);
-      toast({ title: "Error", description: "Failed to load questions.", variant: "destructive" });
+  const loadMockTestQuestions = async (testId: string) => {
+    if (testId === "all") {
+      setMockTestQuestionIds([]);
       return;
     }
 
+    const { data } = await supabase
+      .from("test_questions")
+      .select("question_id")
+      .eq("test_id", testId);
+    
+    setMockTestQuestionIds((data || []).map(item => item.question_id));
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setFilterCategory(value);
+    setFilterSubcategory("all");
+    
+    setFilterExam("all");
+    setFilterSubject("all");
+    setFilterMockTest("all");
+    setFilterTopic("all");
+    setMockTestQuestionIds([]);
+  };
+
+  const handleSubcategoryChange = (value: string) => {
+    setFilterSubcategory(value);
+    
+    if (value === "all") {
+      setFilterExam("all");
+      setFilterMockTest("all");
+      setMockTestQuestionIds([]);
+      setFilterSubject("all");
+      setFilterTopic("all");
+      return;
+    }
+
+    if (filterCategory === "exam") {
+      // Now the subcategory dropdown shows exams, not mock tests
+      if (value.startsWith("exam:")) {
+        const examId = value.substring(5);
+        setFilterExam(examId);
+        setFilterMockTest("all");
+        setMockTestQuestionIds([]);
+      }
+    } else if (filterCategory === "subject") {
+      if (value.startsWith("subject:")) {
+        const subjectName = value.substring(8);
+        setFilterSubject(subjectName);
+        setFilterTopic("all");
+      }
+    }
+  };
+
+  // Handler for Mock Test selection (3rd dropdown when Exam category + specific exam is selected)
+  const handleMockTestFilterChange = (value: string) => {
+    if (value === "all") {
+      setFilterMockTest("all");
+      setMockTestQuestionIds([]);
+    } else {
+      setFilterMockTest(value);
+      loadMockTestQuestions(value);
+    }
+  };
+
+  // Add an explicit topic handler since topic comes after subject now
+  const handleTopicChange = (value: string) => {
+    setFilterTopic(value);
+  };
+
+  const loadQuestions = async () => {
+    // Use fetchAllRows to bypass Supabase's 1000-row default limit — SECURITY FIX
+    const allData = await fetchAllRows(
+      "questions",
+      "*, exams(name), test_questions(mock_tests(title))",
+      undefined,
+      "created_at",
+      true
+    );
+
     // Map data to include subjects/topics from text fields for display compatibility
-    const mappedQuestions = (data || []).map(q => ({
+    const mappedQuestions = allData.map((q: any) => ({
       ...q,
       subject_id: null,
       topic_id: null,
@@ -166,25 +310,74 @@ const QuestionBank = () => {
       filtered = filtered.filter((q) =>
         q.question_text.toLowerCase().includes(query) ||
         (q.subject || "").toLowerCase().includes(query) ||
-        (q.topic || "").toLowerCase().includes(query)
+        (q.topic || "").toLowerCase().includes(query) ||
+        (q.source || "").toLowerCase().includes(query)
       );
     }
-    if (filterSubject !== "all") {
-      // Match against text-based subject field
-      const selectedSubName = subjectOptions.find(o => o.id === filterSubject)?.name;
-      filtered = filtered.filter((q) =>
-        q.subject === filterSubject ||
-        (selectedSubName && q.subject === selectedSubName)
-      );
+
+    // Scope filtering: when a category is chosen, only show questions belonging to that category
+    if (filterCategory === "exam") {
+      // Only show questions that are linked to an exam
+      filtered = filtered.filter((q) => q.exam_id);
+    } else if (filterCategory === "subject") {
+      // Only show questions that have a subject assigned
+      filtered = filtered.filter((q) => q.subject);
     }
-    if (filterTopic !== "all") {
-      // Match against text-based topic field
-      const selectedTopName = topicOptions.find(o => o.id === filterTopic)?.name;
-      filtered = filtered.filter((q) =>
-        q.topic === filterTopic ||
-        (selectedTopName && q.topic === selectedTopName)
-      );
+
+    if (filterExam !== "all") {
+      filtered = filtered.filter((q) => q.exam_id === filterExam);
     }
+    
+    // Only apply Mock Test filter if category is Exam
+    if (filterCategory === "exam") {
+      if (filterMockTest !== "all" && mockTestQuestionIds.length > 0) {
+        filtered = filtered.filter((q) => mockTestQuestionIds.includes(q.id));
+      } else if (filterMockTest !== "all") {
+        // If mock test is selected but has no questions, show empty
+        filtered = [];
+      }
+    }
+
+    // Only apply Subject/Topic filters if category is Subject
+    if (filterCategory === "subject") {
+      // If a specific subject is selected from the second dropdown
+      if (filterSubject !== "all") {
+        // Find by ID or text match
+        const selectedSubName = subjectOptions.find(o => o.id === filterSubject)?.name;
+        filtered = filtered.filter((q) =>
+          q.subject_id === filterSubject ||
+          q.subject === filterSubject ||
+          (selectedSubName && q.subject === selectedSubName)
+        );
+      }
+      
+      if (filterTopic !== "all") {
+        // Match against text-based topic field
+        const selectedTopName = topicOptions.find(o => o.id === filterTopic)?.name;
+        filtered = filtered.filter((q) =>
+          q.topic === filterTopic ||
+          (selectedTopName && q.topic === selectedTopName)
+        );
+      }
+    }
+
+    // Difficulty filter
+    if (filterDifficulty !== "all") {
+      filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
+    }
+
+    // PYQ / Year filter
+    if (filterYear === "pyq") {
+      filtered = filtered.filter((q) => q.year !== null && q.year !== undefined && Number(q.year) > 0);
+    } else if (filterYear !== "all") {
+      filtered = filtered.filter((q) => String(q.year) === filterYear);
+    }
+
+    // Language filter
+    if (filterLanguage !== "all") {
+      filtered = filtered.filter((q) => q.language === filterLanguage);
+    }
+    
     setFilteredQuestions(filtered);
     setCurrentPage(1);
   };
@@ -203,6 +396,12 @@ const QuestionBank = () => {
       subject_name: question.subjects?.name || question.subject || "",
       topic_id: question.topic_id || "",
       topic_name: question.topics?.name || question.topic || "",
+      difficulty: question.difficulty || "medium",
+      year: question.year ? String(question.year) : "",
+      language: question.language || "bn",
+      status: question.status || "published",
+      source: question.source || "",
+      tags: Array.isArray(question.tags) ? question.tags.join(", ") : (question.tags || ""),
     });
     setEditOpen(true);
   };
@@ -274,6 +473,14 @@ const QuestionBank = () => {
       session.user.id
     );
 
+    // SECURITY: Use buildSafeUpdateData to prevent accidental cross-contamination
+    const safeData = buildSafeUpdateData(
+      { subject_name: formData.subject_name, topic_name: formData.topic_name, subject_id: finalSubjectId, topic_id: finalTopicId },
+      selectedQuestion
+    );
+
+    // STRICT: Only update question content, subject/topic, and enhanced DB columns
+    // NEVER change exam_id — it stays exactly as originally uploaded
     const updateData: any = {
       question_text: formData.question_text,
       option_a: formData.option_a,
@@ -282,19 +489,28 @@ const QuestionBank = () => {
       option_d: formData.option_d,
       correct_answer: formData.correct_answer,
       explanation: formData.explanation || null,
-      subject: formData.subject_name || null,
-      topic: formData.topic_name || null,
+      subject: safeData.subject,
+      topic: safeData.topic,
+      difficulty: formData.difficulty || "medium",
+      year: formData.year ? parseInt(formData.year, 10) || null : null,
+      language: formData.language || "bn",
+      status: formData.status || "published",
+      source: formData.source || null,
+      tags: formData.tags ? formData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : null,
     };
 
     if (hasStructuredColumns) {
-      updateData.subject_id = finalSubjectId || null;
-      updateData.topic_id = finalTopicId || null;
+      updateData.subject_id = safeData.subject_id;
+      updateData.topic_id = safeData.topic_id;
     }
+
+    // NOTE: exam_id is intentionally NOT included in updateData
+    // Questions can only be assigned to an exam during upload
 
     const { error } = await supabase.from("questions").update(updateData).eq("id", selectedQuestion.id);
 
     if (error) {
-      toast({ title: "Error", description: "Failed to update question", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update question: " + error.message, variant: "destructive" });
       return;
     }
     toast({ title: "Success", description: "Question updated successfully" });
@@ -330,30 +546,7 @@ const QuestionBank = () => {
   };
 
   const [subjectOptions, setSubjectOptions] = useState<{ id: string, name: string }[]>([]);
-  const [topicOptions, setTopicOptions] = useState<{ id: string, name: string }[]>([]);
-
-  useEffect(() => {
-    // Build filter options from actual question data
-    if (questions.length === 0) {
-      setSubjectOptions([]);
-      setTopicOptions([]);
-      return;
-    }
-
-    // Get unique subjects from questions
-    const uniqueSubjects = Array.from(new Set(questions.map(q => q.subject).filter(Boolean)));
-    setSubjectOptions(uniqueSubjects.map(name => ({ id: name as string, name: name as string })));
-
-    // Get unique topics from questions (filtered by selected subject if any)
-    if (filterSubject !== "all") {
-      const matchingQuestions = questions.filter(q => q.subject === filterSubject);
-      const uniqueTopics = Array.from(new Set(matchingQuestions.map(q => q.topic).filter(Boolean)));
-      setTopicOptions(uniqueTopics.map(name => ({ id: name as string, name: name as string })));
-    } else {
-      const uniqueTopics = Array.from(new Set(questions.map(q => q.topic).filter(Boolean)));
-      setTopicOptions(uniqueTopics.map(name => ({ id: name as string, name: name as string })));
-    }
-  }, [questions, filterSubject]);
+  const [topicOptions, setTopicOptions] = useState<{ id: string, name: string, subject_id?: string }[]>([]);
 
 
 
@@ -417,52 +610,141 @@ const QuestionBank = () => {
     }
   };
 
+  const handleBulkExamChange = async (examId: string) => {
+    setBulkEditData({ ...bulkEditData, exam_id: examId, mock_test_id: "" });
+    if (examId === "all" || !examId) {
+      setBulkEditMockTests([]);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("mock_tests")
+      .select("id, title")
+      .eq("exam_id", examId)
+      .order("title");
+    
+    setBulkEditMockTests(data || []);
+  };
+
   const handleBulkEdit = async () => {
     if (selectedQuestions.length === 0) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    if (!bulkEditData.subject_name && !bulkEditData.topic_name) {
-      toast({ title: "Error", description: "Enter at least Subject or Topic to update", variant: "destructive" });
-      return;
+    // Determine the category of selected questions
+    const selectedQs = questions.filter(q => selectedQuestions.includes(q.id));
+    const isExamBased = selectedQs.some(q => q.exam_id);
+    const isSubjectBased = selectedQs.some(q => q.subject && !q.exam_id);
+
+    if (isExamBased) {
+      // Exam-based questions: only allow changing exam_id and mock_test_id
+      if (!bulkEditData.exam_id && !bulkEditData.mock_test_id) {
+        toast({ title: "Error", description: "Select at least one field to update", variant: "destructive" });
+        return;
+      }
+    } else {
+      // Subject-based questions: only allow changing subject/topic
+      if (!bulkEditData.subject_name && !bulkEditData.topic_name) {
+        toast({ title: "Error", description: "Select at least one field to update", variant: "destructive" });
+        return;
+      }
     }
 
     setSaving(true);
     try {
-      // 1. Use the exam_id of the first selected question to resolve subject/topic
-      const firstQuestion = questions.find(q => q.id === selectedQuestions[0]);
-      if (!firstQuestion) throw new Error("Question not found");
+      const updateData: any = {};
 
-      // 2. Resolve Subject and Topic once for this bulk operation
-      const { finalSubjectId, finalTopicId } = await ensureSubjectAndTopic(
-        bulkEditData.subject_id,
-        bulkEditData.subject_name,
-        bulkEditData.topic_id,
-        bulkEditData.topic_name,
-        session.user.id
-      );
+      if (isSubjectBased || (!isExamBased && !isSubjectBased)) {
+        // Subject-based: only update subject/topic, NEVER set exam_id
+        if (bulkEditData.subject_name) {
+          updateData.subject = bulkEditData.subject_name;
+        }
+        if (bulkEditData.topic_name) {
+          updateData.topic = bulkEditData.topic_name;
+        }
 
-      // 3. Update all selected questions in one call
-      const updateData: any = {
-        subject: bulkEditData.subject_name || null,
-        topic: bulkEditData.topic_name || null,
-      };
+        // Resolve IDs for structured columns
+        const { finalSubjectId, finalTopicId } = await ensureSubjectAndTopic(
+          bulkEditData.subject_id,
+          bulkEditData.subject_name,
+          bulkEditData.topic_id,
+          bulkEditData.topic_name,
+          session.user.id
+        );
 
-      if (hasStructuredColumns) {
-        updateData.subject_id = finalSubjectId || null;
-        updateData.topic_id = finalTopicId || null;
+        if (hasStructuredColumns) {
+          if (finalSubjectId) updateData.subject_id = finalSubjectId;
+          if (finalTopicId) updateData.topic_id = finalTopicId;
+        }
       }
 
-      const { error } = await supabase
-        .from("questions")
-        .update(updateData)
-        .in("id", selectedQuestions);
+      if (isExamBased) {
+        // Exam-based: only update exam_id, NEVER change subject/topic
+        if (bulkEditData.exam_id && bulkEditData.exam_id !== "all") {
+          updateData.exam_id = bulkEditData.exam_id;
+        }
+      }
 
-      if (error) throw error;
+      // Universal updates (applicable to both exam and subject questions)
+      if (bulkEditData.difficulty && bulkEditData.difficulty !== "all") {
+        updateData.difficulty = bulkEditData.difficulty;
+      }
+      if (bulkEditData.year) {
+        updateData.year = parseInt(bulkEditData.year, 10) || null;
+      }
+      if (bulkEditData.language && bulkEditData.language !== "all") {
+        updateData.language = bulkEditData.language;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error } = await supabase
+          .from("questions")
+          .update(updateData)
+          .in("id", selectedQuestions);
+
+        if (error) throw error;
+      }
+
+      // Update Mock Test associations if selected (exam-based only)
+      if (isExamBased && bulkEditData.mock_test_id && bulkEditData.mock_test_id !== "all") {
+        const { data: existingLinks } = await supabase
+          .from("test_questions")
+          .select("question_id")
+          .eq("test_id", bulkEditData.mock_test_id)
+          .in("question_id", selectedQuestions);
+        
+        const linkedIds = new Set((existingLinks || []).map(l => l.question_id));
+        const newLinks = selectedQuestions
+          .filter(id => !linkedIds.has(id))
+          .map(id => ({
+            test_id: bulkEditData.mock_test_id,
+            question_id: id,
+            marks: 1,
+            question_order: 0
+          }));
+
+        if (newLinks.length > 0) {
+          const { error: linkError } = await supabase
+            .from("test_questions")
+            .insert(newLinks);
+          if (linkError) throw linkError;
+        }
+      }
 
       toast({ title: "Success", description: `Successfully updated ${selectedQuestions.length} questions` });
       setBulkEditOpen(false);
-      setBulkEditData({ subject_id: "", subject_name: "", topic_id: "", topic_name: "" });
+      setBulkEditData({
+        subject_id: "",
+        subject_name: "",
+        topic_id: "",
+        topic_name: "",
+        exam_id: "",
+        mock_test_id: "",
+        difficulty: "all",
+        year: "",
+        language: "all",
+      });
+      setBulkEditMockTests([]);
       setSelectedQuestions([]);
       await loadQuestions();
     } catch (error: any) {
@@ -502,60 +784,196 @@ const QuestionBank = () => {
   }
 
   return (
-    <AdminLayout title="Question Bank" subtitle={`${questions.length} questions`} headerActions={AddButton}>
+    <AdminLayout title="Question Bank" subtitle={`${questions.length} questions in database`} headerActions={AddButton}>
       <div className="space-y-4">
-        {/* Stats Row */}
-        <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-4">
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm min-w-[120px] md:min-w-0">
-            <p className="text-2xl font-bold text-gray-900">{questions.length}</p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Total Questions</p>
+        {/* Stats Row with Difficulty & PYQ breakdown */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <p className="text-xl font-extrabold text-slate-900">{questions.length}</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Total MCQs</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm min-w-[120px] md:min-w-0">
-            <p className="text-2xl font-bold text-emerald-600">{subjectOptions.length}</p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Subjects</p>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <p className="text-xl font-extrabold text-emerald-600">{questions.filter(q => q.difficulty === 'easy').length}</p>
+            <p className="text-[10px] text-emerald-700 uppercase tracking-wider font-bold">Easy</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm min-w-[120px] md:min-w-0">
-            <p className="text-2xl font-bold text-teal-600">{topicOptions.length}</p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Topics</p>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <p className="text-xl font-extrabold text-amber-600">{questions.filter(q => q.difficulty === 'medium').length}</p>
+            <p className="text-[10px] text-amber-700 uppercase tracking-wider font-bold">Medium</p>
+          </div>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <p className="text-xl font-extrabold text-rose-600">{questions.filter(q => q.difficulty === 'hard').length}</p>
+            <p className="text-[10px] text-rose-700 uppercase tracking-wider font-bold">Hard</p>
+          </div>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <p className="text-xl font-extrabold text-purple-600">{questions.filter(q => q.year && Number(q.year) > 0).length}</p>
+            <p className="text-[10px] text-purple-700 uppercase tracking-wider font-bold">PYQs</p>
+          </div>
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
+            <p className="text-xl font-extrabold text-blue-600">{subjectOptions.length}</p>
+            <p className="text-[10px] text-blue-700 uppercase tracking-wider font-bold">Subjects</p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-3">
-          <div className="relative flex-1 lg:min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search questions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 rounded-xl bg-white border-gray-200"
-            />
-          </div>
-          <div className="grid grid-cols-2 lg:flex gap-2">
-            <Select value={filterSubject} onValueChange={setFilterSubject}>
-              <SelectTrigger className="h-12 rounded-xl flex-1 lg:w-[140px]">
-                <SelectValue placeholder="Subject" />
+        <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <div className="relative md:col-span-2 lg:col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search question text or source..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm"
+              />
+            </div>
+
+            <Select value={filterCategory} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Subjects</SelectItem>
-                {subjectOptions.map((subject) => (
-                  <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="exam">Exam Linked</SelectItem>
+                <SelectItem value="subject">Subject Linked</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select 
+              value={filterSubcategory} 
+              onValueChange={handleSubcategoryChange} 
+              disabled={filterCategory === "all"}
+            >
+              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                <SelectValue placeholder={filterCategory === "exam" ? "Select Exam" : filterCategory === "subject" ? "Select Subject" : "Exam / Subject"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {filterCategory === "exam" ? "All Exams" : filterCategory === "subject" ? "All Subjects" : "All"}
+                </SelectItem>
+                {filterCategory === "exam" && exams.map((exam) => (
+                  <SelectItem key={`exam:${exam.id}`} value={`exam:${exam.id}`}>{exam.name}</SelectItem>
+                ))}
+                {filterCategory === "subject" && subjectOptions.map((subject) => (
+                  <SelectItem key={`subject:${subject.id}`} value={`subject:${subject.id}`}>{subject.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterTopic} onValueChange={setFilterTopic}>
-              <SelectTrigger className="h-12 rounded-xl flex-1 lg:w-[140px]">
-                <SelectValue placeholder="Topic" />
+
+            {/* Difficulty Filter */}
+            <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
+              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                <SelectValue placeholder="Difficulty" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Topics</SelectItem>
-                {topicOptions.map((topic) => (
-                  <SelectItem key={topic.id} value={topic.id}>{topic.name}</SelectItem>
-                ))}
+                <SelectItem value="all">All Difficulties</SelectItem>
+                <SelectItem value="easy">🟢 Easy</SelectItem>
+                <SelectItem value="medium">🟡 Medium</SelectItem>
+                <SelectItem value="hard">🔴 Hard</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* PYQ Year Filter */}
+            <Select value={filterYear} onValueChange={setFilterYear}>
+              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                <SelectValue placeholder="PYQ Year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Questions</SelectItem>
+                <SelectItem value="pyq">All PYQ Papers</SelectItem>
+                <SelectItem value="2025">2025 PYQ</SelectItem>
+                <SelectItem value="2024">2024 PYQ</SelectItem>
+                <SelectItem value="2023">2023 PYQ</SelectItem>
+                <SelectItem value="2022">2022 PYQ</SelectItem>
+                <SelectItem value="2021">2021 PYQ</SelectItem>
+                <SelectItem value="2020">2020 PYQ</SelectItem>
+                <SelectItem value="2019">2019 PYQ</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            {/* Language filter */}
+            <div className="w-40">
+              <Select value={filterLanguage} onValueChange={setFilterLanguage}>
+                <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Languages</SelectItem>
+                  <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="mixed">Mixed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Show Mock Test dropdown when an Exam is selected */}
+            {filterCategory === "exam" && filterExam !== "all" && (
+              <div className="w-56">
+                <Select 
+                  value={filterMockTest} 
+                  onValueChange={handleMockTestFilterChange}
+                >
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                    <SelectValue placeholder="Select Mock Test" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Mock Tests</SelectItem>
+                    {mockTests
+                      .filter(test => test.exam_id === filterExam)
+                      .map((test) => (
+                        <SelectItem key={`test:${test.id}`} value={test.id}>{test.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Show Topic dropdown ONLY when a Subject is selected */}
+            {filterCategory === "subject" && filterSubcategory !== "all" && filterSubcategory.startsWith("subject:") && (
+              <div className="w-56">
+                 <Select 
+                  value={filterTopic} 
+                  onValueChange={handleTopicChange} 
+                >
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                    <SelectValue placeholder="Topic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Topics</SelectItem>
+                    {topicOptions
+                      // Only show topics belonging to the selected subject
+                      .filter(topic => topic.subject_id === filterSubject || filterSubject === "all")
+                      .map((topic) => (
+                        <SelectItem key={`topic:${topic.id}`} value={topic.id}>{topic.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(filterCategory !== "all" || filterExam !== "all" || filterDifficulty !== "all" || filterYear !== "all" || filterLanguage !== "all" || searchQuery) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilterCategory("all");
+                  setFilterSubcategory("all");
+                  setFilterExam("all");
+                  setFilterSubject("all");
+                  setFilterTopic("all");
+                  setFilterMockTest("all");
+                  setFilterDifficulty("all");
+                  setFilterYear("all");
+                  setFilterLanguage("all");
+                }}
+                className="h-10 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800"
+              >
+                Reset Filters
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Selection Tools */}
@@ -621,7 +1039,12 @@ const QuestionBank = () => {
                         subject_id: "",
                         subject_name: "",
                         topic_id: "",
-                        topic_name: ""
+                        topic_name: "",
+                        exam_id: "",
+                        mock_test_id: "",
+                        difficulty: "all",
+                        year: "",
+                        language: "all"
                       });
                       setBulkEditOpen(true);
                     }}
@@ -668,159 +1091,174 @@ const QuestionBank = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-0 bg-white rounded-2xl overflow-hidden">
-            {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[40px_2.5fr_1fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <span></span>
-              <span>Question</span>
-              <span>Subject</span>
-              <span>Topic</span>
-              <span className="text-center">Actions</span>
-            </div>
+          <div className="space-y-3.5">
+            {currentQuestions.map((question, index) => {
+              const isSelected = selectedQuestions.includes(question.id);
+              const correct = (question.correct_answer || "").toUpperCase().trim();
+              const isA = correct === "A";
+              const isB = correct === "B";
+              const isC = correct === "C";
+              const isD = correct === "D";
 
-            <div className="divide-y divide-gray-100">
-              {currentQuestions.map((question, index) => {
-                const isSelected = selectedQuestions.includes(question.id);
-                return (
-                  <div key={question.id} className={`transition-colors ${isSelected ? "bg-emerald-50" : "hover:bg-gray-50/50"}`}>
-                    {/* Desktop Row */}
-                    <div className="hidden md:grid md:grid-cols-[40px_2.5fr_1fr_1fr_80px] gap-4 px-4 py-3 items-start">
-                      {/* Checkbox */}
-                      <div className="flex items-center pt-0.5">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleSelectQuestion(question.id)}
-                        />
-                      </div>
+              return (
+                <div
+                  key={question.id}
+                  className={`bg-white rounded-2xl border transition-all p-4 sm:p-5 ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-50/20 shadow-xs ring-1 ring-blue-500/30"
+                      : "border-slate-200/80 shadow-2xs hover:border-slate-300 hover:shadow-xs"
+                  }`}
+                >
+                  {/* Top Row: Circular Selector + Number & Question Text + Action Icons */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      {/* Circle Selector */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectQuestion(question.id)}
+                        className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center shrink-0 mt-0.5 cursor-pointer ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-500 text-white"
+                            : "border-blue-400/80 bg-white hover:border-blue-600"
+                        }`}
+                        aria-label="Select question"
+                      >
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </button>
 
-                      {/* Question */}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-400">Q{indexOfFirstQuestion + index + 1}</span>
+                      {/* Question Number & Text */}
+                      <div className="flex-1 min-w-0 flex items-start gap-1.5 text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                        <span className="shrink-0">{indexOfFirstQuestion + index + 1}.</span>
+                        <div className="flex-1 min-w-0">
+                          <MathText text={question.question_text} formatBullets={false} />
                         </div>
-                        <p className="text-sm text-gray-800 line-clamp-2">{question.question_text}</p>
-                      </div>
-
-                      {/* Subject */}
-                      <div className="min-w-0">
-                        {question.subjects?.name || question.subject ? (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 w-fit bg-blue-100 text-blue-700 max-w-full truncate">
-                            {question.subjects?.name || question.subject}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-gray-300">-</span>
-                        )}
-                      </div>
-
-                      {/* Topic */}
-                      <div className="min-w-0">
-                        {question.topics?.name || question.topic ? (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 w-fit max-w-full truncate">
-                            {question.topics?.name || question.topic}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-gray-300">-</span>
-                        )}
-                      </div>
-
-                      {/* Answer hidden as per user request */}
-
-                      {/* Actions */}
-                      <div className="flex justify-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-emerald-50">
-                              <MoreVertical className="w-4 h-4 text-gray-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl min-w-[160px]">
-                            <DropdownMenuItem onClick={() => viewDetails(question)} className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(question)} className="gap-2">
-                              <Pencil className="w-4 h-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(question.id)} className="gap-2 text-red-600 focus:text-red-600">
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </div>
 
-                    {/* Mobile Row */}
-                    <div className="md:hidden p-3">
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleSelectQuestion(question.id)}
-                          className="mt-1"
-                        />
+                    {/* Action buttons on top right: Edit & Delete */}
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(question)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        title="Edit Question"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(question.id)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Question"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className="text-xs font-medium text-gray-400">Q{indexOfFirstQuestion + index + 1}</span>
-                            {(question.subjects?.name || question.subject) && (
-                              <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-blue-100 text-blue-700">
-                                {question.subjects?.name || question.subject}
-                              </Badge>
-                            )}
-                            {(question.topics?.name || question.topic) && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 border-gray-200 text-gray-600">
-                                {question.topics?.name || question.topic}
-                              </Badge>
-                            )}
-                            <Badge className="bg-emerald-500 text-white text-[9px] px-1.5 py-0">{question.correct_answer}</Badge>
-                          </div>
-                          <p className="text-sm text-gray-800 line-clamp-2">{question.question_text}</p>
+                  {/* Middle: 2-Column Options (A & C left, B & D right) */}
+                  <div className="ml-8 mt-3 mb-3.5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 sm:gap-x-12 gap-y-1.5 text-xs sm:text-sm">
+                    {/* Left Column: A and C */}
+                    <div className="space-y-1.5">
+                      <div className={`flex items-start gap-1.5 ${isA ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
+                        <span className="shrink-0">A.</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <MathText text={question.option_a || ""} formatBullets={false} />
+                          {isA && <span className="text-slate-900 font-bold ml-1">✓</span>}
                         </div>
+                      </div>
+                      <div className={`flex items-start gap-1.5 ${isC ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
+                        <span className="shrink-0">C.</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <MathText text={question.option_c || ""} formatBullets={false} />
+                          {isC && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                        </div>
+                      </div>
+                    </div>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-emerald-50 shrink-0">
-                              <MoreVertical className="w-4 h-4 text-gray-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl min-w-[160px]">
-                            <DropdownMenuItem onClick={() => viewDetails(question)} className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(question)} className="gap-2">
-                              <Pencil className="w-4 h-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(question.id)} className="gap-2 text-red-600 focus:text-red-600">
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    {/* Right Column: B and D */}
+                    <div className="space-y-1.5">
+                      <div className={`flex items-start gap-1.5 ${isB ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
+                        <span className="shrink-0">B.</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <MathText text={question.option_b || ""} formatBullets={false} />
+                          {isB && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                        </div>
+                      </div>
+                      <div className={`flex items-start gap-1.5 ${isD ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
+                        <span className="shrink-0">D.</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <MathText text={question.option_d || ""} formatBullets={false} />
+                          {isD && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Bottom: Metadata Row */}
+                  <div className="ml-8 flex items-center flex-wrap gap-3 text-xs text-slate-500 font-medium pt-1">
+                    <div className="flex items-center gap-1.5 text-slate-600">
+                      <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>
+                        {question.subjects?.name || question.subject || question.topics?.name || "General"}
+                      </span>
+                    </div>
+
+                    <span className="text-slate-500 font-sans text-xs">
+                      {question.language || "bn"}
+                    </span>
+
+                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+
+                    {question.exams?.name && (
+                      <span className="text-slate-400 text-[11px]">
+                        • {question.exams.name}
+                      </span>
+                    )}
+
+                    {question.year && (
+                      <span className="text-purple-600 text-[11px] font-semibold">
+                        • PYQ {question.year}
+                      </span>
+                    )}
+
+                    {question.difficulty && (
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                        question.difficulty === 'easy' ? 'bg-emerald-50 text-emerald-700' :
+                        question.difficulty === 'hard' ? 'bg-rose-50 text-rose-700' :
+                        'bg-amber-50 text-amber-700'
+                      }`}>
+                        {question.difficulty}
+                      </span>
+                    )}
+
+                    {question.explanation && (
+                      <button
+                        type="button"
+                        onClick={() => viewDetails(question)}
+                        className="ml-auto text-[11px] text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Eye className="w-3 h-3" /> ব্যাখ্যা দেখুন
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-100">
+              <div className="flex items-center justify-center gap-2 py-6">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-lg"
+                  className="rounded-xl border-slate-200"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-slate-600 font-medium px-2">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -828,74 +1266,153 @@ const QuestionBank = () => {
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="rounded-lg"
+                  className="rounded-xl border-slate-200"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             )}
-          </Card>
+          </div>
         )}
       </div>
 
       {/* Edit Question Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Question</DialogTitle>
-            <DialogDescription>Update question details</DialogDescription>
+            <DialogTitle className="text-lg font-bold text-slate-900">Edit Question</DialogTitle>
+            <DialogDescription>Update question details, difficulty level, PYQ year, and tags</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Question Text *</Label>
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Question Text *</Label>
               <Textarea
                 value={formData.question_text}
                 onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
                 rows={3}
-                className="rounded-xl mt-1"
+                className="rounded-xl mt-1 text-sm"
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Option A *</Label>
-                <Input value={formData.option_a} onChange={(e) => setFormData({ ...formData, option_a: e.target.value })} className="h-12 rounded-xl mt-1" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Option A *</Label>
+                <Input value={formData.option_a} onChange={(e) => setFormData({ ...formData, option_a: e.target.value })} className="h-11 rounded-xl text-sm" />
               </div>
-              <div className="space-y-2">
-                <Label>Option B *</Label>
-                <Input value={formData.option_b} onChange={(e) => setFormData({ ...formData, option_b: e.target.value })} className="h-12 rounded-xl mt-1" />
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Option B *</Label>
+                <Input value={formData.option_b} onChange={(e) => setFormData({ ...formData, option_b: e.target.value })} className="h-11 rounded-xl text-sm" />
               </div>
-              <div className="space-y-2">
-                <Label>Option C *</Label>
-                <Input value={formData.option_c} onChange={(e) => setFormData({ ...formData, option_c: e.target.value })} className="h-12 rounded-xl mt-1" />
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Option C *</Label>
+                <Input value={formData.option_c} onChange={(e) => setFormData({ ...formData, option_c: e.target.value })} className="h-11 rounded-xl text-sm" />
               </div>
-              <div className="space-y-2">
-                <Label>Option D *</Label>
-                <Input value={formData.option_d} onChange={(e) => setFormData({ ...formData, option_d: e.target.value })} className="h-12 rounded-xl mt-1" />
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Option D *</Label>
+                <Input value={formData.option_d} onChange={(e) => setFormData({ ...formData, option_d: e.target.value })} className="h-11 rounded-xl text-sm" />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Correct Answer *</Label>
-              <Select value={formData.correct_answer} onValueChange={(value) => setFormData({ ...formData, correct_answer: value })}>
-                <SelectTrigger className="h-12 rounded-xl mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">A</SelectItem>
-                  <SelectItem value="B">B</SelectItem>
-                  <SelectItem value="C">C</SelectItem>
-                  <SelectItem value="D">D</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Short Notes / Explanation</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Correct Answer *</Label>
+                <Select value={formData.correct_answer} onValueChange={(value) => setFormData({ ...formData, correct_answer: value })}>
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Option A</SelectItem>
+                    <SelectItem value="B">Option B</SelectItem>
+                    <SelectItem value="C">Option C</SelectItem>
+                    <SelectItem value="D">Option D</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Difficulty Level</Label>
+                <Select value={formData.difficulty} onValueChange={(val: any) => setFormData({ ...formData, difficulty: val })}>
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">🟢 Easy</SelectItem>
+                    <SelectItem value="medium">🟡 Medium</SelectItem>
+                    <SelectItem value="hard">🔴 Hard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">PYQ Year (Optional)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 2024"
+                  value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                  className="h-11 rounded-xl text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Language</Label>
+                <Select value={formData.language} onValueChange={(val: any) => setFormData({ ...formData, language: val })}>
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="mixed">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Status</Label>
+                <Select value={formData.status} onValueChange={(val: any) => setFormData({ ...formData, status: val })}>
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="review">Under Review</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Source / Paper Name</Label>
+                <Input
+                  placeholder="e.g. WBP SI 2020"
+                  value={formData.source}
+                  onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                  className="h-11 rounded-xl text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-700">Tags (Comma separated)</Label>
+              <Input
+                placeholder="history, mughal, static-gk"
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                className="h-11 rounded-xl text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Short Notes / Explanation</Label>
               <Textarea
                 value={formData.explanation}
                 onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
                 rows={3}
-                placeholder="Provide an explanation or short notes for this question..."
-                className="rounded-xl mt-1"
+                placeholder="Provide explanation or key points for this question..."
+                className="rounded-xl text-sm"
               />
             </div>
 
@@ -912,11 +1429,11 @@ const QuestionBank = () => {
             )}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setEditOpen(false)} className="rounded-xl h-12 flex-1 sm:flex-none">Cancel</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="rounded-xl h-11 flex-1 sm:flex-none">Cancel</Button>
             <Button
               onClick={handleUpdate}
               disabled={!formData.question_text || !formData.option_a || !formData.option_b || !formData.option_c || !formData.option_d}
-              className="rounded-xl h-12 bg-gradient-to-r from-emerald-500 to-teal-600 flex-1 sm:flex-none"
+              className="rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold flex-1 sm:flex-none shadow-md shadow-blue-600/20"
             >
               Update Question
             </Button>
@@ -926,48 +1443,122 @@ const QuestionBank = () => {
 
       {/* View Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Question Details</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Question Specifications</DialogTitle>
           </DialogHeader>
           {selectedQuestion && (
             <div className="space-y-4">
-              <div>
-                <Label className="text-gray-500 text-xs">Question</Label>
-                <p className="text-sm mt-1">{selectedQuestion.question_text}</p>
+              {/* Badges Bar */}
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedQuestion.difficulty && (
+                  <Badge variant="outline" className={`text-xs font-bold ${
+                    selectedQuestion.difficulty === 'easy' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                    selectedQuestion.difficulty === 'hard' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                    'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    Difficulty: {selectedQuestion.difficulty.toUpperCase()}
+                  </Badge>
+                )}
+                {selectedQuestion.year && (
+                  <Badge variant="outline" className="text-xs font-bold bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    PYQ Year: {selectedQuestion.year}
+                  </Badge>
+                )}
+                {selectedQuestion.language && (
+                  <Badge variant="outline" className="text-xs font-semibold bg-slate-50 text-slate-700 border-slate-200">
+                    Language: {selectedQuestion.language === 'bn' ? 'বাংলা' : selectedQuestion.language === 'en' ? 'English' : 'Mixed'}
+                  </Badge>
+                )}
+                {selectedQuestion.status && (
+                  <Badge className="text-xs font-semibold bg-blue-100 text-blue-800 border-0">
+                    {selectedQuestion.status.toUpperCase()}
+                  </Badge>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label className="text-gray-500 text-xs">Options</Label>
-                <div className="space-y-1.5">
-                  <p className={`text-sm p-2 rounded-lg ${selectedQuestion.correct_answer === "A" ? "bg-emerald-100 text-emerald-700 font-medium" : "bg-gray-50"}`}>
-                    A. {selectedQuestion.option_a}
-                  </p>
-                  <p className={`text-sm p-2 rounded-lg ${selectedQuestion.correct_answer === "B" ? "bg-emerald-100 text-emerald-700 font-medium" : "bg-gray-50"}`}>
-                    B. {selectedQuestion.option_b}
-                  </p>
-                  <p className={`text-sm p-2 rounded-lg ${selectedQuestion.correct_answer === "C" ? "bg-emerald-100 text-emerald-700 font-medium" : "bg-gray-50"}`}>
-                    C. {selectedQuestion.option_c}
-                  </p>
-                  <p className={`text-sm p-2 rounded-lg ${selectedQuestion.correct_answer === "D" ? "bg-emerald-100 text-emerald-700 font-medium" : "bg-gray-50"}`}>
-                    D. {selectedQuestion.option_d}
-                  </p>
+
+              <div>
+                <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">Question</Label>
+                <div className="text-sm mt-1 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <MathText text={selectedQuestion.question_text} />
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">Options</Label>
+                <div className="space-y-1.5">
+                  <div className={`text-sm p-3 rounded-xl border ${selectedQuestion.correct_answer === "A" ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold shadow-sm" : "bg-white border-slate-200"}`}>
+                    <div className="flex gap-2"><span className="font-bold">A.</span> <MathText text={selectedQuestion.option_a} /></div>
+                  </div>
+                  <div className={`text-sm p-3 rounded-xl border ${selectedQuestion.correct_answer === "B" ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold shadow-sm" : "bg-white border-slate-200"}`}>
+                    <div className="flex gap-2"><span className="font-bold">B.</span> <MathText text={selectedQuestion.option_b} /></div>
+                  </div>
+                  <div className={`text-sm p-3 rounded-xl border ${selectedQuestion.correct_answer === "C" ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold shadow-sm" : "bg-white border-slate-200"}`}>
+                    <div className="flex gap-2"><span className="font-bold">C.</span> <MathText text={selectedQuestion.option_c} /></div>
+                  </div>
+                  <div className={`text-sm p-3 rounded-xl border ${selectedQuestion.correct_answer === "D" ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold shadow-sm" : "bg-white border-slate-200"}`}>
+                    <div className="flex gap-2"><span className="font-bold">D.</span> <MathText text={selectedQuestion.option_d} /></div>
+                  </div>
+                </div>
+              </div>
+              
+              {selectedQuestion.explanation && (
                 <div>
-                  <Label className="text-gray-500 text-xs">Correct Answer</Label>
-                  <Badge className="mt-1 bg-emerald-500">{selectedQuestion.correct_answer}</Badge>
+                  <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">Explanation / Short Notes</Label>
+                  <div className="text-sm mt-1 bg-blue-50/60 p-3.5 rounded-xl border border-blue-200 text-slate-800">
+                    <MathText text={selectedQuestion.explanation} />
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                <div>
+                  <Label className="text-slate-500 text-xs">Correct Answer</Label>
+                  <Badge className="mt-1 bg-emerald-600 font-bold block w-fit">Option {selectedQuestion.correct_answer}</Badge>
+                </div>
+                <div>
+                  <Label className="text-slate-500 text-xs">Linked Exam</Label>
+                  <p className="text-xs mt-1 font-bold text-slate-800 truncate">{selectedQuestion.exams?.name || "Independent / All"}</p>
+                </div>
+                <div>
+                  <Label className="text-slate-500 text-xs">Source Paper</Label>
+                  <p className="text-xs mt-1 font-semibold text-slate-700 truncate">{selectedQuestion.source || "None"}</p>
+                </div>
+                <div className="col-span-2 sm:col-span-3">
+                  <Label className="text-slate-500 text-xs">Test / Mock Test</Label>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {selectedQuestion.test_questions && selectedQuestion.test_questions.length > 0 ? (
+                      selectedQuestion.test_questions.map((tq, i) => tq.mock_tests?.title && (
+                        <Badge key={i} variant="secondary" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 font-medium">
+                          {tq.mock_tests.title}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400">Not assigned to specific mock test</span>
+                    )}
+                  </div>
                 </div>
                 {(selectedQuestion.subjects?.name || selectedQuestion.subject) && (
                   <div>
-                    <Label className="text-gray-500 text-xs">Subject</Label>
-                    <p className="text-sm mt-1">{selectedQuestion.subjects?.name || selectedQuestion.subject}</p>
+                    <Label className="text-slate-500 text-xs">Subject</Label>
+                    <p className="text-xs mt-1 font-bold text-blue-700">{selectedQuestion.subjects?.name || selectedQuestion.subject}</p>
                   </div>
                 )}
                 {(selectedQuestion.topics?.name || selectedQuestion.topic) && (
                   <div>
-                    <Label className="text-gray-500 text-xs">Topic</Label>
-                    <p className="text-sm mt-1">{selectedQuestion.topics?.name || selectedQuestion.topic}</p>
+                    <Label className="text-slate-500 text-xs">Topic</Label>
+                    <p className="text-xs mt-1 font-semibold text-slate-700">{selectedQuestion.topics?.name || selectedQuestion.topic}</p>
+                  </div>
+                )}
+                {selectedQuestion.tags && (
+                  <div className="col-span-2 sm:col-span-3">
+                    <Label className="text-slate-500 text-xs">Tags</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(Array.isArray(selectedQuestion.tags) ? selectedQuestion.tags : String(selectedQuestion.tags).split(',')).map((tag: any, idx: number) => (
+                        <Badge key={idx} variant="outline" className="text-[10px] bg-slate-100 text-slate-700 border-slate-200">
+                          #{String(tag).trim()}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -996,29 +1587,140 @@ const QuestionBank = () => {
         isDeleting={isDeleting}
       />
 
-      {/* Bulk Edit Subject/Topic Dialog */}
+      {/* Bulk Edit Subject/Topic/Metadata Dialog */}
       <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Subject/Topic</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Bulk Update Questions</DialogTitle>
             <DialogDescription>
-              Update subject and/or topic for {selectedQuestions.length} selected questions. Leave empty to keep existing value.
+              Batch update {selectedQuestions.length} selected questions with common difficulty, year, language, or curriculum tags.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <SubjectTopicSelectors
-              category="questions"
-              onSubjectChange={(id, name) => setBulkEditData({ ...bulkEditData, subject_id: id || "", subject_name: name })}
-              onTopicChange={(id, name) => setBulkEditData({ ...bulkEditData, topic_id: id || "", topic_name: name })}
-            />
-            <p className="text-xs text-gray-500 italic">Moving {selectedQuestions.length} questions to the selected Subject and Topic.</p>
+          <div className="space-y-4 py-3">
+            {/* Common Metadata Fields */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Universal Metadata</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600">Difficulty</Label>
+                  <Select value={bulkEditData.difficulty} onValueChange={(val) => setBulkEditData({ ...bulkEditData, difficulty: val })}>
+                    <SelectTrigger className="h-10 rounded-xl text-xs bg-white">
+                      <SelectValue placeholder="Difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Do not change</SelectItem>
+                      <SelectItem value="easy">🟢 Easy</SelectItem>
+                      <SelectItem value="medium">🟡 Medium</SelectItem>
+                      <SelectItem value="hard">🔴 Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600">PYQ Year</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 2024"
+                    value={bulkEditData.year}
+                    onChange={(e) => setBulkEditData({ ...bulkEditData, year: e.target.value })}
+                    className="h-10 rounded-xl text-xs bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600">Language</Label>
+                  <Select value={bulkEditData.language} onValueChange={(val) => setBulkEditData({ ...bulkEditData, language: val })}>
+                    <SelectTrigger className="h-10 rounded-xl text-xs bg-white">
+                      <SelectValue placeholder="Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Do not change</SelectItem>
+                      <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Detect category of selected questions */}
+            {(() => {
+              const selectedQs = questions.filter(q => selectedQuestions.includes(q.id));
+              const isExamBased = selectedQs.some(q => q.exam_id);
+              
+              if (isExamBased) {
+                return (
+                  <>
+                    <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                      <p className="text-xs font-semibold text-blue-700">📝 Exam-linked questions — can assign Exam & Mock Test</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-slate-600">Exam</Label>
+                        <Select value={bulkEditData.exam_id} onValueChange={handleBulkExamChange}>
+                          <SelectTrigger className="h-10 rounded-xl text-xs">
+                            <SelectValue placeholder="Select exam" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Do not change</SelectItem>
+                            {exams.map((exam) => (
+                              <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-slate-600">Mock Test</Label>
+                        <Select 
+                          value={bulkEditData.mock_test_id} 
+                          onValueChange={(val) => setBulkEditData({ ...bulkEditData, mock_test_id: val })}
+                          disabled={!bulkEditData.exam_id || bulkEditData.exam_id === "all"}
+                        >
+                          <SelectTrigger className="h-10 rounded-xl text-xs">
+                            <SelectValue placeholder="Select test" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Do not change</SelectItem>
+                            {bulkEditMockTests.map((test) => (
+                              <SelectItem key={test.id} value={test.id}>{test.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <p className="text-xs font-semibold text-emerald-700">📚 Subject-linked questions — can assign Subject & Topic</p>
+                    </div>
+                    <SubjectTopicSelectors
+                      category="questions"
+                      onSubjectChange={(id, name) => setBulkEditData({ ...bulkEditData, subject_id: id || "", subject_name: name })}
+                      onTopicChange={(id, name) => setBulkEditData({ ...bulkEditData, topic_id: id || "", topic_name: name })}
+                    />
+                  </>
+                );
+              }
+            })()}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setBulkEditOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button variant="outline" onClick={() => setBulkEditOpen(false)} className="rounded-xl h-11">Cancel</Button>
             <Button
               onClick={handleBulkEdit}
-              disabled={saving || (!bulkEditData.subject_name && !bulkEditData.topic_name)}
-              className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600"
+              disabled={saving || (
+                !bulkEditData.subject_name &&
+                !bulkEditData.topic_name &&
+                (!bulkEditData.exam_id || bulkEditData.exam_id === "all") &&
+                (!bulkEditData.mock_test_id || bulkEditData.mock_test_id === "all") &&
+                (!bulkEditData.difficulty || bulkEditData.difficulty === "all") &&
+                !bulkEditData.year &&
+                (!bulkEditData.language || bulkEditData.language === "all")
+              )}
+              className="rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-600/20"
             >
               {saving ? (
                 <>

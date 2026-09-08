@@ -11,131 +11,206 @@ import {
   ChevronRight,
   BookOpen,
   LogOut,
-  Lock,
   MessageSquare,
   Pencil,
   CheckCircle,
-  Shield,
   Clock,
   Camera,
   Bell,
   Sparkles,
-  Mail
+  Mail,
+  Crown,
+  Bookmark,
+  ShieldCheck,
+  Award,
+  Settings,
+  CreditCard,
+  HelpCircle,
+  Receipt,
+  BarChart2,
+  KeyRound,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Check,
+  ExternalLink,
+  Target,
+  RefreshCw
 } from "lucide-react";
 import StudentLayout from "@/components/student/StudentLayout";
+import PullToRefresh from "@/components/student/PullToRefresh";
 import { differenceInDays } from "date-fns";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import StudentChat from "@/components/StudentChat";
 import { getStudentUnreadCount } from "@/config/chat";
-import { formatDistanceToNow } from "date-fns";
 import { initRazorpayPayment } from "@/utils/payment";
-import { Badge } from "@/components/ui/badge";
 
 interface ProfileStatistics {
   totalTests: number;
   passRate: number;
+  passedCount: number;
+  failedCount: number;
 }
+
+interface PurchaseItem {
+  id: string;
+  content_type: string;
+  content_id: string;
+  amount: number;
+  status: string;
+  razorpay_payment_id?: string | null;
+  created_at: string;
+}
+
+const targetExamsList = [
+  "WBP Constable / Lady Constable",
+  "WB Police SI",
+  "WB Food SI",
+  "WB PSC Clerkship",
+  "WB Primary TET",
+  "WBCS (Exe)",
+  "Railway RRB Group D / NTPC",
+  "SSC GD / CGL / CHSL",
+  "Other Competitive Exam"
+];
+
+const faqs = [
+  {
+    q: "How does the PracticeKoro Yearly VIP Subscription work?",
+    a: "With a Yearly VIP Pass, you get unlimited access to all full-length mock tests, chapter-wise topic tests, solved question series, and high-yield PDF notes for 365 days with no hidden fees."
+  },
+  {
+    q: "Can I retake tests to improve my score and ranking?",
+    a: "Yes! You can re-attempt any test multiple times. We keep track of your highest score and historical test attempts in your Results tab."
+  },
+  {
+    q: "What should I do if money was deducted but subscription is not unlocked?",
+    a: "Payments are verified automatically. If network issues occur, wait 2 minutes and refresh this page. You can also click 'Open Support Chat' or message us on WhatsApp with your payment ID."
+  },
+  {
+    q: "Are the questions based on the latest exam syllabus?",
+    a: "All mock tests and notes are curated by subject mentors based on the latest West Bengal and National government exam patterns, negative marking rules, and previous year trends."
+  }
+];
 
 const StudentProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [approvalStatus, setApprovalStatus] = useState<string>("pending");
-  const [statistics, setStatistics] = useState<ProfileStatistics>({ totalTests: 0, passRate: 0 });
-  const [formData, setFormData] = useState({ full_name: "", whatsapp_number: "" });
-  const [isEditing, setIsEditing] = useState(false);
+  const [statistics, setStatistics] = useState<ProfileStatistics>({
+    totalTests: 0,
+    passRate: 0,
+    passedCount: 0,
+    failedCount: 0
+  });
+  const [formData, setFormData] = useState({
+    full_name: "",
+    whatsapp_number: "",
+    target_exam: "WBP Constable / Lady Constable"
+  });
   const [accountDays, setAccountDays] = useState(0);
   const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionFee, setSubscriptionFee] = useState<number>(499);
+  const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
+  const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const [subscriptionFee, setSubscriptionFee] = useState<number>(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  // Active navigation tab inside Profile
+  const [activeTab, setActiveTab] = useState<"personal" | "membership" | "billing" | "security" | "performance" | "support">("personal");
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [sendingResetEmail, setSendingResetEmail] = useState(false);
+
+  // Expanded FAQ state
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !profile?.id) return;
 
-    // Validate file
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Error", description: "Please select an image file (PNG, JPG, WebP)", variant: "destructive" });
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "Error", description: "Image must be less than 2MB", variant: "destructive" });
+      toast({ title: "Error", description: "Image size must be less than 2MB", variant: "destructive" });
       return;
     }
 
     setUploadingImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop() || "jpg";
       const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
-      // Path must be: {user_id}/{filename} - required by RLS policy
       const filePath = `${profile.id}/${fileName}`;
 
-      // Upload to storage
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from('avatars')
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
         .upload(filePath, file, { upsert: true });
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      // Get public URL with cache-busting
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const avatarUrlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
 
-      // Update profile with avatar URL
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ avatar_url: avatarUrlWithCacheBust })
-        .eq('id', profile.id);
+        .eq("id", profile.id);
 
-      if (updateError) {
-        console.error("Profile update error:", updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
       setProfile({ ...profile, avatar_url: avatarUrlWithCacheBust });
-      toast({ title: "Success", description: "Profile photo updated!" });
+      toast({ title: "Photo Updated!", description: "Profile photo saved successfully." });
     } catch (error: any) {
       console.error("Avatar upload error:", error);
-      toast({ title: "Error", description: error.message || "Failed to upload", variant: "destructive" });
+      toast({ title: "Upload Failed", description: error.message || "Failed to update photo.", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
     }
-    setUploadingImage(false);
   };
 
-  const loadNotifications = useCallback(async () => {
-    if (!profile?.id) return;
+  const loadNotificationsCount = useCallback(async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from("notifications")
+        .select("is_read")
+        .eq("user_id", userId)
+        .eq("is_read", false);
+      if (data) setUnreadNotificationCount(data.length);
+    } catch (_) {}
+  }, []);
 
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
+  const loadChatCount = useCallback(async (studentId: string) => {
+    try {
+      const count = await getStudentUnreadCount(studentId);
+      setChatUnreadCount(count);
+    } catch (_) {}
+  }, []);
 
-    if (error) {
-      console.error("Error loading notifications:", error);
-      return;
-    }
-
-    if (data) {
-      setNotifications(data);
-      setUnreadNotificationCount(data.filter(n => !n.is_read).length);
-    }
-  }, [profile?.id]);
-
-  const loadChatUnreadCount = useCallback(async (studentId: string) => {
-    const count = await getStudentUnreadCount(studentId);
-    setChatUnreadCount(count);
+  const loadPurchases = useCallback(async (userId: string) => {
+    setLoadingPurchases(true);
+    try {
+      const { data } = await supabase
+        .from("purchases" as any)
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (data) setPurchases(data as any[]);
+    } catch (_) {}
+    setLoadingPurchases(false);
   }, []);
 
   const loadStatistics = useCallback(async (userId: string) => {
@@ -145,10 +220,12 @@ const StudentProfile = () => {
       .eq("user_id", userId);
 
     if (attempts && attempts.length > 0) {
-      const passed = attempts.filter(a => a.passed).length;
+      const passed = attempts.filter((a) => a.passed).length;
       setStatistics({
         totalTests: attempts.length,
         passRate: Math.round((passed / attempts.length) * 100),
+        passedCount: passed,
+        failedCount: attempts.length - passed
       });
     }
   }, []);
@@ -173,7 +250,7 @@ const StudentProfile = () => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase.from("site_settings").select("value").eq("key", "yearly_subscription_fee").maybeSingle()
+      supabase.from("site_settings").select("*")
     ]);
 
     if (profileResult.data) {
@@ -181,6 +258,7 @@ const StudentProfile = () => {
       setFormData({
         full_name: profileResult.data.full_name || "",
         whatsapp_number: profileResult.data.whatsapp_number || "",
+        target_exam: profileResult.data.target_exam || "WBP Constable / Lady Constable"
       });
       if (profileResult.data.created_at) {
         setAccountDays(differenceInDays(new Date(), new Date(profileResult.data.created_at)));
@@ -189,9 +267,13 @@ const StudentProfile = () => {
 
     setApprovalStatus(approvalResult.data?.status || "pending");
 
-    // Set subscription fee
-    const fee = (settingsResult as any).data?.value;
-    if (fee) setSubscriptionFee(parseFloat(fee));
+    // Check site settings for subscription fee
+    if (settingsResult.data) {
+      const feeSetting = (settingsResult.data as any[]).find((s) => s.key === "yearly_subscription_fee");
+      if (feeSetting?.value) {
+        setSubscriptionFee(parseFloat(feeSetting.value) || 499);
+      }
+    }
 
     const subscriptionData = (subscriptionResult as any).data;
     if (subscriptionData) {
@@ -206,78 +288,60 @@ const StudentProfile = () => {
         });
       }
     }
-    await loadStatistics(session.user.id);
+
+    await Promise.all([
+      loadStatistics(session.user.id),
+      loadPurchases(session.user.id),
+      loadNotificationsCount(session.user.id),
+      loadChatCount(session.user.id)
+    ]);
+
     setLoading(false);
-  }, [navigate, loadStatistics]);
+  }, [navigate, loadStatistics, loadPurchases, loadNotificationsCount, loadChatCount]);
 
   useEffect(() => {
     checkAuthAndLoadData();
   }, [checkAuthAndLoadData]);
 
-  // Load notifications
-  useEffect(() => {
-    if (profile?.id) {
-      loadNotifications();
-      const interval = setInterval(loadNotifications, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [profile?.id, loadNotifications]);
-
-  // Load chat unread count
-  useEffect(() => {
-    if (profile?.id) {
-      const studentId = profile.id;
-      loadChatUnreadCount(studentId);
-      const interval = setInterval(() => loadChatUnreadCount(studentId), 5000);
-      return () => clearInterval(interval);
-    }
-  }, [profile?.id, loadChatUnreadCount]);
-
-  const handleNotificationClick = useCallback(async (notif: any) => {
-    if (!notif.is_read) {
-      await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("id", notif.id);
-      loadNotifications();
+  const handleProPlanUpgrade = async () => {
+    if (subscription) {
+      toast({
+        title: "VIP Plan Active! 👑",
+        description: "You already have unlimited access to all mock tests & study notes."
+      });
+      return;
     }
 
-    if (notif.link) {
-      navigate(notif.link);
-    } else if (notif.test_id) {
-      // For backwards compatibility if test_id exists in any old local testing data
-      navigate(`/student/take-test/${notif.test_id}`);
+    try {
+      await initRazorpayPayment({
+        amount: subscriptionFee,
+        contentId: "site_yearly_subscription",
+        contentType: "subscription",
+        title: "PracticeKoro Yearly VIP Pass",
+        description: "1-Year Unlimited Access to All Mock Tests & Notes"
+      });
+      toast({ title: "Success! 🎉", description: "VIP Subscription activated!" });
+      await checkAuthAndLoadData();
+    } catch (err: any) {
+      if (err?.message && err.message !== "Payment cancelled") {
+        toast({ title: "Payment Issue", description: err.message, variant: "destructive" });
+      }
     }
-  }, [navigate, loadNotifications]);
-
-  const formatNotificationTime = useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-  }, []);
+  };
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
     localStorage.clear();
     navigate("/");
   };
 
-  const handleSubmit = async () => {
+  const handleUpdateProfile = async () => {
     if (formData.whatsapp_number && !/^\d{10}$/.test(formData.whatsapp_number)) {
-      toast({ title: "Error", description: "Enter valid 10-digit number", variant: "destructive" });
+      toast({ title: "Invalid Number", description: "Please enter a valid 10-digit WhatsApp number.", variant: "destructive" });
       return;
     }
 
@@ -290,403 +354,867 @@ const StudentProfile = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Saved!" });
-      setIsEditing(false);
+      toast({ title: "Saved! ✅", description: "Profile information updated successfully." });
+      setProfile({ ...profile, full_name: formData.full_name, whatsapp_number: formData.whatsapp_number });
     }
     setSaving(false);
   };
 
-  if (loading) {
-    return (
-      <StudentLayout title="Profile" subtitle="Your account">
-        <div className="w-full flex items-center justify-center min-h-[50vh]">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center">
-              <User className="w-6 h-6 text-white" />
-            </div>
-            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          </div>
-        </div>
-      </StudentLayout>
-    );
-  }
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      toast({ title: "Weak Password", description: "Password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Mismatch", description: "Passwords do not match.", variant: "destructive" });
+      return;
+    }
 
+    setUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast({ title: "Success! 🔒", description: "Your password has been changed successfully." });
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      toast({ title: "Update Failed", description: err.message || "Failed to update password.", variant: "destructive" });
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'ST';
+  const handleSendResetEmail = async () => {
+    if (!userEmail || userEmail.includes("@whatsapp.practicekoro.local")) {
+      toast({
+        title: "No Email Linked",
+        description: "Your account is registered via WhatsApp number. Please use the password change form above.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSendingResetEmail(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      if (error) throw error;
+      toast({
+        title: "Email Sent! 📬",
+        description: `A password reset link has been sent to ${userEmail}. Check your inbox.`
+      });
+    } catch (err: any) {
+      toast({ title: "Request Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSendingResetEmail(false);
+    }
+  };
+
+  const firstName = profile?.full_name?.trim()?.split(" ")[0] || "Student";
+  const userInitials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "PK";
 
   return (
-    <StudentLayout title="Profile" subtitle="Your account" hideNavbar={chatOpen}>
-      <div className="w-full space-y-3 pb-12 px-1">
-
-        {/* Premium Profile Header - Matches Dashboard Height */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700"
-        >
-          <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-3xl -ml-20 -mb-20" />
-          <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/5 rounded-full blur-2xl" />
-
-          <div className="relative z-10">
-            {/* Header - Matches Dashboard style */}
-            <div className="flex items-center gap-4 mb-6">
-              {/* Avatar with Upload */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-                className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shrink-0 overflow-hidden group"
-              >
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xl sm:text-2xl font-bold text-white">{initials}</span>
-                )}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  {uploadingImage ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Camera className="w-5 h-5 text-white" />
-                  )}
-                </div>
-              </button>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-white/70 text-xs sm:text-sm font-medium mb-1">👤 Profile</p>
-                <h2 className="text-xl sm:text-2xl font-bold text-white truncate">{profile?.full_name || "Student"}</h2>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {subscription && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-gradient-to-r from-amber-400 to-orange-500 px-2 py-0.5 rounded-full shadow-sm shadow-amber-500/20">
-                      <Sparkles className="w-3 h-3" />
-                      PREMIUM
-                    </span>
-                  )}
-                  {approvalStatus === "approved" ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-100 bg-emerald-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                      <CheckCircle className="w-3 h-3" />
-                      Verified
+    <StudentLayout title="Student Profile" subtitle="Account Settings & Membership" hideNavbar={chatOpen}>
+      <PullToRefresh onRefresh={checkAuthAndLoadData}>
+        <div className="w-full max-w-5xl mx-auto px-2.5 sm:px-4 py-2 sm:py-4 pb-28 space-y-4 sm:space-y-6">
+          {/* Top Brand Header */}
+          <div className="flex items-center justify-between gap-3 pb-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  My Profile
+                  {subscription ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+                      ★ VIP Member
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-100 bg-amber-500/30 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                      <Clock className="w-3 h-3" />
-                      Pending
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Active Student
                     </span>
                   )}
-                </div>
+                </h1>
+                <p className="text-xs text-slate-500 font-medium">Manage your learning account and study preferences</p>
               </div>
             </div>
 
-            {/* Stats Row - 3 columns like Dashboard */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{statistics.totalTests}</p>
-                <p className="text-white/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-1">Tests</p>
-              </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                <p className="text-2xl sm:text-3xl font-bold text-emerald-300">{statistics.passRate}%</p>
-                <p className="text-white/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-1">Pass Rate</p>
-              </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center border border-white/20">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{accountDays === 0 ? '0' : accountDays}</p>
-                <p className="text-white/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-1">Days</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Premium Subscription Details */}
-        {subscription && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="p-4 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 relative overflow-hidden shadow-lg shadow-amber-500/20"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/20 rounded-full blur-2xl -mr-12 -mt-12" />
-            <div className="relative z-10 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/30">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-white font-bold text-base">Premium Plan</h4>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                  <p className="text-white/90 text-xs font-semibold uppercase tracking-wider">Active</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Valid Till</p>
-                <p className="text-white font-black text-sm">
-                  {subscription.expiryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Account Details Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl border border-slate-100 overflow-hidden"
-        >
-          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Account Details</p>
-          </div>
-
-          <div className="p-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                {userEmail?.includes("@whatsapp.practicekoro.local") ? (
-                  <Phone className="w-4 h-4 text-indigo-600" />
-                ) : (
-                  <Mail className="w-4 h-4 text-indigo-600" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">
-                  {userEmail?.includes("@whatsapp.practicekoro.local") ? "Login Mobile" : "Login Email"}
-                </p>
-                <p className="text-sm font-medium text-slate-900 truncate">
-                  {userEmail?.includes("@whatsapp.practicekoro.local")
-                    ? userEmail.split("@")[0]
-                    : userEmail || "Not set"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">Full Name</p>
-                {isEditing ? (
-                  <Input
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="h-9 text-sm"
-                    placeholder="Your name"
-                  />
-                ) : (
-                  <p className="text-sm font-medium text-slate-900 truncate">{formData.full_name || "Not set"}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-                <Phone className="w-4 h-4 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">WhatsApp</p>
-                {isEditing ? (
-                  <Input
-                    value={formData.whatsapp_number}
-                    onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value.replace(/\D/g, '') })}
-                    className="h-9 text-sm"
-                    placeholder="10 digit number"
-                    maxLength={10}
-                  />
-                ) : (
-                  <p className="text-sm font-medium text-slate-900">{formData.whatsapp_number || "Not set"}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 border-t border-slate-100">
-            {isEditing ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(false)}
-                  className="flex-1 h-10 rounded-xl text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={saving}
-                  className="flex-1 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm"
-                >
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            ) : (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsEditing(true)}
-                className="w-full h-10 rounded-xl bg-indigo-50 text-indigo-700 font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                onClick={() => navigate("/student/notifications")}
+                className="relative w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs hover:border-slate-300 transition-all"
+                title="Notifications"
               >
-                <Pencil className="w-4 h-4" />
-                Edit Profile
+                <Bell className="w-4 h-4" />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                )}
               </button>
-            )}
+            </div>
           </div>
-        </motion.div>
 
-        {/* Notifications Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-white rounded-xl border border-slate-100 overflow-hidden"
-        >
-          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Notifications</p>
-            {unreadNotificationCount > 0 && (
-              <span className="text-[9px] font-bold text-white bg-indigo-500 px-1.5 py-0.5 rounded-full">
-                {unreadNotificationCount} new
-              </span>
-            )}
-          </div>
-          <div className="divide-y divide-slate-100">
-            {notifications.length === 0 ? (
-              <div className="p-6 text-center">
-                <Bell className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">No notifications yet</p>
-              </div>
-            ) : (
-              notifications.slice(0, 3).map((notif) => {
-                const isUnread = !notif.is_read;
-                return (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
-                    className={`p-3 flex items-start gap-3 cursor-pointer hover:bg-slate-50 transition-colors ${isUnread ? "bg-emerald-50/50" : ""}`}
-                  >
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isUnread ? "bg-emerald-100" : "bg-slate-100"}`}>
-                      <Bell className={`w-4 h-4 ${isUnread ? "text-emerald-600" : "text-slate-400"}`} />
+          {loading ? (
+            <div className="py-8 space-y-4 animate-pulse">
+              <div className="h-64 rounded-3xl bg-slate-200/70" />
+              <div className="h-14 rounded-2xl bg-slate-200/70" />
+              <div className="h-80 rounded-3xl bg-slate-200/70" />
+            </div>
+          ) : (
+            <>
+              {/* ═══════════════════════════════════════════════════════════
+                  HERO PROFILE SHOWCASE CARD
+                  ═══════════════════════════════════════════════════════════ */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative overflow-hidden rounded-3xl p-5 sm:p-7 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-indigo-900/40"
+              >
+                {/* Glow Orbs & Patterns */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none -mr-24 -mt-24" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-500/20 rounded-full blur-3xl pointer-events-none -ml-24 -mb-24" />
+                <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+
+                <div className="relative z-10 space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                    {/* Interactive Avatar with Upload */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                    <div className="relative shrink-0 self-start sm:self-center">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center border-2 border-white/20 overflow-hidden group shadow-lg transition-transform hover:scale-105"
+                        title="Click to update photo"
+                      >
+                        {profile?.avatar_url ? (
+                          <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl sm:text-4xl font-black text-white">{userInitials}</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          {uploadingImage ? (
+                            <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                          ) : (
+                            <>
+                              <Camera className="w-5 h-5 text-white" />
+                              <span className="text-[10px] font-bold text-white mt-1">Change</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-indigo-600 border-2 border-slate-900 flex items-center justify-center text-white shadow-sm hover:bg-indigo-500"
+                        title="Upload photo"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${isUnread ? "text-slate-900" : "text-slate-600"}`}>{notif.title}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{notif.message}</p>
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        {approvalStatus === "approved" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-400/30">
+                            <CheckCircle className="w-3 h-3" />
+                            Verified Student
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-400/30">
+                            <Clock className="w-3 h-3" />
+                            Approval Pending
+                          </span>
+                        )}
+
+                        {subscription ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] font-black text-amber-950 px-3 py-0.5 rounded-full shadow-md shadow-amber-500/20"
+                            style={{ background: "linear-gradient(135deg, #D4A017 0%, #FBBF24 50%, #D4A017 100%)" }}
+                          >
+                            <Crown className="w-3.5 h-3.5 fill-amber-950" />
+                            VIP PASS
+                          </span>
+                        ) : (
+                          <button
+                            onClick={handleProPlanUpgrade}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 hover:text-amber-200 transition-colors underline"
+                          >
+                            <Sparkles className="w-3 h-3 text-amber-400" />
+                            Upgrade to VIP
+                          </button>
+                        )}
+                      </div>
+
+                      <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate">
+                        {profile?.full_name || "Aspirant"}
+                      </h2>
+
+                      <div className="flex items-center gap-4 text-xs text-slate-300 mt-1 flex-wrap font-medium">
+                        <span className="flex items-center gap-1.5">
+                          {userEmail?.includes("@whatsapp.practicekoro.local") ? (
+                            <>
+                              <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                              +91 {userEmail.split("@")[0]}
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-3.5 h-3.5 text-blue-400" />
+                              {userEmail || "No login email"}
+                            </>
+                          )}
+                        </span>
+                        {profile?.whatsapp_number && (
+                          <span className="flex items-center gap-1 text-emerald-300">
+                            <Phone className="w-3 h-3" />
+                            +91 {profile.whatsapp_number}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[9px] text-slate-400 shrink-0">
-                      {notif.created_at ? formatNotificationTime(notif.created_at) : ""}
-                    </span>
                   </div>
-                );
-              })
-            )}
-          </div>
-          {notifications.length > 3 && (
-            <button
-              onClick={() => navigate("/student/notifications")} // Assuming this route exists or we just want the UI
-              className="w-full p-2.5 text-center text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-100"
-            >
-              View All Notifications
-            </button>
+
+                  {/* 4 KPI Metric Badges */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
+                      <p className="text-2xl sm:text-3xl font-black text-white leading-none">
+                        {statistics.totalTests}
+                      </p>
+                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1.5">
+                        Tests Taken
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
+                      <p className="text-2xl sm:text-3xl font-black text-emerald-400 leading-none">
+                        {statistics.passRate}%
+                      </p>
+                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1.5">
+                        Pass Rate
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
+                      <p className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-none">
+                        {accountDays <= 0 ? 1 : accountDays}
+                      </p>
+                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1.5">
+                        Days on App
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/15">
+                      <p className="text-base sm:text-lg font-black text-white leading-none mt-1">
+                        {subscription ? "Active" : "Free"}
+                      </p>
+                      <p className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-2.5">
+                        {subscription ? "VIP Member" : "Standard"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* ═══════════════════════════════════════════════════════════
+                  SEGMENTED MODERN TAB BAR
+                  ═══════════════════════════════════════════════════════════ */}
+              <div className="flex gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
+                {[
+                  { id: "personal", label: "Profile Info", icon: User },
+                  { id: "membership", label: "VIP Plan", icon: Crown },
+                  { id: "billing", label: "Orders & Receipts", icon: Receipt },
+                  { id: "security", label: "Security", icon: KeyRound },
+                  { id: "performance", label: "Analytics", icon: BarChart2 },
+                  { id: "support", label: "Help & FAQs", icon: HelpCircle },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                        isActive
+                          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ═══════════════════════════════════════════════════════════
+                  TAB CONTENT AREA
+                  ═══════════════════════════════════════════════════════════ */}
+              <AnimatePresence mode="wait">
+                {/* ─── TAB 1: PERSONAL INFO ─── */}
+                {activeTab === "personal" && (
+                  <motion.div
+                    key="personal"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-4"
+                  >
+                    <div className="md:col-span-8 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900">Personal Information</h3>
+                          <p className="text-xs text-slate-500">Update your name and primary contact number</p>
+                        </div>
+                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                          Editable
+                        </span>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                            Full Name
+                          </label>
+                          <div className="relative">
+                            <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <Input
+                              value={formData.full_name}
+                              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                              placeholder="e.g. Rahul Sharma"
+                              className="pl-10 h-11 rounded-xl border-slate-200 text-sm font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                            WhatsApp Mobile Number
+                          </label>
+                          <div className="relative">
+                            <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <Input
+                              value={formData.whatsapp_number}
+                              onChange={(e) =>
+                                setFormData({ ...formData, whatsapp_number: e.target.value.replace(/\D/g, "") })
+                              }
+                              placeholder="10-digit mobile number"
+                              maxLength={10}
+                              className="pl-10 h-11 rounded-xl border-slate-200 text-sm font-medium"
+                            />
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-1">Used for score updates and mentor support</p>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                            Target Competitive Exam
+                          </label>
+                          <select
+                            value={formData.target_exam}
+                            onChange={(e) => setFormData({ ...formData, target_exam: e.target.value })}
+                            className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          >
+                            {targetExamsList.map((exam) => (
+                              <option key={exam} value={exam}>
+                                {exam}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <Button
+                          onClick={handleUpdateProfile}
+                          disabled={saving}
+                          className="h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20"
+                        >
+                          {saving ? "Saving Changes..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-4 space-y-4">
+                      {/* Account Meta Card */}
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Account Credentials</h4>
+                        <div className="space-y-3 text-xs">
+                          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Registered Login</span>
+                            <span className="font-bold text-slate-800 truncate block mt-0.5">
+                              {userEmail?.includes("@whatsapp.practicekoro.local")
+                                ? `+91 ${userEmail.split("@")[0]}`
+                                : userEmail || "Not specified"}
+                            </span>
+                          </div>
+                          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Joined Date</span>
+                            <span className="font-bold text-slate-800 block mt-0.5">
+                              {profile?.created_at
+                                ? new Date(profile.created_at).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric"
+                                  })
+                                : "N/A"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ─── TAB 2: PRO MEMBERSHIP ─── */}
+                {activeTab === "membership" && (
+                  <motion.div
+                    key="membership"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="space-y-4"
+                  >
+                    {subscription ? (
+                      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-amber-500/30 shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+                        <div className="relative z-10 space-y-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5">
+                              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/30">
+                                <Crown className="w-7 h-7 fill-slate-950" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-xl font-black text-white">Yearly VIP Pass Active</h3>
+                                  <span className="text-[10px] font-black text-amber-900 bg-amber-400 px-2 py-0.5 rounded-full">
+                                    ★ VIP PASS
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-300 mt-0.5">
+                                  Valid until {subscription.expiryDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-left sm:text-right">
+                              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Status</span>
+                              <span className="text-sm font-black text-emerald-400">UNLIMITED ACCESS</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                            {[
+                              "Unlimited All India Mock Tests & Ranks",
+                              "Chapter-Wise Topic Tests with Instant Solutions",
+                              "High-Yield Study Notes (PDF Ready)",
+                              "Detailed Answer Explanations in Bengali & English",
+                              "Mistakes Notebook & Revision Tracker",
+                              "Direct Mentor & Support Chat Priority"
+                            ].map((benefit, i) => (
+                              <div key={i} className="flex items-center gap-2.5 text-xs text-slate-200">
+                                <div className="w-5 h-5 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center shrink-0">
+                                  <Check className="w-3 h-3" />
+                                </div>
+                                <span>{benefit}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+                          <div className="flex items-center gap-3.5">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
+                              <Crown className="w-6 h-6 fill-slate-950" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-black text-slate-900">Upgrade to PracticeKoro VIP Pass</h3>
+                                <span className="text-[9px] font-black text-amber-900 bg-amber-200 px-2 py-0.5 rounded-full">
+                                  BEST VALUE
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                Complete preparation bundle for WB Food SI, Police, Clerkship & more
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl sm:text-3xl font-black text-slate-900">₹{subscriptionFee}</span>
+                            <span className="text-xs font-bold text-slate-400">/ 1 Full Year</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          {[
+                            "100+ Full-Length Timed Mock Tests",
+                            "Subject-Wise Topic Practice with Explanations",
+                            "Previous Year Question (PYQ) Solved Series",
+                            "Complete PDF Notes & Current Affairs Digests",
+                            "Instant Solution Reviews with Speed Analysis",
+                            "24/7 Student WhatsApp & Mentor Support"
+                          ].map((perk, idx) => (
+                            <div key={idx} className="flex items-center gap-2.5 text-xs text-slate-700">
+                              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                                <Check className="w-3 h-3" />
+                              </div>
+                              <span className="font-semibold">{perk}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="pt-2">
+                          <Button
+                            onClick={handleProPlanUpgrade}
+                            className="w-full sm:w-auto h-12 px-8 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2"
+                          >
+                            <Crown className="w-4 h-4 fill-slate-950" />
+                            <span>Unlock VIP Membership (₹{subscriptionFee}/yr)</span>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* ─── TAB 3: BILLING & ORDERS ─── */}
+                {activeTab === "billing" && (
+                  <motion.div
+                    key="billing"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">Order & Payment History</h3>
+                        <p className="text-xs text-slate-500">Your past transactions and active passes</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => profile?.id && loadPurchases(profile.id)}
+                        disabled={loadingPurchases}
+                        className="h-8 rounded-xl text-xs gap-1.5"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${loadingPurchases ? "animate-spin" : ""}`} />
+                        Refresh
+                      </Button>
+                    </div>
+
+                    {loadingPurchases ? (
+                      <div className="py-12 text-center text-xs text-slate-400">Loading purchase records...</div>
+                    ) : purchases.length === 0 ? (
+                      <div className="py-12 text-center space-y-2">
+                        <Receipt className="w-8 h-8 text-slate-300 mx-auto" />
+                        <p className="text-sm font-bold text-slate-700">No purchase records yet</p>
+                        <p className="text-xs text-slate-400">Your mock test or membership receipts will appear here.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100">
+                        {purchases.map((p) => (
+                          <div key={p.id} className="py-3.5 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                <Receipt className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-800 capitalize">
+                                  {p.content_type === "subscription" ? "Yearly VIP Membership Pass" : `${p.content_type} Access`}
+                                </p>
+                                <p className="text-[11px] text-slate-400">
+                                  {new Date(p.created_at).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit"
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-black text-slate-900 block">₹{p.amount}</span>
+                              <span
+                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                                  p.status === "completed"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                                }`}
+                              >
+                                {p.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* ─── TAB 4: SECURITY ─── */}
+                {activeTab === "security" && (
+                  <motion.div
+                    key="security"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-4"
+                  >
+                    <div className="md:col-span-7 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                      <div className="border-b border-slate-100 pb-4">
+                        <h3 className="text-base font-bold text-slate-900">Change Password</h3>
+                        <p className="text-xs text-slate-500">Update your account login password</p>
+                      </div>
+
+                      <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1.5">New Password</label>
+                          <div className="relative">
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="Minimum 6 characters"
+                              className="h-11 rounded-xl border-slate-200 pr-10 text-sm font-medium"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1.5">Confirm New Password</label>
+                          <Input
+                            type={showNewPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Re-type new password"
+                            className="h-11 rounded-xl border-slate-200 text-sm font-medium"
+                          />
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={updatingPassword || !newPassword}
+                          className="h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20"
+                        >
+                          {updatingPassword ? "Updating..." : "Update Password"}
+                        </Button>
+                      </form>
+                    </div>
+
+                    <div className="md:col-span-5 space-y-4">
+                      {/* Password Reset via Email */}
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Password Recovery</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Forgot your password or want to reset via email link? We'll email you a secure link.
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={handleSendResetEmail}
+                          disabled={sendingResetEmail}
+                          className="w-full h-10 rounded-xl text-xs font-bold border-slate-200"
+                        >
+                          {sendingResetEmail ? "Sending Link..." : "Send Reset Email"}
+                        </Button>
+                      </div>
+
+                      {/* Sign Out Card */}
+                      <div className="bg-rose-50/60 rounded-3xl p-5 border border-rose-100 space-y-2">
+                        <h4 className="text-xs font-bold text-rose-900">Session Management</h4>
+                        <p className="text-[11px] text-rose-700 leading-relaxed">
+                          Sign out of this browser session safely when using shared or cyber cafe devices.
+                        </p>
+                        <Button
+                          onClick={handleLogout}
+                          className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 mt-2"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          Sign Out of PracticeKoro
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ─── TAB 5: PERFORMANCE ─── */}
+                {activeTab === "performance" && (
+                  <motion.div
+                    key="performance"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Attempts</span>
+                        <p className="text-3xl font-black text-slate-900 mt-1">{statistics.totalTests}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Mock & Topic Tests</p>
+                      </div>
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Passed Tests</span>
+                        <p className="text-3xl font-black text-emerald-600 mt-1">{statistics.passedCount}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Above qualifying cutoff</p>
+                      </div>
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pass Ratio</span>
+                        <p className="text-3xl font-black text-indigo-600 mt-1">{statistics.passRate}%</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Accuracy index</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        onClick={() => navigate("/student/results")}
+                        className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-300 text-left transition-all shadow-xs group"
+                      >
+                        <BarChart2 className="w-5 h-5 text-indigo-600 mb-2 group-hover:scale-110 transition-transform" />
+                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">View Full Results</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Check scorecards and answer keys</p>
+                      </button>
+
+                      <button
+                        onClick={() => navigate("/student/mistakes")}
+                        className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-rose-300 text-left transition-all shadow-xs group"
+                      >
+                        <AlertCircle className="w-5 h-5 text-rose-500 mb-2 group-hover:scale-110 transition-transform" />
+                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Mistakes Notebook</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Revise incorrect questions</p>
+                      </button>
+
+                      <button
+                        onClick={() => navigate("/student/bookmarks")}
+                        className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-300 text-left transition-all shadow-xs group"
+                      >
+                        <Bookmark className="w-5 h-5 text-amber-500 mb-2 group-hover:scale-110 transition-transform" />
+                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Bookmarks</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Access saved important questions</p>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ─── TAB 6: HELP & SUPPORT ─── */}
+                {activeTab === "support" && (
+                  <motion.div
+                    key="support"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="space-y-4"
+                  >
+                    {/* Live Support Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <MessageSquare className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">Live Mentor Chat</h4>
+                            <p className="text-[11px] text-slate-500">Direct message our student support</p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => setChatOpen(true)}
+                          className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                        >
+                          Open Chat ({chatUnreadCount} unread)
+                        </Button>
+                      </div>
+
+                      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <Phone className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">WhatsApp Support</h4>
+                            <p className="text-[11px] text-slate-500">Quick response for payment & access issues</p>
+                          </div>
+                        </div>
+                        <a
+                          href="https://wa.me/919876543210?text=Hello%20PracticeKoro%20Support,%20I%20need%20help%20with%20my%20account."
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Chat on WhatsApp
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* FAQs Accordion */}
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                      <h3 className="text-base font-bold text-slate-900">Frequently Asked Questions</h3>
+                      <div className="divide-y divide-slate-100">
+                        {faqs.map((faq, idx) => {
+                          const isExpanded = expandedFaq === idx;
+                          return (
+                            <div key={idx} className="py-3">
+                              <button
+                                onClick={() => setExpandedFaq(isExpanded ? null : idx)}
+                                className="w-full text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-slate-800 hover:text-indigo-600 transition-colors"
+                              >
+                                <span>{faq.q}</span>
+                                <ChevronRight
+                                  className={`w-4 h-4 text-slate-400 transition-transform ${
+                                    isExpanded ? "rotate-90 text-indigo-600" : ""
+                                  }`}
+                                />
+                              </button>
+                              {isExpanded && (
+                                <p className="text-xs text-slate-500 mt-2 leading-relaxed pl-1">
+                                  {faq.a}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
           )}
-        </motion.div>
 
-        {/* Chat Inbox Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          className="bg-white rounded-xl border border-slate-100 overflow-hidden"
-        >
-          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Chat Inbox</p>
-            {chatUnreadCount > 0 && (
-              <span className="text-[9px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded-full">
-                {chatUnreadCount} new
-              </span>
-            )}
-          </div>
-          <div className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">Admin Support</p>
-                <p className="text-xs text-slate-500">Chat with our support team</p>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => setChatOpen(true)}
-            className="w-full p-3 text-center text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center justify-center gap-2"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Open Chat
-          </button>
-        </motion.div>
-
-        {/* Student Chat Component */}
-        {profile && (
-          <StudentChat
-            studentId={profile.id}
-            studentName={profile.full_name || "Student"}
-            isOpen={chatOpen}
-            onOpenChange={setChatOpen}
-          />
-        )}
-
-        {/* Quick Links */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl border border-slate-100 overflow-hidden"
-        >
-          <button
-            onClick={() => navigate("/student/results")}
-            className="flex items-center gap-3 p-3 w-full text-left border-b border-slate-100 active:bg-slate-50 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-4 h-4 text-amber-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 text-sm">Results</p>
-              <p className="text-[10px] text-slate-400">View performance</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300" />
-          </button>
-
-          <button
-            onClick={() => navigate("/student/exams")}
-            className="flex items-center gap-3 p-3 w-full text-left border-b border-slate-100 active:bg-slate-50 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-              <BookOpen className="w-4 h-4 text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 text-sm">Mock Tests</p>
-              <p className="text-[10px] text-slate-400">Browse tests</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300" />
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 p-3 w-full text-left active:bg-red-50 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-              <LogOut className="w-4 h-4 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-red-600 text-sm">Logout</p>
-              <p className="text-[10px] text-slate-400">Sign out</p>
-            </div>
-          </button>
-        </motion.div>
-      </div>
+          {/* Student Chat Modal Component */}
+          {profile && (
+            <StudentChat
+              studentId={profile.id}
+              studentName={profile.full_name || "Student"}
+              isOpen={chatOpen}
+              onOpenChange={setChatOpen}
+            />
+          )}
+        </div>
+      </PullToRefresh>
     </StudentLayout>
   );
 };
