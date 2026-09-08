@@ -1073,7 +1073,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _actionCard(
-                        title: 'Topic Drills',
+                        title: 'Topic Quiz',
                         subtitle: 'Chapter-Wise MCQs',
                         icon: Icons.gps_fixed_rounded,
                         color: const Color(0xFF3B82F6),

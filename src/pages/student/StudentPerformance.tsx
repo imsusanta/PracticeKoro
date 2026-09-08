@@ -209,7 +209,7 @@ export const StudentPerformance = () => {
 
                 <div className="space-y-1">
                   <div className="flex justify-between text-[11px] text-slate-200">
-                    <span>PYQ Practice & Topic Drills</span>
+                    <span>PYQ Practice & Topic Quizzes</span>
                     <span className="font-mono font-bold">{readiness.topicDrillAccuracy}% (25%)</span>
                   </div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">

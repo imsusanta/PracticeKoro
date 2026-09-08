@@ -1127,7 +1127,7 @@ const StudentDashboard = () => {
                 path: "/student/daily",
               },
               {
-                title: "Topic Drill",
+                title: "Topic Quiz",
                 icon: Target,
                 bg: "bg-purple-50 border-purple-200/80 text-purple-600",
                 path: "/student/practice/subject",

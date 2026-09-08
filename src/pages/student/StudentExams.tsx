@@ -723,7 +723,7 @@ const StudentExams = () => {
           </motion.div>
         )}
 
-        {/* Quick Topic Drill Banner when Topic Test tab is active */}
+        {/* Quick Topic Quiz Banner when Topic Test tab is active */}
         {filterType === "topic_wise" && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}

@@ -55,9 +55,9 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-topic-drills",
     category: "practice",
-    title: "Chapter-wise & Topic Drills",
-    subtitle: "Customize MCQ drills by subject, chapter and difficulty",
-    badge: "Drills",
+    title: "Chapter-wise & Topic Quizzes",
+    subtitle: "Customize MCQ quizzes by subject, chapter and difficulty",
+    badge: "Quiz",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
     icon: Zap,
     url: "/student/practice/subject",
@@ -316,7 +316,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
   const popularChips = [
     { label: "WB Police", query: "Police" },
     { label: "Panchayat 2026", query: "Panchayat" },
-    { label: "Topic Drills", query: "Drills" },
+    { label: "Topic Quiz", query: "Quiz" },
     { label: "PYQ Vault", query: "PYQ" },
     { label: "Mistakes Notebook", query: "Mistakes" },
     { label: "Mathematics", query: "Math" },

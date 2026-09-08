@@ -905,7 +905,7 @@ const StudentProfile = () => {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1 sm:pt-2">
                             {[
                               "Unlimited Full-Length Mock Tests & Real Percentile Ranks",
-                              "Chapter-Wise Topic Drills with Instant Solutions",
+                              "Chapter-Wise Topic Quizzes with Instant Solutions",
                               "Previous Year Question (PYQ) Vault & Speed Tests",
                               "Detailed Answer Explanations in Bengali & English",
                               "Automatic Mistakes Notebook & Targeted Revision",

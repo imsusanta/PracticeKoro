@@ -199,7 +199,7 @@ export const PYQPractice = () => {
                   PYQ Vault
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with topic drills</p>
+              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with topic quizzes</p>
             </div>
           </div>
         </div>
