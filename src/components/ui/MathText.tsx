@@ -49,9 +49,9 @@ export const MathText: React.FC<MathTextProps> = ({
               <Latex>{intro}</Latex>
             </p>
           )}
-          <ul className="space-y-2 my-1 text-slate-700">
+          <ul className="space-y-2 my-1">
             {bullets.map((bullet, idx) => (
-              <li key={idx} className="flex items-start gap-2.5 leading-relaxed text-xs sm:text-sm">
+              <li key={idx} className="flex items-start gap-2.5 leading-relaxed text-inherit">
                 <span className="text-blue-600 font-bold text-base leading-none mt-0.5 select-none shrink-0">
                   •
                 </span>
@@ -74,13 +74,13 @@ export const MathText: React.FC<MathTextProps> = ({
 
     if (hasBulletsOrNumbers) {
       return (
-        <div className={cn("math-text-container space-y-2 text-slate-700", className)}>
+        <div className={cn("math-text-container space-y-2", className)}>
           {lines.map((line, idx) => {
             // Markdown bullet
             if (/^[-*]\s+/.test(line)) {
               const content = line.replace(/^[-*]\s+/, '').trim();
               return (
-                <div key={idx} className="flex items-start gap-2.5 leading-relaxed text-xs sm:text-sm">
+                <div key={idx} className="flex items-start gap-2.5 leading-relaxed text-inherit">
                   <span className="text-blue-600 font-bold text-base leading-none mt-0.5 select-none shrink-0">
                     •
                   </span>
@@ -97,7 +97,7 @@ export const MathText: React.FC<MathTextProps> = ({
               const num = numMatch[1];
               const content = numMatch[2];
               return (
-                <div key={idx} className="flex items-start gap-2 leading-relaxed text-xs sm:text-sm">
+                <div key={idx} className="flex items-start gap-2 leading-relaxed text-inherit">
                   <span className="text-blue-600 font-bold text-xs leading-none mt-1 select-none shrink-0 min-w-[18px]">
                     {num}
                   </span>
@@ -110,7 +110,7 @@ export const MathText: React.FC<MathTextProps> = ({
 
             // Regular paragraph line
             return (
-              <p key={idx} className="leading-relaxed text-xs sm:text-sm">
+              <p key={idx} className="leading-relaxed text-inherit">
                 <Latex>{line}</Latex>
               </p>
             );
@@ -121,9 +121,9 @@ export const MathText: React.FC<MathTextProps> = ({
 
     // Regular multi-line paragraphs
     return (
-      <div className={cn("math-text-container space-y-2 text-slate-700", className)}>
+      <div className={cn("math-text-container space-y-2", className)}>
         {lines.map((line, idx) => (
-          <p key={idx} className="leading-relaxed text-xs sm:text-sm">
+          <p key={idx} className="leading-relaxed text-inherit">
             <Latex>{line}</Latex>
           </p>
         ))}

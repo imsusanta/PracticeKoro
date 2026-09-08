@@ -57,7 +57,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
                     {/* Logo and brand container */}
                     <div className="relative z-10 flex flex-col items-center">
-                        {/* Animated Graduation Cap Icon */}
+                        {/* Animated Practice Koro Logo */}
                         <motion.div
                             initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: 1, rotate: 0 }}
@@ -71,11 +71,9 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
                         >
                             {/* Main icon container */}
                             <motion.div
-                                className="relative w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center p-4 shadow-xl shadow-blue-500/25 text-white"
+                                className="relative w-24 h-24 rounded-3xl bg-white flex items-center justify-center p-2 shadow-xl shadow-blue-500/25 border border-slate-100 overflow-hidden"
                             >
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-14 h-14">
-                                    <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
-                                </svg>
+                                <img src="/logo-icon.png" alt="Practice Koro Logo" className="w-full h-full object-cover rounded-2xl" />
                             </motion.div>
                         </motion.div>
 

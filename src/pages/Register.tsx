@@ -143,7 +143,7 @@ const Register = () => {
         className="w-full max-w-sm sm:max-w-md bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col"
       >
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 mb-6">
+        <div className="flex items-center justify-center gap-2.5 mb-6">
           <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 shadow-xs border border-slate-100 bg-white">
             <img src="/logo-icon.png" alt="PracticeKoro" className="w-full h-full object-cover" />
           </div>
@@ -154,7 +154,7 @@ const Register = () => {
         </div>
 
         {/* Title */}
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Create Account
           </h1>

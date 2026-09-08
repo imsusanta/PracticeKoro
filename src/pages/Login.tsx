@@ -194,7 +194,7 @@ const Login = () => {
         className="w-full max-w-sm sm:max-w-md bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col"
       >
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 mb-6">
+        <div className="flex items-center justify-center gap-2.5 mb-6">
           <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 shadow-xs border border-slate-100 bg-white">
             <img src="/logo-icon.png" alt="PracticeKoro" className="w-full h-full object-cover" />
           </div>
@@ -205,7 +205,7 @@ const Login = () => {
         </div>
 
         {/* Welcome Header */}
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Welcome Back
           </h1>
@@ -432,16 +432,6 @@ const Login = () => {
             Register
           </Link>
         </p>
-
-        <div className="text-center mt-4 pt-4 border-t border-slate-100">
-          <Link
-            to="/admin/login"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Lock className="w-3 h-3" />
-            <span>Admin Control Portal</span>
-          </Link>
-        </div>
       </motion.div>
     </div>
   );

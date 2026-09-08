@@ -571,7 +571,7 @@ export const DailyPractice = () => {
                   )}
                 </div>
 
-                <div className="text-slate-900 font-bold text-base sm:text-lg leading-relaxed font-bengali">
+                <div className="text-slate-900 font-bold text-lg sm:text-xl md:text-2xl leading-relaxed font-bengali">
                   <MathText text={questions[currentIndex].question_text} />
                 </div>
 
@@ -589,14 +589,14 @@ export const DailyPractice = () => {
                       <button
                         key={opt.key}
                         onClick={() => selectOption(opt.key)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left text-xs sm:text-sm transition-all group ${
+                        className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left text-base sm:text-lg transition-all group ${
                           isSelected
                             ? "bg-blue-50/80 border-blue-500 text-blue-950 font-bold shadow-sm"
                             : "bg-slate-50/60 border-slate-200/80 text-slate-700 hover:bg-slate-100/70 hover:border-slate-300"
                         }`}
                       >
                         <span
-                          className={`w-7 h-7 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 transition-colors ${
+                          className={`w-9 h-9 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center shrink-0 transition-colors ${
                             isSelected
                               ? "bg-blue-600 text-white"
                               : "bg-white border border-slate-200 text-slate-600 group-hover:border-slate-400"

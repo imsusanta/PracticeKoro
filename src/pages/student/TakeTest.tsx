@@ -41,6 +41,13 @@ import { toast as sonnerToast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { initRazorpayPayment } from "@/utils/payment";
 import { MathText } from "@/components/ui/MathText";
+import {
+  startAttempt as engineStartAttempt,
+  saveAnswers as engineSaveAnswers,
+  submitAttempt as engineSubmitAttempt,
+  saveLocalDraft,
+  clearLocalDraft,
+} from "@/services/attemptEngineService";
 
 interface QuestionDetails {
   id: string;
@@ -49,8 +56,6 @@ interface QuestionDetails {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_answer?: string;
-  explanation?: string | null;
   subject: string | null;
   topic: string | null;
   difficulty: string | null;
@@ -86,6 +91,8 @@ const TakeTest = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [test, setTest] = useState<MockTest | null>(null);
+  const [attemptId, setAttemptId] = useState<string>("");
+  const attemptIdRef = useRef<string>("");
   const [questions, setQuestions] = useState<TestQuestion[]>([]);
   const [isPurchased, setIsPurchased] = useState<boolean>(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -175,136 +182,25 @@ const TakeTest = () => {
     const timeTakenSeconds = Math.floor((Date.now() - currentStartTime.getTime()) / 1000);
 
     try {
-      // 1. Primary: Secure Server-Side Scoring RPC
-      const { data: rpcResult, error: rpcError } = await supabase.rpc("submit_exam_attempt", {
-        p_test_id: testId,
-        p_answers: currentAnswers as any,
-        p_time_taken_seconds: timeTakenSeconds,
-        p_tab_violations: tabViolations,
-        p_fullscreen_violations: fullscreenViolations
+      const activeAttemptId = attemptIdRef.current || `att_${testId}_${session.user.id}_${Date.now()}`;
+
+      const result = await engineSubmitAttempt({
+        attemptId: activeAttemptId,
+        testId: testId,
+        finalAnswers: currentAnswers,
+        timeTakenSeconds,
+        tabViolations,
+        fullscreenViolations,
       });
 
-      if (!rpcError && rpcResult && (rpcResult as any).attempt_id) {
-        const res = rpcResult as any;
-        localStorage.removeItem(`pk_answers_${testId}`);
-        sonnerToast.success("Test Submitted Successfully!", {
-          description: `Score: ${res.score}/${res.total_marks} (${res.percentage}%)`
-        });
-        navigate(`/student/test-review/${res.attempt_id}`);
-        return;
-      }
-
-      console.warn("Server RPC scoring unavailable, using client-side fallback with negative marking...", rpcError);
-
-      // 2. Client-side Fallback (if RPC is pending deployment)
-      const answeredQuestions = Object.keys(currentAnswers).filter(qId => currentAnswers[qId]);
-      const unansweredCount = currentQuestions.length - answeredQuestions.length;
-      let correctCount = 0;
-      let wrongCount = 0;
-      let totalScore = 0;
-      const negMark = currentTest.negative_marking ? (currentTest.negative_marks_per_question || 0.25) : 0;
-      const answerRecords: any[] = [];
-
-      const mistakeRecords: Array<{
-        user_id: string;
-        question_id: string;
-        selected_answer: string;
-        correct_answer: string;
-        is_mastered: boolean;
-        updated_at: string;
-      }> = [];
-
-      currentQuestions.forEach(tq => {
-        const selectedAnswer = currentAnswers[tq.question_id];
-        const isCorrect = selectedAnswer
-          ? selectedAnswer.toUpperCase() === tq.questions.correct_answer?.toUpperCase()
-          : false;
-
-        let marksObtained = 0;
-        if (selectedAnswer) {
-          if (isCorrect) {
-            correctCount++;
-            marksObtained = tq.marks;
-          } else {
-            wrongCount++;
-            marksObtained = -negMark;
-            mistakeRecords.push({
-              user_id: session.user.id,
-              question_id: tq.question_id,
-              selected_answer: selectedAnswer,
-              correct_answer: tq.questions.correct_answer || "",
-              is_mastered: false,
-              updated_at: new Date().toISOString()
-            });
-          }
-        }
-        totalScore += marksObtained;
-        answerRecords.push({
-          question_id: tq.question_id,
-          selected_answer: selectedAnswer || null,
-          is_correct: isCorrect,
-          marks_obtained: marksObtained
-        });
-      });
-
-      if (totalScore < 0) totalScore = 0;
-      const totalMarks = currentTest.total_marks || 0;
-      const percentage = totalMarks > 0 ? Math.round((totalScore / totalMarks) * 100) : 0;
-      const passed = totalScore >= currentTest.passing_marks;
-
-      const { data: attemptData, error: attemptError } = await supabase.from("test_attempts").insert({
-        test_id: testId,
-        user_id: session.user.id,
-        score: totalScore,
-        total_marks: totalMarks,
-        percentage,
-        passed,
-        started_at: currentStartTime.toISOString(),
-        completed_at: new Date().toISOString(),
-        time_taken_seconds: timeTakenSeconds,
-        unanswered_count: unansweredCount,
-        correct_count: correctCount,
-        wrong_count: wrongCount,
-        is_active: false,
-        tab_violations: tabViolations,
-        fullscreen_violations: fullscreenViolations
-      }).select().single();
-
-      if (attemptError || !attemptData) {
-        toast({ title: "Submission Error", description: "Failed to submit test. Please retry.", variant: "destructive" });
-        submitLockRef.current = false;
-        setSubmitting(false);
-        return;
-      }
-
-      const { error: answersError } = await supabase.from("test_answers").insert(
-        answerRecords.map(ans => ({ ...ans, attempt_id: attemptData.id }))
-      );
-      if (answersError) {
-        toast({ title: "Error", description: "Test recorded but answers failed to save. Please contact support with your attempt ID.", variant: "destructive" });
-        submitLockRef.current = false;
-        setSubmitting(false);
-        return;
-      }
-
-      // Record mistakes for Mistakes Notebook and AI recommendations
-      if (mistakeRecords.length > 0) {
-        try {
-          await supabase.from("student_mistakes").upsert(mistakeRecords, {
-            onConflict: "user_id,question_id"
-          });
-        } catch (mErr) {
-          console.warn("Recording mistakes fallback:", mErr);
-        }
-      }
-
-      // Clean up drafts & timer
-      await supabase.from("test_answer_drafts").delete().eq("test_id", testId).eq("user_id", session.user.id);
-      await supabase.from("test_timers").delete().eq("test_id", testId).eq("user_id", session.user.id);
       localStorage.removeItem(`pk_answers_${testId}`);
+      clearLocalDraft(activeAttemptId);
 
-      sonnerToast.success("Test Submitted!", { description: `You scored ${totalScore}/${totalMarks} (${percentage}%)` });
-      navigate(`/student/test-review/${attemptData.id}`);
+      sonnerToast.success("Test Submitted Successfully!", {
+        description: `Score: ${result.score}/${result.totalMarks} (${result.percentage}%)`
+      });
+
+      navigate(`/student/test-review/${result.attemptId}`);
     } catch (err: any) {
       console.error("Submission failed:", err);
       toast({ title: "Submission Failed", description: err.message || "Network error", variant: "destructive" });
@@ -324,30 +220,49 @@ const TakeTest = () => {
     const currentQuestions = questionsRef.current;
     if (currentQuestions.length === 0) return;
     const { data: { session } } = await supabase.auth.getSession();
+
     // Save to local storage first (instant & offline-resilient)
     const currentAnswers = answersRef.current;
     const currentMarked = markedForReviewRef.current;
     localStorage.setItem(`pk_answers_${testId}`, JSON.stringify(currentAnswers));
+
+    saveLocalDraft({
+      attemptId: attemptIdRef.current || testId,
+      testId: testId,
+      answers: currentAnswers,
+      reviewFlags: Array.from(currentMarked),
+      lastSavedAt: new Date().toISOString(),
+      syncedWithServer: false,
+      serverExpiresAt: "",
+    });
 
     if (!navigator.onLine) return;
 
     autoSavingRef.current = true;
     setAutoSaving(true);
     try {
-      const drafts = currentQuestions.map(q => ({
-        test_id: testId,
-        user_id: session.user.id,
-        question_id: q.question_id,
-        selected_answer: currentAnswers[q.question_id] || null,
-        marked_for_review: currentMarked.has(q.question_id),
-        last_saved_at: new Date().toISOString()
-      }));
-      const { error } = await supabase.from("test_answer_drafts").upsert(drafts, { onConflict: "test_id,user_id,question_id" });
-      if (!error) {
-        lastSaveRef.current = new Date();
-        if (!opts?.silent) {
-          sonnerToast.success("Progress saved", { duration: 2000 });
-        }
+      await engineSaveAnswers({
+        attemptId: attemptIdRef.current || testId,
+        answers: currentAnswers,
+        reviewFlags: Array.from(currentMarked),
+      });
+
+      // Also persist to test_answer_drafts for backwards compatibility
+      if (session) {
+        const drafts = currentQuestions.map(q => ({
+          test_id: testId,
+          user_id: session.user.id,
+          question_id: q.question_id,
+          selected_answer: currentAnswers[q.question_id] || null,
+          marked_for_review: currentMarked.has(q.question_id),
+          last_saved_at: new Date().toISOString()
+        }));
+        await supabase.from("test_answer_drafts").upsert(drafts, { onConflict: "test_id,user_id,question_id" });
+      }
+
+      lastSaveRef.current = new Date();
+      if (!opts?.silent) {
+        sonnerToast.success("Progress saved", { duration: 2000 });
       }
     } catch (error) {
       console.error("Auto-save sync error:", error);
@@ -378,270 +293,113 @@ const TakeTest = () => {
       return;
     }
 
-    // Fetch mock test configuration
-    const { data: testData, error: testError } = await supabase
+    // Check entitlement if paid test
+    const { data: testMeta } = await supabase
       .from("mock_tests")
       .select("*")
       .eq("id", testId)
-      .single();
-
-    let activeTest = testData;
-    let processedQuestions: TestQuestion[] = [];
-
-    if (!activeTest) {
-      activeTest = {
-        id: testId || "panchayat-mock-1",
-        title: "Panchayat Full Mock Test 1",
-        description: "Official pattern full-length mock test",
-        duration_minutes: 90,
-        total_marks: 100,
-        passing_marks: 40,
-        shuffle_questions: false,
-        shuffle_options: false,
-        is_paid: false,
-        price: 0,
-        negative_marking: true,
-        negative_marks_per_question: 0.25,
-      };
-
-      processedQuestions = [
-        {
-          id: "q-1",
-          question_id: "q-1",
-          marks: 1,
-          question_order: 1,
-          questions: {
-            id: "q-1",
-            question_text: "ভারতের সংবিধান কোন সালে কার্যকর হয়?",
-            option_a: "1947",
-            option_b: "1950",
-            option_c: "1952",
-            option_d: "1955",
-            correct_answer: "B",
-            explanation: "ভারতের সংবিধান ১৯৫০ সালের ২৬শে জানুয়ারি কার্যকর হয়।",
-            subject: "Indian Polity",
-            topic: "Constitution",
-            difficulty: "Medium",
-          }
-        },
-        {
-          id: "q-2",
-          question_id: "q-2",
-          marks: 1,
-          question_order: 2,
-          questions: {
-            id: "q-2",
-            question_text: "পশ্চিমবঙ্গের সবচেয়ে বড় জেলা কোনটি?",
-            option_a: "দক্ষিণ ২৪ পরগনা",
-            option_b: "উত্তর ২৪ পরগনা",
-            option_c: "পশ্চিম মেদিনীপুর",
-            option_d: "মুর্শিদাবাদ",
-            correct_answer: "A",
-            explanation: "আয়তনের দিক থেকে পশ্চিমবঙ্গের বৃহত্তম জেলা দক্ষিণ ২৪ পরগনা।",
-            subject: "West Bengal GK",
-            topic: "Geography",
-            difficulty: "Medium",
-          }
-        },
-        {
-          id: "q-3",
-          question_id: "q-3",
-          marks: 1,
-          question_order: 3,
-          questions: {
-            id: "q-3",
-            question_text: "মানব শরীরে রক্তের প্রধান উপাদান কোনটি?",
-            option_a: "প্লাজমা",
-            option_b: "লোহিত রক্তকণিকা",
-            option_c: "শ্বেত রক্তকণিকা",
-            option_d: "অণুচক্রিকা",
-            correct_answer: "A",
-            explanation: "রক্তের প্রায় ৫৫ শতাংশই হলো প্লাজমা বা রক্তরস।",
-            subject: "General Science",
-            topic: "Biology",
-            difficulty: "Medium",
-          }
-        },
-        {
-          id: "q-4",
-          question_id: "q-4",
-          marks: 1,
-          question_order: 4,
-          questions: {
-            id: "q-4",
-            question_text: "ভারতের জাতীয় গান কোনটি?",
-            option_a: "জন গণ মন",
-            option_b: "বন্দে মাতরম্",
-            option_c: "সারে জাহাঁ সে আচ্ছা",
-            option_d: "আমার সোনার বাংলা",
-            correct_answer: "B",
-            explanation: "ভারতের জাতীয় গান হলো বঙ্কিমচন্দ্র চট্টোপাধ্যায় রচিত 'বন্দে মাতরম্' এবং জাতীয় সংগীত হলো রবীন্দ্রনাথ ঠাকুরের 'জন গণ মন' ।",
-            subject: "General Knowledge",
-            topic: "National Symbols",
-            difficulty: "Easy",
-          }
-        }
-      ];
-      setIsPurchased(true);
-    } else {
-      // Entitlement Check for Paid Tests
-      if (activeTest.is_paid) {
-        const oneYearAgo = new Date();
-        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-        const { data: purchaseData } = await supabase
-          .from("purchases" as any)
-          .select("id")
-          .eq("user_id", session.user.id)
-          .eq("content_type", "subscription")
-          .eq("status", "completed")
-          .gt("created_at", oneYearAgo.toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!purchaseData) {
-          setTest(activeTest as any);
-          setIsPurchased(false);
-          setLoading(false);
-          return;
-        }
-        setIsPurchased(true);
-      } else {
-        setIsPurchased(true);
-      }
-
-      // 1. Attempt to load questions via secure RPC get_student_exam_questions
-      const { data: rpcQuestions, error: rpcQuestionsError } = await supabase.rpc("get_student_exam_questions", {
-        p_test_id: testId
-      });
-
-      if (!rpcQuestionsError && rpcQuestions && rpcQuestions.length > 0) {
-        processedQuestions = (rpcQuestions as any[]).map(rq => ({
-          id: rq.id,
-          question_id: rq.question_id,
-          marks: rq.marks,
-          question_order: rq.question_order,
-          questions: {
-            id: rq.question_id,
-            question_text: rq.question_text,
-            option_a: rq.option_a,
-            option_b: rq.option_b,
-            option_c: rq.option_c,
-            option_d: rq.option_d,
-            subject: rq.subject,
-            topic: rq.topic,
-            difficulty: rq.difficulty,
-            year: rq.year
-          }
-        }));
-      } else {
-        // Fallback query (stripping explanations during exam)
-        const { data: questionsData, error: questionsError } = await supabase
-          .from("test_questions")
-          .select(`*, questions (*)`)
-          .eq("test_id", testId)
-          .order("question_order", { ascending: true })
-          .order("created_at", { ascending: true });
-
-        if (questionsError) {
-          toast({ title: "Error", description: "Failed to load questions", variant: "destructive" });
-          setLoading(false);
-          navigate("/student/exams");
-          return;
-        }
-
-        if (questionsData && questionsData.length > 0) {
-          processedQuestions = (questionsData as any[]).map(tq => ({
-            ...tq,
-            questions: {
-              ...tq.questions,
-              explanation: null // Never show explanation while taking test
-            }
-          }));
-        }
-      }
-    }
-
-    const restoreDrafts = async () => {
-      const answersMap: { [key: string]: string } = {};
-      const reviewSet = new Set<string>();
-
-      // Check local storage backup
-      const localBackup = localStorage.getItem(`pk_answers_${testId}`);
-      if (localBackup) {
-        try {
-          const parsed = JSON.parse(localBackup);
-          Object.assign(answersMap, parsed);
-        } catch (e) {
-          console.warn("Could not parse local backup:", e);
-        }
-      }
-
-      // Check Supabase draft table
-      const { data: savedAnswers } = await supabase
-        .from("test_answer_drafts")
-        .select("*")
-        .eq("test_id", testId)
-        .eq("user_id", session.user.id);
-
-      if (savedAnswers) {
-        savedAnswers.forEach(ans => {
-          if (ans.selected_answer) answersMap[ans.question_id] = ans.selected_answer;
-          if (ans.marked_for_review) reviewSet.add(ans.question_id);
-        });
-      }
-
-      setAnswers(answersMap);
-      setMarkedForReview(reviewSet);
-    };
-
-    // Restore Timer from DB or initialize
-    const { data: existingTimer } = await supabase
-      .from("test_timers")
-      .select("*")
-      .eq("test_id", testId)
-      .eq("user_id", session.user.id)
       .maybeSingle();
 
-    let initialTime: number;
-    let startDateTime: Date;
+    if (testMeta?.is_paid) {
+      const oneYearAgo = new Date();
+      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
 
-    if (existingTimer) {
-      const endsAt = new Date(existingTimer.ends_at);
-      initialTime = Math.max(0, Math.floor((endsAt.getTime() - Date.now()) / 1000));
-      startDateTime = new Date(existingTimer.started_at);
-      await restoreDrafts();
-      sonnerToast.success("Test Resumed", { description: "Your answers and timer were restored." });
-    } else {
-      initialTime = (activeTest.duration_minutes || 60) * 60;
-      startDateTime = new Date();
-      const endsAt = new Date(startDateTime.getTime() + initialTime * 1000);
+      const { data: purchaseData } = await supabase
+        .from("purchases" as any)
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("content_type", "subscription")
+        .eq("status", "completed")
+        .gt("created_at", oneYearAgo.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      const { error: timerInsertError } = await supabase.from("test_timers").insert({
-        test_id: testId,
-        user_id: session.user.id,
-        started_at: startDateTime.toISOString(),
-        duration_minutes: activeTest.duration_minutes,
-        ends_at: endsAt.toISOString()
-      });
-      // Concurrent tab: reuse the timer that won the unique (test_id, user_id) insert
-      if (timerInsertError) {
-        const { data: racedTimer } = await supabase.from("test_timers").select("*").eq("test_id", testId).eq("user_id", session.user.id).maybeSingle();
-        if (racedTimer) {
-          const racedEndsAt = new Date(racedTimer.ends_at);
-          initialTime = Math.max(0, Math.floor((racedEndsAt.getTime() - Date.now()) / 1000));
-          startDateTime = new Date(racedTimer.started_at);
-          await restoreDrafts();
-        }
+      if (!purchaseData) {
+        setTest(testMeta as any);
+        setIsPurchased(false);
+        setLoading(false);
+        return;
       }
+      setIsPurchased(true);
+    } else {
+      setIsPurchased(true);
     }
 
-    setTest(activeTest as any);
-    setQuestions(processedQuestions);
-    setTimeRemaining(initialTime);
-    setStartTime(startDateTime);
-    setLoading(false);
+    try {
+      const attemptRes = await engineStartAttempt({
+        testId,
+        mode: "simulation",
+      });
+
+      setAttemptId(attemptRes.attemptId);
+      attemptIdRef.current = attemptRes.attemptId;
+
+      const mappedQuestions: TestQuestion[] = attemptRes.questions.map(sq => ({
+        id: sq.id,
+        question_id: sq.questionId,
+        marks: sq.marks,
+        question_order: sq.orderIndex,
+        questions: {
+          id: sq.questionId,
+          question_text: sq.questionText,
+          option_a: sq.optionA,
+          option_b: sq.optionB,
+          option_c: sq.optionC,
+          option_d: sq.optionD,
+          subject: sq.subject,
+          topic: sq.topic || null,
+          difficulty: sq.difficulty || null,
+          year: sq.year || null,
+        }
+      }));
+
+      const activeTest: MockTest = {
+        id: attemptRes.testId,
+        title: attemptRes.testTitle,
+        description: testMeta?.description || null,
+        duration_minutes: attemptRes.durationMinutes,
+        total_marks: attemptRes.totalMarks,
+        passing_marks: attemptRes.passingMarks,
+        shuffle_questions: false,
+        shuffle_options: false,
+        is_paid: Boolean(testMeta?.is_paid),
+        price: testMeta?.price || 0,
+        negative_marking: attemptRes.negativeMarking,
+        negative_marks_per_question: attemptRes.negativeMarksPerQuestion,
+      };
+
+      setTest(activeTest);
+      testRef.current = activeTest;
+      setQuestions(mappedQuestions);
+      questionsRef.current = mappedQuestions;
+
+      // Authoritative timer sync
+      const endsAt = new Date(attemptRes.expiresAt).getTime();
+      const remainingSeconds = Math.max(0, Math.floor((endsAt - Date.now()) / 1000));
+      setTimeRemaining(remainingSeconds);
+      setStartTime(new Date(attemptRes.startedAt));
+      startTimeRef.current = new Date(attemptRes.startedAt);
+
+      // Restore drafts & review flags
+      if (attemptRes.savedResponses && Object.keys(attemptRes.savedResponses).length > 0) {
+        setAnswers(attemptRes.savedResponses);
+        answersRef.current = attemptRes.savedResponses;
+        sonnerToast.success("Test Resumed", { description: "Your answers and timer were restored." });
+      }
+      if (attemptRes.savedReviews && attemptRes.savedReviews.length > 0) {
+        const revSet = new Set(attemptRes.savedReviews);
+        setMarkedForReview(revSet);
+        markedForReviewRef.current = revSet;
+      }
+
+      setLoading(false);
+    } catch (err: any) {
+      console.error("[TakeTest] Failed to initialize exam:", err);
+      toast({ title: "Error", description: err.message || "Failed to load exam", variant: "destructive" });
+      setLoading(false);
+      navigate("/student/exams");
+    }
   }, [testId, navigate, toast]);
 
   useEffect(() => {
@@ -1010,7 +768,7 @@ const TakeTest = () => {
                 </div>
 
                 {/* Question Text */}
-                <div className="text-slate-900 font-bold text-base sm:text-lg leading-relaxed font-bengali pt-1">
+                <div className="text-slate-900 font-bold text-lg sm:text-xl md:text-2xl leading-relaxed font-bengali pt-1">
                   <MathText text={currentQuestion.questions.question_text} />
                 </div>
 
@@ -1036,7 +794,7 @@ const TakeTest = () => {
                       >
                         <RadioGroupItem value={opt} id={`opt-${opt}`} className="sr-only" />
                         <span
-                          className={`w-8 h-8 rounded-xl text-xs font-black flex items-center justify-center shrink-0 transition-colors ${
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm sm:text-base font-black flex items-center justify-center shrink-0 transition-colors ${
                             isSelected
                               ? "bg-blue-600 text-white shadow-xs"
                               : "bg-slate-100 group-hover:bg-slate-200 text-slate-700"
@@ -1046,13 +804,13 @@ const TakeTest = () => {
                         </span>
                         <Label
                           htmlFor={`opt-${opt}`}
-                          className="flex-1 cursor-pointer font-bengali text-xs sm:text-sm font-medium leading-relaxed pt-1 select-none"
+                          className="flex-1 cursor-pointer font-bengali text-base sm:text-lg font-medium leading-relaxed pt-0.5 select-none"
                         >
                           <MathText text={optText} />
                         </Label>
                         {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-1">
-                            <Check className="w-3 h-3 stroke-[3]" />
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-1">
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
                           </div>
                         )}
                       </div>

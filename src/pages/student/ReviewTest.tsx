@@ -581,7 +581,7 @@ export const ReviewTest = () => {
                   </button>
                 </div>
 
-                <div className="text-slate-900 font-bold text-base leading-relaxed font-bengali">
+                <div className="text-slate-900 font-bold text-base sm:text-lg md:text-xl leading-relaxed font-bengali">
                   <MathText text={a.questions.question_text} />
                 </div>
 
@@ -603,10 +603,10 @@ export const ReviewTest = () => {
                     return (
                       <div
                         key={opt.key}
-                        className={`p-3 rounded-xl border text-xs sm:text-sm font-medium flex items-center gap-2.5 ${style}`}
+                        className={`p-3 sm:p-3.5 rounded-xl border text-sm sm:text-base font-medium flex items-center gap-2.5 ${style}`}
                       >
                         <span
-                          className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
+                          className={`w-7 h-7 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center shrink-0 ${
                             isCorrectOption
                               ? "bg-emerald-600 text-white"
                               : isUserSelected

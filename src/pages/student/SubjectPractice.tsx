@@ -547,7 +547,7 @@ export const SubjectPractice = () => {
                   </button>
                 </div>
 
-                <div className="text-slate-900 font-bold text-base sm:text-lg leading-relaxed font-bengali">
+                <div className="text-slate-900 font-bold text-lg sm:text-xl md:text-2xl leading-relaxed font-bengali">
                   <MathText text={practiceQuestions[currentIndex].question_text} />
                 </div>
 
@@ -578,10 +578,10 @@ export const SubjectPractice = () => {
                         key={opt.key}
                         disabled={showAnswer}
                         onClick={() => selectAnswer(opt.key)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left text-xs sm:text-sm font-medium transition-all cursor-pointer ${optionStyle}`}
+                        className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left text-base sm:text-lg font-medium transition-all cursor-pointer ${optionStyle}`}
                       >
                         <span
-                          className={`w-7 h-7 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 ${
+                          className={`w-9 h-9 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center shrink-0 ${
                             showAnswer && isCorrect
                               ? "bg-emerald-600 text-white"
                               : showAnswer && selected && !isCorrect
