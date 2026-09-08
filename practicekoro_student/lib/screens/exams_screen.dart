@@ -105,7 +105,16 @@ class _ExamsScreenState extends State<ExamsScreen> {
                                 color: const Color(0xFF94A3B8),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 14),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: Image.asset(
+                                'assets/images/exam_hero_banner.png',
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
                           ],
                         ),
                       ),

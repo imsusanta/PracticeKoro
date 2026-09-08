@@ -208,8 +208,8 @@ const StudentLayout = ({
 
           {/* Sidebar Navigation Content */}
           <SidebarContent className="py-3 px-2 flex flex-col gap-3 group-data-[collapsible=icon]:px-1.5">
-            {/* Pro Upgrade Mini-Banner for Free Users (Soft harmonious amber palette) */}
-            {!hasSubscription && (
+            {/* Pro Upgrade Mini-Banner for Free Users (Shown ONLY on Home & Settings) */}
+            {!hasSubscription && (location.pathname === "/student/dashboard" || location.pathname === "/student/profile") && (
               <div className="mx-1.5 p-3 rounded-2xl bg-gradient-to-br from-amber-500/[0.08] via-orange-500/[0.04] to-transparent border border-amber-200/70 group-data-[collapsible=icon]:hidden">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0">

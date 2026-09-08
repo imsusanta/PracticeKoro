@@ -274,21 +274,6 @@ const StudentExams = () => {
             </button>
 
             <button
-              onClick={handleProPlanClick}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-2xs hover:shadow-xs active:scale-95 transition-all ${
-                hasSubscription
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                  : "bg-[#FEF3C7] hover:bg-amber-100 border-amber-200 text-amber-900"
-              }`}
-              title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
-            >
-              <Crown className={`w-3.5 h-3.5 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
-              <span className="text-xs font-bold whitespace-nowrap">
-                {hasSubscription ? "Pro Plan" : "Upgrade to Pro"}
-              </span>
-            </button>
-
-            <button
               onClick={() => navigate("/student/notifications")}
               className="relative p-2 text-slate-700 hover:text-blue-600 rounded-full hover:bg-slate-100 transition-colors"
               aria-label="Notifications"
@@ -339,43 +324,13 @@ const StudentExams = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 p-5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white select-none"
+          className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 border border-slate-200/60 bg-[#0A2655] select-none"
         >
-          {/* Ambient Glows */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
-          <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-sky-400/15 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div className="max-w-lg">
-              <span className="inline-block bg-white/15 backdrop-blur-sm text-sky-200 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-white/10">
-                EXAM PREPARATION
-              </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-[1.15] mt-2">
-                Master Every Exam <br />
-                <span className="text-[#FBBF24]">With Precision</span>
-              </h2>
-              <p className="text-[11px] sm:text-xs text-blue-100 font-medium leading-relaxed mt-2 max-w-md">
-                Full-length simulated mocks and topic-wise practice designed strictly on West Bengal PSC & SSC exam patterns.
-              </p>
-            </div>
-
-            {/* Personal Performance KPI Cards (No test count mentioned) */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5 text-center flex flex-col items-center justify-center min-w-[90px] sm:min-w-[110px]">
-                <p className="text-xl sm:text-2xl font-black text-white leading-tight">
-                  {String(completedTests).padStart(2, '0')}
-                </p>
-                <p className="text-sky-200 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider mt-1">Completed</p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5 text-center flex flex-col items-center justify-center min-w-[90px] sm:min-w-[110px]">
-                <p className="text-xl sm:text-2xl font-black text-emerald-300 leading-tight">
-                  {avgScore}%
-                </p>
-                <p className="text-sky-200 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider mt-1">Avg Accuracy</p>
-              </div>
-            </div>
-          </div>
+          <img
+            src="/images/exam_hero_banner.png"
+            alt="Exam Preparation - Master Every Exam With Precision"
+            className="w-full h-auto object-cover block"
+          />
         </motion.div>
 
         {/* ═══════════════════════════════════════════════════════════════

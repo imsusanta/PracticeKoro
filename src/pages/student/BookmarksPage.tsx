@@ -269,18 +269,6 @@ export const BookmarksPage = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate(hasSubscription ? "/student/profile" : "/student/exams")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-colors shadow-2xs ${
-                hasSubscription
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                  : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-100"
-              }`}
-              title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
-            >
-              <Crown className={`w-3.5 h-3.5 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
-              <span>{hasSubscription ? "Pro Plan" : "Upgrade to Pro"}</span>
-            </button>
-            <button
               onClick={() => navigate("/student/notifications")}
               className="relative w-9 h-9 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm transition-colors"
               aria-label="Notifications"

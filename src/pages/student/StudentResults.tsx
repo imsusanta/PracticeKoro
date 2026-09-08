@@ -311,21 +311,6 @@ const StudentResults = () => {
               </button>
 
               <button
-                onClick={handleProPlanClick}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-2xs hover:shadow-xs active:scale-95 transition-all ${
-                  hasSubscription
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                    : "bg-[#FEF3C7] hover:bg-amber-100 border-amber-300/80 text-amber-900"
-                }`}
-                title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
-              >
-                <Crown className={`w-4 h-4 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
-                <span className="text-xs font-bold whitespace-nowrap">
-                  {hasSubscription ? "Pro Plan" : "Upgrade to Pro"}
-                </span>
-              </button>
-
-              <button
                 onClick={() => navigate("/student/notifications")}
                 className="relative p-2 text-slate-700 hover:text-blue-600 rounded-full hover:bg-slate-100 transition-colors"
                 aria-label="Notifications"
