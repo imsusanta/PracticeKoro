@@ -19,97 +19,84 @@ import {
   Crown,
   Bell,
   CheckCircle2,
-  ChevronRight
+  ChevronRight,
+  Play,
+  Zap,
+  RotateCcw,
+  Target,
+  ShieldCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-
-interface PYQQuestion {
-  id: string;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  explanation: string | null;
-  subject: string | null;
-  topic: string | null;
-  difficulty: string | null;
-  year: number | null;
-}
+import { EXAM_CATALOG } from "@/data/examCatalog";
+import { fetchPYQQuestions } from "@/services/drillService";
+import { DrillConfig, DrillQuestion } from "@/types/drills";
+import InteractiveDrillRunner from "@/components/student/InteractiveDrillRunner";
 
 export const PYQPractice = () => {
   const navigate = useNavigate();
   const { hasSubscription } = useStudentAuth();
   const [loading, setLoading] = useState(true);
-  const [questions, setQuestions] = useState<PYQQuestion[]>([]);
+  const [questions, setQuestions] = useState<DrillQuestion[]>([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  
+  // Selection States
+  const [selectedExamId, setSelectedExamId] = useState<string>("all");
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [revealedAnswers, setRevealedAnswers] = useState<Set<string>>(new Set());
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
-  const [pyqTab, setPyqTab] = useState<"year" | "subject" | "topic">("year");
-  const [selectedPaper, setSelectedPaper] = useState<string | null>(null);
+  
+  // Active Interactive Drill Modal
+  const [activeDrillConfig, setActiveDrillConfig] = useState<DrillConfig | null>(null);
+
+  const selectedExam = EXAM_CATALOG.find(e => e.id === selectedExamId);
 
   const loadPYQData = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/login");
-        return;
+      if (session) {
+        const { data: bookmarks } = await supabase
+          .from("student_bookmarks")
+          .select("question_id")
+          .eq("user_id", session.user.id);
+
+        if (bookmarks) {
+          setBookmarkedIds(new Set(bookmarks.map(b => b.question_id)));
+        }
       }
 
-      const { data: bookmarks } = await supabase
-        .from("student_bookmarks")
-        .select("question_id")
-        .eq("user_id", session.user.id);
+      const qList = await fetchPYQQuestions({
+        year: selectedYear !== "all" ? Number(selectedYear) : undefined,
+        subject: selectedSubject !== "all" ? selectedSubject : undefined,
+        questionCount: 150
+      });
 
-      if (bookmarks) {
-        setBookmarkedIds(new Set(bookmarks.map(b => b.question_id)));
-      }
+      setQuestions(qList);
 
-      const { data, error } = await supabase
-        .from("questions")
-        .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, subject, topic, difficulty, year")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const yearsSet = new Set<number>();
+      const subsSet = new Set<string>();
 
-      if (error) {
-        console.error("Error loading PYQs:", error);
-        toast.error("Failed to load Previous Year Questions");
-        return;
-      }
+      qList.forEach(q => {
+        if (q.year) yearsSet.add(q.year);
+        if (q.subject) subsSet.add(q.subject);
+      });
 
-      if (data) {
-        const qList = data as PYQQuestion[];
-        setQuestions(qList);
+      const defaultYears = selectedExam?.pyqYears || [2024, 2023, 2022, 2021, 2020];
+      defaultYears.forEach(y => yearsSet.add(y));
 
-        const yearsSet = new Set<number>();
-        const subsSet = new Set<string>();
-
-        qList.forEach(q => {
-          if (q.year) yearsSet.add(q.year);
-          if (q.subject) subsSet.add(q.subject);
-        });
-
-        const defaultYears = [2025, 2024, 2023, 2022, 2021, 2020];
-        const combinedYears = Array.from(yearsSet).length > 0
-          ? Array.from(yearsSet).sort((a, b) => b - a)
-          : defaultYears;
-
-        setAvailableYears(combinedYears);
-        setAvailableSubjects(Array.from(subsSet).sort());
-      }
+      setAvailableYears(Array.from(yearsSet).sort((a, b) => b - a));
+      setAvailableSubjects(Array.from(subsSet).sort());
     } catch (err) {
       console.error("Error in loadPYQData:", err);
+      toast.error("Failed to load Previous Year Questions");
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [selectedYear, selectedSubject, selectedExam]);
 
   useEffect(() => {
     loadPYQData();
@@ -126,7 +113,10 @@ export const PYQPractice = () => {
 
   const toggleBookmark = async (questionId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      toast.info("Please sign in to bookmark questions");
+      return;
+    }
 
     const isBookmarked = bookmarkedIds.has(questionId);
     if (isBookmarked) {
@@ -151,26 +141,50 @@ export const PYQPractice = () => {
         });
 
       setBookmarkedIds(prev => new Set(prev).add(questionId));
-      toast.success("Saved to Bookmarks");
+      toast.success("Saved to Bookmarks ⭐");
     }
   };
 
   const filteredQuestions = questions.filter(q => {
     if (selectedYear !== "all" && q.year && q.year.toString() !== selectedYear) return false;
-    if (selectedSubject !== "all" && q.subject !== selectedSubject) return false;
+    if (selectedSubject !== "all" && q.subject && q.subject.toLowerCase() !== selectedSubject.toLowerCase()) return false;
     if (searchQuery.trim()) {
       const qText = q.question_text.toLowerCase();
       const sub = (q.subject || "").toLowerCase();
       const top = (q.topic || "").toLowerCase();
+      const src = (q.source || "").toLowerCase();
       const search = searchQuery.toLowerCase();
-      return qText.includes(search) || sub.includes(search) || top.includes(search);
+      return qText.includes(search) || sub.includes(search) || top.includes(search) || src.includes(search);
     }
     return true;
   });
 
+  const launchDrill = (mode: "instant_feedback" | "timed_quiz", count: number = 10) => {
+    const deck = filteredQuestions.length > 0 ? filteredQuestions : questions;
+    const drillQuestions = deck.slice(0, count);
+
+    const examTitle = selectedExam ? selectedExam.name : "West Bengal PYQ Drill";
+    const yearSub = selectedYear !== "all" ? `(${selectedYear})` : "Archive";
+
+    setActiveDrillConfig({
+      title: `${examTitle} ${yearSub}`,
+      subtitle: `${count} Questions • ${mode === "instant_feedback" ? "Instant Solutions" : "Timed Quiz"}`,
+      examId: selectedExamId,
+      examName: examTitle,
+      subject: selectedSubject !== "all" ? selectedSubject : undefined,
+      year: selectedYear !== "all" ? Number(selectedYear) : undefined,
+      questionCount: count,
+      marksPerQuestion: 1,
+      negativeMarks: selectedExam?.defaultNegativeMarks ?? 0.25,
+      timeLimitMinutes: Math.max(5, Math.round(count * 1.2)),
+      mode: mode
+    });
+  };
+
   return (
-    <StudentLayout title="Previous Year Questions" subtitle="Exam Vault">
+    <StudentLayout title="Previous Year Questions" subtitle="Exam Vault & Interactive Drills">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
+        
         {/* Top Brand Header */}
         <div className="flex items-center justify-between gap-2 pb-1">
           <div className="flex items-center gap-2.5">
@@ -183,10 +197,10 @@ export const PYQPractice = () => {
                   Practice<span className="text-blue-600">Koro</span>
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                  PYQ Vault
+                  Smart PYQ Vault
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">Previous Year Papers & Solved Questions</p>
+              <p className="text-[11px] text-slate-500 font-medium">Previous Year Solved Papers & Real Test Drills</p>
             </div>
           </div>
 
@@ -229,14 +243,32 @@ export const PYQPractice = () => {
                 Previous Year <span className="text-[#FBBF24]">Question Vault</span>
               </h1>
               <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
-                Practice actual questions asked in West Bengal Panchayat, WBSSC Group C/D, WBP Constable/SI, and WBCS exams with step-by-step solutions.
+                Practice verified past questions from WB Panchayat, WBP Constable/SI, WBPSC Clerkship, WB Primary TET, WBCS, and Railway with step-by-step solutions and real-time drills.
               </p>
+
+              {/* Quick Launch Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <Button
+                  onClick={() => launchDrill("instant_feedback", 10)}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 h-9"
+                >
+                  <Zap className="w-4 h-4 fill-slate-950" />
+                  <span>10 MCQ Quick Drill</span>
+                </Button>
+                <Button
+                  onClick={() => launchDrill("timed_quiz", 20)}
+                  className="bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold text-xs rounded-xl gap-1.5 h-9 backdrop-blur-sm"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>20 MCQ Timed Test</span>
+                </Button>
+              </div>
             </div>
 
             <div className="flex gap-3 shrink-0">
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-center min-w-[90px]">
-                <p className="text-2xl font-black text-amber-300 leading-none">{availableYears.length}</p>
-                <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wider mt-1">Exam Years</p>
+                <p className="text-2xl font-black text-amber-300 leading-none">{EXAM_CATALOG.length}</p>
+                <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wider mt-1">Exams</p>
               </div>
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-center min-w-[90px]">
                 <p className="text-2xl font-black text-emerald-300 leading-none">{questions.length}</p>
@@ -247,71 +279,80 @@ export const PYQPractice = () => {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            SCREEN 16 SUB-TABS: [ Year | Subject | Topic ]
+            EXAM SELECTOR RIBBON / CAROUSEL
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="bg-slate-100/90 p-1 rounded-2xl flex items-center max-w-md border border-slate-200/80">
-          {[
-            { id: "year", label: "Year" },
-            { id: "subject", label: "Subject" },
-            { id: "topic", label: "Topic" },
-          ].map((tab) => (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-blue-600" /> Target Examination:
+            </span>
+            <span className="text-xs font-bold text-blue-600">
+              {selectedExam ? selectedExam.conductingBody : "All Boards"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
             <button
-              key={tab.id}
-              onClick={() => setPyqTab(tab.id as any)}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                pyqTab === tab.id
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+              onClick={() => setSelectedExamId("all")}
+              className={`px-3.5 py-2 rounded-2xl text-xs font-black transition-all shrink-0 ${
+                selectedExamId === "all"
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                  : "bg-white border border-slate-200/90 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
-              {tab.label}
+              All Exams (সকল পরীক্ষা)
             </button>
-          ))}
-        </div>
-
-        {/* Screen 16: 4 Year Paper Cards when Year tab is active */}
-        {pyqTab === "year" && (
-          <div className="space-y-2.5">
-            {[
-              { id: "p-2024", title: "Panchayat PYQ 2024", subtitle: "100 Questions Real Exam Paper", year: 2024, iconBg: "bg-purple-100 text-purple-700" },
-              { id: "p-2023", title: "Panchayat PYQ 2023", subtitle: "100 Questions", year: 2023, iconBg: "bg-emerald-100 text-emerald-700" },
-              { id: "p-2022", title: "Panchayat PYQ 2022", subtitle: "100 Questions", year: 2022, iconBg: "bg-blue-100 text-blue-700" },
-              { id: "p-2021", title: "Panchayat PYQ 2021", subtitle: "100 Questions", year: 2021, iconBg: "bg-purple-100 text-purple-700" },
-            ].map((paper) => (
-              <motion.div
-                key={paper.id}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
+            {EXAM_CATALOG.map((exam) => (
+              <button
+                key={exam.id}
                 onClick={() => {
-                  setSelectedYear(paper.year.toString());
-                  setSelectedPaper(paper.id);
-                  toast.success(`Loaded ${paper.title}`);
+                  setSelectedExamId(exam.id);
+                  if (exam.pyqYears.length > 0) {
+                    setSelectedYear(exam.pyqYears[0].toString());
+                  }
                 }}
-                className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer flex items-center justify-between shadow-xs ${
-                  selectedYear === paper.year.toString()
-                    ? "border-blue-500 ring-2 ring-blue-500/10"
-                    : "border-slate-200/90 hover:border-slate-300"
+                className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                  selectedExamId === exam.id
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-white border border-slate-200/90 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${paper.iconBg}`}>
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-sm text-slate-900 leading-tight">
-                      {paper.title}
-                    </h4>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      {paper.subtitle}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </motion.div>
+                <span>{exam.name}</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 font-mono font-bold">
+                  {exam.pyqYears[0]}
+                </span>
+              </button>
             ))}
+          </div>
+        </div>
+
+        {/* Selected Exam Detailed Overview Pill */}
+        {selectedExam && (
+          <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-sm text-slate-900 font-display">
+                  {selectedExam.bengaliName}
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">
+                  {selectedExam.conductingBody}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-200">
+                  -{selectedExam.defaultNegativeMarks} Negative
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">
+                {selectedExam.description}
+              </p>
+            </div>
+
+            <Button
+              onClick={() => launchDrill("instant_feedback", 15)}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold gap-1.5 h-9 shrink-0 shadow-sm"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Start {selectedExam.name} Drill</span>
+            </Button>
           </div>
         )}
 
@@ -324,7 +365,7 @@ export const PYQPractice = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search PYQs by topic, keyword, or exam question..."
+              placeholder="Search PYQs by topic, formula, or exam question..."
               className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
@@ -395,25 +436,35 @@ export const PYQPractice = () => {
         {/* Counter and Action Bar */}
         <div className="flex items-center justify-between px-1">
           <p className="text-xs font-bold text-slate-600">
-            Showing <span className="text-blue-600 font-black">{filteredQuestions.length}</span> PYQ Questions
+            Showing <span className="text-blue-600 font-black">{filteredQuestions.length}</span> Solved Questions
           </p>
-          <button
-            onClick={() => {
-              if (revealedAnswers.size > 0) setRevealedAnswers(new Set());
-              else setRevealedAnswers(new Set(filteredQuestions.map(q => q.id)));
-            }}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
-          >
-            {revealedAnswers.size > 0 ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5" /> Hide All Answers
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5" /> Reveal All Answers
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (revealedAnswers.size > 0) setRevealedAnswers(new Set());
+                else setRevealedAnswers(new Set(filteredQuestions.map(q => q.id)));
+              }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+            >
+              {revealedAnswers.size > 0 ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5" /> Hide Solutions
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5" /> Reveal Solutions
+                </>
+              )}
+            </button>
+            <Button
+              size="sm"
+              onClick={() => launchDrill("instant_feedback", 10)}
+              className="h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold gap-1 shadow-2xs"
+            >
+              <Play className="w-3 h-3" />
+              <span>Launch Drill</span>
+            </Button>
+          </div>
         </div>
 
         {/* Question Cards List */}
@@ -433,6 +484,7 @@ export const PYQPractice = () => {
             <Button
               variant="outline"
               onClick={() => {
+                setSelectedExamId("all");
                 setSelectedYear("all");
                 setSelectedSubject("all");
                 setSearchQuery("");
@@ -477,6 +529,11 @@ export const PYQPractice = () => {
                           • {q.topic}
                         </span>
                       )}
+                      {q.source && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+                          {q.source}
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => toggleBookmark(q.id)}
@@ -504,7 +561,7 @@ export const PYQPractice = () => {
                       { key: "C", text: q.option_c },
                       { key: "D", text: q.option_d },
                     ].map(opt => {
-                      const isCorrect = opt.key === q.correct_answer.toUpperCase();
+                      const isCorrect = opt.key === q.correct_answer.toUpperCase().trim();
                       const highlight = isRevealed && isCorrect;
 
                       return (
@@ -585,6 +642,16 @@ export const PYQPractice = () => {
             })}
           </div>
         )}
+
+        {/* Interactive Drill Modal */}
+        {activeDrillConfig && (
+          <InteractiveDrillRunner
+            config={activeDrillConfig}
+            questions={filteredQuestions.length > 0 ? filteredQuestions.slice(0, activeDrillConfig.questionCount) : questions.slice(0, activeDrillConfig.questionCount)}
+            onClose={() => setActiveDrillConfig(null)}
+          />
+        )}
+
       </div>
     </StudentLayout>
   );

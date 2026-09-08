@@ -7,13 +7,10 @@ import { MathText } from "@/components/ui/MathText";
 import {
   BookOpen,
   CheckCircle2,
-  XCircle,
   Clock,
   Target,
-  Trophy,
   ArrowRight,
   ArrowLeft,
-  RotateCcw,
   Sparkles,
   ChevronRight,
   Bookmark,
@@ -25,114 +22,96 @@ import {
   ShieldCheck,
   Languages,
   Brain,
-  Check,
+  Zap,
   HelpCircle,
-  FileQuestion,
+  Eye,
+  EyeOff,
+  Flame,
+  Search,
+  Filter
 } from "lucide-react";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { fetchTopicQuestions } from "@/services/drillService";
+import { DrillConfig, DrillQuestion } from "@/types/drills";
+import InteractiveDrillRunner from "@/components/student/InteractiveDrillRunner";
+import { useStudentAuth } from "@/contexts/StudentContext";
 
-interface Question {
-  id: string;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  explanation: string | null;
-  subject: string | null;
-  topic: string | null;
-  difficulty: string | null;
-}
-
-// Icon helper for subjects
-const getSubjectIcon = (subjectName: string) => {
-  const s = (subjectName || "").toLowerCase();
-  if (s.includes("hist") || s.includes("ইতিহাস")) return History;
-  if (s.includes("geog") || s.includes("ভূগোল")) return Globe2;
-  if (s.includes("math") || s.includes("গণিত")) return Calculator;
-  if (s.includes("sci") || s.includes("বিজ্ঞান")) return Atom;
-  if (s.includes("polity") || s.includes("সংবিধান")) return ShieldCheck;
-  if (s.includes("eng") || s.includes("ইংরেজি")) return Languages;
-  if (s.includes("reason") || s.includes("রিজনিং") || s.includes("gi")) return Brain;
-  return BookOpen;
-};
-
-// Color theme helper for subjects
-const getSubjectColor = (subjectName: string) => {
-  const s = (subjectName || "").toLowerCase();
-  if (s.includes("hist")) return { bg: "bg-amber-50 text-amber-600 border-amber-200", badge: "text-amber-700 bg-amber-50" };
-  if (s.includes("geog")) return { bg: "bg-emerald-50 text-emerald-600 border-emerald-200", badge: "text-emerald-700 bg-emerald-50" };
-  if (s.includes("math")) return { bg: "bg-blue-50 text-blue-600 border-blue-200", badge: "text-blue-700 bg-blue-50" };
-  if (s.includes("sci")) return { bg: "bg-purple-50 text-purple-600 border-purple-200", badge: "text-purple-700 bg-purple-50" };
-  if (s.includes("polity")) return { bg: "bg-rose-50 text-rose-600 border-rose-200", badge: "text-rose-700 bg-rose-50" };
-  if (s.includes("eng")) return { bg: "bg-indigo-50 text-indigo-600 border-indigo-200", badge: "text-indigo-700 bg-indigo-50" };
-  return { bg: "bg-sky-50 text-sky-600 border-sky-200", badge: "text-sky-700 bg-sky-50" };
-};
+const STANDARD_SUBJECT_PRESETS = [
+  { id: "General Knowledge", name: "General Knowledge", bengaliName: "সাধারণ জ্ঞান ও কারেন্ট অ্যাফেয়ার্স", icon: Globe2, color: "bg-amber-500", textCol: "text-amber-700", borderCol: "border-amber-200", bgCol: "bg-amber-50" },
+  { id: "Mathematics", name: "Mathematics", bengaliName: "পাটিগণিত ও প্রাথমিক গণিত", icon: Calculator, color: "bg-blue-500", textCol: "text-blue-700", borderCol: "border-blue-200", bgCol: "bg-blue-50" },
+  { id: "General Science", name: "General Science", bengaliName: "সাধারণ বিজ্ঞান (পদার্থ, রসায়ন, জীববিজ্ঞান)", icon: Atom, color: "bg-emerald-500", textCol: "text-emerald-700", borderCol: "border-emerald-200", bgCol: "bg-emerald-50" },
+  { id: "History", name: "History", bengaliName: "ভারতের ইতিহাস ও জাতীয় আন্দোলন", icon: History, color: "bg-orange-500", textCol: "text-orange-700", borderCol: "border-orange-200", bgCol: "bg-orange-50" },
+  { id: "Geography", name: "Geography", bengaliName: "পশ্চিমবঙ্গ ও ভারতের ভূগোল", icon: Globe2, color: "bg-teal-500", textCol: "text-teal-700", borderCol: "border-teal-200", bgCol: "bg-teal-50" },
+  { id: "Indian Polity", name: "Indian Polity", bengaliName: "ভারতীয় সংবিধান ও পঞ্চায়েতি রাজ", icon: ShieldCheck, color: "bg-rose-500", textCol: "text-rose-700", borderCol: "border-rose-200", bgCol: "bg-rose-50" },
+  { id: "English", name: "English", bengaliName: "General English (Grammar & Vocabulary)", icon: Languages, color: "bg-indigo-500", textCol: "text-indigo-700", borderCol: "border-indigo-200", bgCol: "bg-indigo-50" },
+  { id: "Bengali", name: "Bengali", bengaliName: "বাংলা ভাষা, সাহিত্য ও ব্যাকরণ", icon: BookOpen, color: "bg-pink-500", textCol: "text-pink-700", borderCol: "border-pink-200", bgCol: "bg-pink-50" },
+  { id: "Reasoning", name: "Reasoning", bengaliName: "লজিক্যাল রিজনিং ও সাধারণ বুদ্ধিমত্তা", icon: Brain, color: "bg-purple-500", textCol: "text-purple-700", borderCol: "border-purple-200", bgCol: "bg-purple-50" },
+];
 
 export const SubjectPractice = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useStudentAuth();
+
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [topicsBySubject, setTopicsBySubject] = useState<{ [subject: string]: string[] }>({});
 
-  // Selection states
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [selectedTopic, setSelectedTopic] = useState<string>("");
+  // Configuration States
+  const [selectedSubject, setSelectedSubject] = useState<string>("Mathematics");
+  const [selectedTopic, setSelectedTopic] = useState<string>("All Topics");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
   const [questionCount, setQuestionCount] = useState<number>(10);
+  const [drillMode, setDrillMode] = useState<"instant_feedback" | "timed_quiz">("instant_feedback");
 
-  // Practice state
-  const [isPracticing, setIsPracticing] = useState(false);
-  const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<{ [qId: string]: string }>({});
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [practiceFinished, setPracticeFinished] = useState(false);
-  const [startTime, setStartTime] = useState<number>(0);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // Study / Preview Mode States
+  const [previewQuestions, setPreviewQuestions] = useState<DrillQuestion[]>([]);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [searchTopicQuery, setSearchTopicQuery] = useState("");
+
+  // Interactive Drill Modal
+  const [activeDrillConfig, setActiveDrillConfig] = useState<DrillConfig | null>(null);
 
   const loadTaxonomy = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: qData, error } = await supabase
+      const { data: qData } = await supabase
         .from("questions")
         .select("subject, topic")
         .not("subject", "is", null);
 
-      if (error) throw error;
+      const subMap: { [subject: string]: Set<string> } = {};
+
+      STANDARD_SUBJECT_PRESETS.forEach(p => {
+        subMap[p.id] = new Set();
+      });
 
       if (qData) {
-        const subMap: { [subject: string]: Set<string> } = {};
         qData.forEach(q => {
           if (q.subject) {
             if (!subMap[q.subject]) subMap[q.subject] = new Set();
             if (q.topic) subMap[q.subject].add(q.topic);
           }
         });
+      }
 
-        const subList = Object.keys(subMap).sort();
-        const formattedTopics: { [sub: string]: string[] } = {};
-        subList.forEach(s => {
-          formattedTopics[s] = Array.from(subMap[s]).sort();
-        });
+      const formattedTopics: { [sub: string]: string[] } = {};
+      Object.keys(subMap).forEach(s => {
+        formattedTopics[s] = Array.from(subMap[s]).sort();
+      });
 
-        setSubjects(subList);
-        setTopicsBySubject(formattedTopics);
+      setSubjects(Object.keys(subMap));
+      setTopicsBySubject(formattedTopics);
 
-        if (subList.length > 0) {
-          const urlSub = searchParams.get("subject");
-          const matched = urlSub ? subList.find(s => s.toLowerCase() === urlSub.toLowerCase()) : null;
-          const chosen = matched || subList[0];
-          setSelectedSubject(chosen);
-          setSelectedTopic("All Topics");
-        }
+      const urlSub = searchParams.get("subject");
+      if (urlSub) {
+        const match = Object.keys(subMap).find(s => s.toLowerCase() === urlSub.toLowerCase());
+        if (match) setSelectedSubject(match);
       }
     } catch (err) {
       console.error("Error loading subjects/topics:", err);
-      toast.error("Failed to load practice subjects");
     } finally {
       setLoading(false);
     }
@@ -142,592 +121,445 @@ export const SubjectPractice = () => {
     loadTaxonomy();
   }, [loadTaxonomy]);
 
-  const handleSubjectChange = (subj: string) => {
-    setSelectedSubject(subj);
-    setSelectedTopic("All Topics");
-  };
-
-  const startPractice = async () => {
-    if (!selectedSubject) return;
-    try {
-      setLoading(true);
-      let query = supabase
-        .from("questions")
-        .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, subject, topic, difficulty")
-        .eq("subject", selectedSubject);
-
-      if (selectedTopic && selectedTopic !== "All Topics") {
-        query = query.eq("topic", selectedTopic);
+  // Load preview questions for selected subject
+  useEffect(() => {
+    let isCancelled = false;
+    fetchTopicQuestions(selectedSubject, selectedTopic, selectedDifficulty, 20).then(qs => {
+      if (!isCancelled) {
+        setPreviewQuestions(qs);
       }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedSubject, selectedTopic, selectedDifficulty]);
 
-      const { data, error } = await query.limit(questionCount * 2);
-
-      if (error || !data || data.length === 0) {
-        toast.error("No questions found for this topic yet.");
-        setLoading(false);
-        return;
-      }
-
-      const shuffled = (data as Question[]).sort(() => 0.5 - Math.random()).slice(0, questionCount);
-      setPracticeQuestions(shuffled);
-      setCurrentIndex(0);
-      setUserAnswers({});
-      setShowAnswer(false);
-      setPracticeFinished(false);
-      setStartTime(Date.now());
-      setIsPracticing(true);
-    } catch (err) {
-      console.error("Error starting practice:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const selectAnswer = (ans: string) => {
-    if (showAnswer) return;
-    const currentQ = practiceQuestions[currentIndex];
-    setUserAnswers(prev => ({ ...prev, [currentQ.id]: ans }));
-    setShowAnswer(true);
-
-    if (ans.toUpperCase() !== currentQ.correct_answer.toUpperCase()) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          supabase.from("student_mistakes").upsert({
-            user_id: session.user.id,
-            question_id: currentQ.id,
-            selected_answer: ans,
-            correct_answer: currentQ.correct_answer,
-            is_mastered: false,
-            updated_at: new Date().toISOString()
-          }, { onConflict: "user_id,question_id" }).then();
-        }
+  // Load bookmarks
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("student_bookmarks")
+      .select("question_id")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (data) setBookmarkedIds(new Set(data.map((b: any) => b.question_id)));
       });
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentIndex < practiceQuestions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setShowAnswer(false);
-    } else {
-      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-      setPracticeFinished(true);
-    }
-  };
+  }, [user]);
 
   const toggleBookmark = async (qId: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!user) {
+      toast.info("বুকমার্ক সংরক্ষণ করতে লগইন করুন");
+      return;
+    }
     const isBookmarked = bookmarkedIds.has(qId);
     if (isBookmarked) {
-      await supabase.from("student_bookmarks").delete().eq("user_id", session.user.id).eq("question_id", qId);
+      await supabase.from("student_bookmarks").delete().eq("user_id", user.id).eq("question_id", qId);
       setBookmarkedIds(prev => {
         const next = new Set(prev);
         next.delete(qId);
         return next;
       });
-      toast.info("Removed from Bookmarks");
+      toast.info("বুকমার্ক থেকে সরানো হয়েছে");
     } else {
-      await supabase.from("student_bookmarks").insert({ user_id: session.user.id, question_id: qId });
+      await supabase.from("student_bookmarks").insert({ user_id: user.id, question_id: qId });
       setBookmarkedIds(prev => new Set(prev).add(qId));
-      toast.success("Saved to Bookmarks");
+      toast.success("বুকমার্কে সংরক্ষিত হয়েছে ⭐");
     }
   };
 
-  const total = practiceQuestions.length;
-  let correct = 0;
-  practiceQuestions.forEach(q => {
-    if (userAnswers[q.id]?.toUpperCase() === q.correct_answer.toUpperCase()) {
-      correct++;
-    }
-  });
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const handleStartDrill = () => {
+    const topicLabel = selectedTopic !== "All Topics" ? ` • ${selectedTopic}` : "";
+    setActiveDrillConfig({
+      title: `${selectedSubject}${topicLabel}`,
+      subtitle: `${questionCount} Questions • ${drillMode === "instant_feedback" ? "Instant Solutions" : "Timed Quiz"}`,
+      subject: selectedSubject,
+      topic: selectedTopic !== "All Topics" ? selectedTopic : undefined,
+      difficulty: selectedDifficulty,
+      questionCount,
+      marksPerQuestion: 1,
+      negativeMarks: 0.25,
+      timeLimitMinutes: Math.max(5, Math.round(questionCount * 1.2)),
+      mode: drillMode
+    });
+  };
 
-  const availableTopics = topicsBySubject[selectedSubject] || [];
+  const currentPreset = STANDARD_SUBJECT_PRESETS.find(p => p.id === selectedSubject) || STANDARD_SUBJECT_PRESETS[0];
+  const availableTopics = ["All Topics", ...(topicsBySubject[selectedSubject] || [])];
+
+  const filteredTopics = availableTopics.filter(t => 
+    searchTopicQuery.trim() === "" || t.toLowerCase().includes(searchTopicQuery.toLowerCase())
+  );
 
   return (
-    <StudentLayout title="Subject Practice" subtitle="Chapter-wise question practice">
-      <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 md:py-6 pb-24 md:pb-12 space-y-6">
+    <StudentLayout title="Subject Practice" subtitle="Chapter-wise Smart Practice & Speed Drills">
+      <div className="w-full max-w-5xl lg:max-w-6xl mx-auto px-3 sm:px-6 py-4 md:py-6 pb-24 md:pb-12 space-y-6">
 
-        {!isPracticing ? (
-          /* ═══════════════════════════════════════════════════════════════
-              SUBJECT & TOPIC SELECTION (Clean, modern, easy-to-understand)
-              ═══════════════════════════════════════════════════════════════ */
-          <div className="space-y-6">
-            {/* Header & Navigation */}
-            <div>
-              <button
-                onClick={() => navigate("/student/practice")}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors mb-2 cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Practice</span>
-              </button>
+        {/* Header Ribbon */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate("/student/practice")}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Practice Center-এ ফিরে যান</span>
+          </button>
+          <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            অধ্যায়ভিত্তিক অনুশীলন
+          </span>
+        </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                    Subject & Topic Practice
-                  </h1>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Select a subject and chapter to start targeted question practice with instant solutions.
-                  </p>
-                </div>
-
-                {/* Feature Pills */}
-                <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Instant Solutions
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Untimed Practice
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Selection Container */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
-              {/* STEP 1: Select Subject */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">
-                      1
-                    </span>
-                    <span>Select Subject</span>
-                  </label>
-                  <span className="text-xs text-slate-400 font-medium">
-                    {subjects.length} {subjects.length === 1 ? "Subject available" : "Subjects available"}
-                  </span>
-                </div>
-
-                {subjects.length === 0 && !loading ? (
-                  <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-                    <FileQuestion className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-slate-700">No subjects found</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Please check back later or try another practice mode.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {subjects.map((sub) => {
-                      const Icon = getSubjectIcon(sub);
-                      const isSelected = selectedSubject === sub;
-                      const colors = getSubjectColor(sub);
-                      const topicCount = topicsBySubject[sub]?.length || 0;
-
-                      return (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => handleSubjectChange(sub)}
-                          className={`p-4 rounded-2xl border text-left transition-all relative flex items-center justify-between gap-3 cursor-pointer group ${
-                            isSelected
-                              ? "bg-blue-50/60 border-blue-500 ring-2 ring-blue-500/20 shadow-xs"
-                              : "bg-white border-slate-200/90 hover:border-blue-300 hover:bg-slate-50/50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div
-                              className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${colors.bg}`}
-                            >
-                              <Icon className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <h3 className="text-sm font-bold text-slate-900 truncate">
-                                {sub}
-                              </h3>
-                              <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                {topicCount} {topicCount === 1 ? "Chapter" : "Chapters"}
-                              </p>
-                            </div>
-                          </div>
-
-                          {isSelected ? (
-                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                            </div>
-                          ) : (
-                            <div className="w-6 h-6 rounded-full border border-slate-300 group-hover:border-blue-400 shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* STEP 2: Select Topic / Chapter */}
-              {selectedSubject && (
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">
-                        2
-                      </span>
-                      <span>Select Chapter or Topic</span>
-                    </label>
-                    <span className="text-xs text-slate-400 font-medium">
-                      {selectedTopic === "All Topics" ? "Mixed Practice" : "Single Chapter"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {/* All Topics option */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTopic("All Topics")}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                        selectedTopic === "All Topics" || !selectedTopic
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-transparent"
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>All Topics (Combined)</span>
-                    </button>
-
-                    {/* Individual Topics */}
-                    {availableTopics.map((top) => {
-                      const isSelected = selectedTopic === top;
-                      return (
-                        <button
-                          key={top}
-                          type="button"
-                          onClick={() => setSelectedTopic(top)}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all font-bengali cursor-pointer ${
-                            isSelected
-                              ? "bg-blue-600 text-white shadow-xs"
-                              : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80"
-                          }`}
-                        >
-                          {top}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 3: Question Count */}
-              <div className="space-y-3 pt-4 border-t border-slate-100">
-                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">
-                    3
-                  </span>
-                  <span>Number of Questions</span>
-                </label>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {[
-                    { count: 5, label: "5 Questions", time: "~3 mins" },
-                    { count: 10, label: "10 Questions", time: "~5 mins", recommended: true },
-                    { count: 20, label: "20 Questions", time: "~10 mins" },
-                    { count: 30, label: "30 Questions", time: "~15 mins" },
-                  ].map((item) => {
-                    const isSelected = questionCount === item.count;
-                    return (
-                      <button
-                        key={item.count}
-                        type="button"
-                        onClick={() => setQuestionCount(item.count)}
-                        className={`p-3 rounded-xl border text-center transition-all cursor-pointer relative ${
-                          isSelected
-                            ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        {item.recommended && (
-                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-2xs">
-                            Recommended
-                          </span>
-                        )}
-                        <div className="font-bold text-xs sm:text-sm">{item.label}</div>
-                        <div
-                          className={`text-[10px] mt-0.5 ${
-                            isSelected ? "text-slate-300" : "text-slate-400"
-                          }`}
-                        >
-                          {item.time}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Action Button & Summary */}
-              <div className="pt-2">
-                <Button
-                  onClick={startPractice}
-                  disabled={loading || !selectedSubject}
-                  className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-all"
-                >
-                  <span>Start Practice ({questionCount} Questions)</span>
-                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                </Button>
-
-                <p className="text-center text-xs text-slate-400 mt-3">
-                  Targeting: <span className="font-semibold text-slate-700">{selectedSubject}</span>
-                  {selectedTopic && selectedTopic !== "All Topics" && (
-                    <span> • <span className="font-semibold text-slate-700">{selectedTopic}</span></span>
-                  )}
-                </p>
-              </div>
-            </div>
+        {/* ═══════════════════════════════════════════════════════════════
+            SUBJECT SELECTION CARDS
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-black text-slate-900 font-display flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+              <span>বিষয় নির্বাচন করুন (Select Subject)</span>
+            </h2>
+            <span className="text-xs text-slate-500 font-medium">৯টি মূল বিষয়</span>
           </div>
-        ) : !practiceFinished ? (
-          /* ═══════════════════════════════════════════════════════════════
-              ACTIVE PRACTICE QUESTION FLOW (Clean, focused, distraction-free)
-              ═══════════════════════════════════════════════════════════════ */
-          <div className="space-y-4 max-w-3xl mx-auto">
-            {/* Top Bar with Progress */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 text-xs font-bold">
-                  {selectedSubject}
-                </span>
-                {selectedTopic && selectedTopic !== "All Topics" && (
-                  <span className="text-xs font-medium text-slate-500 font-bengali">
-                    • {selectedTopic}
-                  </span>
-                )}
-              </div>
 
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs font-bold text-slate-600">
-                  Question <span className="text-blue-600 font-black">{currentIndex + 1}</span> of {practiceQuestions.length}
-                </span>
-                <button
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
+            {STANDARD_SUBJECT_PRESETS.map((item) => {
+              const Icon = item.icon;
+              const isSelected = selectedSubject === item.id;
+
+              return (
+                <motion.div
+                  key={item.id}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    if (window.confirm("Do you want to exit this practice session?")) {
-                      setIsPracticing(false);
-                    }
+                    setSelectedSubject(item.id);
+                    setSelectedTopic("All Topics");
                   }}
-                  className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 shadow-2xs ${
+                    isSelected
+                      ? "border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/50"
+                      : "border-slate-200/90 bg-white hover:border-slate-300"
+                  }`}
                 >
-                  Exit
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${item.bgCol} ${item.textCol} ${item.borderCol}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm text-slate-900 truncate">
+                      {item.name}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-bengali">
+                      {item.bengaliName}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            DRILL CONFIGURATOR CARD
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${currentPreset.color}`} />
+                <h3 className="text-lg font-black text-slate-900 font-display">
+                  {currentPreset.name} Practice Drill
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 font-bengali">
+                {currentPreset.bengaliName} • ড্রিল কনফিগার করুন এবং পরীক্ষা শুরু করুন
+              </p>
+            </div>
+
+            <Button
+              onClick={handleStartDrill}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm px-6 h-11 shadow-md shadow-blue-500/20 gap-2 shrink-0 self-start sm:self-auto"
+            >
+              <Zap className="w-4 h-4 fill-white" />
+              <span>ড্রিল শুরু করুন ({questionCount} MCQs)</span>
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Topic Dropdown / Chips */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                টপিক / অধ্যায়
+              </label>
+              <select
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
+              >
+                {availableTopics.map(top => (
+                  <option key={top} value={top}>{top}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. Question Count */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                প্রশ্নের সংখ্যা
+              </label>
+              <div className="grid grid-cols-4 gap-1">
+                {[10, 20, 30, 50].map((cnt) => (
+                  <button
+                    key={cnt}
+                    onClick={() => setQuestionCount(cnt)}
+                    className={`h-10 rounded-xl text-xs font-bold transition-all ${
+                      questionCount === cnt
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {cnt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Difficulty */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                ডিফিকাল্টি লেভেল
+              </label>
+              <div className="grid grid-cols-4 gap-1">
+                {[
+                  { id: "all", label: "All" },
+                  { id: "easy", label: "সহজ" },
+                  { id: "medium", label: "মাঝারি" },
+                  { id: "hard", label: "কঠিন" },
+                ].map((dif) => (
+                  <button
+                    key={dif.id}
+                    onClick={() => setSelectedDifficulty(dif.id as any)}
+                    className={`h-10 rounded-xl text-[11px] font-bold transition-all ${
+                      selectedDifficulty === dif.id
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {dif.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Drill Mode */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                প্র্যাকটিস মোড
+              </label>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  onClick={() => setDrillMode("instant_feedback")}
+                  className={`h-10 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                    drillMode === "instant_feedback"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="তাৎক্ষণিক সমাধান দেখুন"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Instant</span>
+                </button>
+                <button
+                  onClick={() => setDrillMode("timed_quiz")}
+                  className={`h-10 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                    drillMode === "timed_quiz"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="টাইমার সহ পরীক্ষা দিন"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Timed</span>
                 </button>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-blue-600 h-full rounded-full transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / practiceQuestions.length) * 100}%` }}
-              />
+        {/* ═══════════════════════════════════════════════════════════════
+            TOPIC CHAPTERS & STUDY PREVIEW
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-base font-black text-slate-900 font-display">
+                {selectedSubject} প্রশ্নব্যাংক ও পূর্বরূপ (Question Bank Preview)
+              </h3>
+              <p className="text-xs text-slate-500">
+                অনুশীলন শুরু করার আগে প্রশ্নগুলি অধ্যয়ন করুন অথবা বুকমার্ক করুন
+              </p>
             </div>
 
-            {/* Question Card */}
-            {practiceQuestions[currentIndex] && (
-              <motion.div
-                key={practiceQuestions[currentIndex].id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-2xs space-y-5"
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (revealedIds.size > 0) setRevealedIds(new Set());
+                  else setRevealedIds(new Set(previewQuestions.map(q => q.id)));
+                }}
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <span className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 font-mono font-black text-xs flex items-center justify-center border border-blue-100">
-                    {String(currentIndex + 1).padStart(2, "0")}
-                  </span>
-                  <button
-                    onClick={() => toggleBookmark(practiceQuestions[currentIndex].id)}
-                    className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer"
-                    aria-label="Bookmark Question"
-                  >
-                    {bookmarkedIds.has(practiceQuestions[currentIndex].id) ? (
-                      <BookmarkCheck className="w-5 h-5 text-amber-500 fill-amber-500" />
-                    ) : (
-                      <Bookmark className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
+                {revealedIds.size > 0 ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5" /> সব উত্তর লুকান
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5" /> সব সমাধান দেখুন
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
 
-                <div className="text-slate-900 font-bold text-lg sm:text-xl md:text-2xl leading-relaxed font-bengali">
-                  <MathText text={practiceQuestions[currentIndex].question_text} />
-                </div>
+          {/* Question Cards Grid */}
+          <div className="space-y-3.5">
+            {previewQuestions.map((q, idx) => {
+              const isRevealed = revealedIds.has(q.id);
+              const isBookmarked = bookmarkedIds.has(q.id);
 
-                {/* Option Buttons */}
-                <div className="space-y-2.5">
-                  {[
-                    { key: "A", text: practiceQuestions[currentIndex].option_a },
-                    { key: "B", text: practiceQuestions[currentIndex].option_b },
-                    { key: "C", text: practiceQuestions[currentIndex].option_c },
-                    { key: "D", text: practiceQuestions[currentIndex].option_d },
-                  ].map((opt) => {
-                    const selected = userAnswers[practiceQuestions[currentIndex].id] === opt.key;
-                    const isCorrect = opt.key === practiceQuestions[currentIndex].correct_answer.toUpperCase();
+              return (
+                <div
+                  key={q.id}
+                  className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-100/90 shadow-2xs hover:shadow-xs hover:border-blue-200 transition-all space-y-3.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 font-mono font-bold text-xs flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      {q.topic && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
+                          {q.topic}
+                        </span>
+                      )}
+                      {q.difficulty && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-medium uppercase">
+                          {q.difficulty}
+                        </span>
+                      )}
+                      {q.year && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-mono">
+                          PYQ {q.year}
+                        </span>
+                      )}
+                    </div>
 
-                    let optionStyle = "bg-slate-50/60 border-slate-200/80 text-slate-700 hover:bg-slate-100/70 hover:border-slate-300";
-                    if (showAnswer) {
-                      if (isCorrect) {
-                        optionStyle = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-sm";
-                      } else if (selected && !isCorrect) {
-                        optionStyle = "bg-rose-50 border-rose-400 text-rose-950 font-bold";
-                      }
-                    } else if (selected) {
-                      optionStyle = "bg-blue-50/80 border-blue-500 text-blue-950 font-bold";
-                    }
+                    <button
+                      onClick={() => toggleBookmark(q.id)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-amber-500 transition-colors"
+                      title={isBookmarked ? "Remove Bookmark" : "Save Question"}
+                    >
+                      {isBookmarked ? (
+                        <BookmarkCheck className="w-4 h-4 text-amber-500 fill-amber-500" />
+                      ) : (
+                        <Bookmark className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
 
-                    return (
-                      <button
-                        key={opt.key}
-                        disabled={showAnswer}
-                        onClick={() => selectAnswer(opt.key)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left text-base sm:text-lg font-medium transition-all cursor-pointer ${optionStyle}`}
-                      >
-                        <span
-                          className={`w-9 h-9 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center shrink-0 ${
-                            showAnswer && isCorrect
-                              ? "bg-emerald-600 text-white"
-                              : showAnswer && selected && !isCorrect
-                              ? "bg-rose-600 text-white"
-                              : "bg-white border border-slate-200 text-slate-700"
+                  <div className="text-slate-900 font-bold text-sm sm:text-base leading-relaxed font-bengali">
+                    <MathText text={q.question_text} />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { key: "A", text: q.option_a },
+                      { key: "B", text: q.option_b },
+                      { key: "C", text: q.option_c },
+                      { key: "D", text: q.option_d },
+                    ].map((opt) => {
+                      const isCorrect = opt.key === q.correct_answer.toUpperCase().trim();
+                      const highlight = isRevealed && isCorrect;
+
+                      return (
+                        <div
+                          key={opt.key}
+                          className={`p-2.5 sm:p-3 rounded-xl border text-xs font-medium flex items-center gap-2 transition-all ${
+                            highlight
+                              ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-2xs"
+                              : "bg-slate-50/70 border-slate-200/80 text-slate-700"
                           }`}
                         >
-                          {opt.key}
-                        </span>
-                        <span className="flex-1 font-bengali">
-                          <MathText text={opt.text} />
-                        </span>
-                        {showAnswer && isCorrect && (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                        )}
-                        {showAnswer && selected && !isCorrect && (
-                          <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span
+                            className={`w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 ${
+                              highlight
+                                ? "bg-emerald-600 text-white"
+                                : "bg-white border border-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {opt.key}
+                          </span>
+                          <span className="flex-1 font-bengali">
+                            <MathText text={opt.text} />
+                          </span>
+                          {highlight && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                {/* Instant Explanation Card */}
-                <AnimatePresence>
-                  {showAnswer && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="pt-4 border-t border-slate-100 space-y-3"
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                    <button
+                      onClick={() => {
+                        setRevealedIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(q.id)) next.delete(q.id);
+                          else next.add(q.id);
+                          return next;
+                        });
+                      }}
+                      className="self-start inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700"
                     >
-                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-xs sm:text-sm leading-relaxed font-bengali">
-                        <p className="font-bold text-slate-900 mb-1 flex items-center gap-1.5">
-                          💡 Explanation:
-                        </p>
-                        {(() => {
-                          const currQ = practiceQuestions[currentIndex];
-                          const ans = (currQ.correct_answer || '').toUpperCase().trim();
-                          const correctText = ans === 'A' ? currQ.option_a : ans === 'B' ? currQ.option_b : ans === 'C' ? currQ.option_c : ans === 'D' ? currQ.option_d : null;
-                          return (
-                            <div className="text-emerald-700 font-bold mb-2 flex items-center flex-wrap gap-1.5">
-                              <span>✓ Correct Answer: ({ans})</span>
-                              {correctText && (
-                                <span className="font-semibold text-emerald-950">
-                                  <MathText text={correctText} formatBullets={false} />
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()}
-                        {practiceQuestions[currentIndex].explanation ? (
-                          <MathText text={practiceQuestions[currentIndex].explanation!} />
-                        ) : (
-                          <p className="text-slate-500 text-xs font-sans">Standard textbook solution applies for this topic.</p>
+                      {isRevealed ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" /> সমাধান লুকান
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5" /> সঠিক উত্তর ও সমাধান
+                        </>
+                      )}
+                    </button>
+
+                    {isRevealed && (
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs font-bengali space-y-1">
+                        <div className="font-bold text-emerald-800">
+                          ✓ সঠিক অপশন: ({q.correct_answer})
+                        </div>
+                        {q.explanation && (
+                          <div className="text-slate-700 pt-1 border-t border-slate-200/60 leading-relaxed">
+                            <strong>ব্যাখ্যা:</strong> <MathText text={q.explanation} />
+                          </div>
                         )}
                       </div>
-
-                      <Button
-                        onClick={nextQuestion}
-                        className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm cursor-pointer"
-                      >
-                        <span>{currentIndex < practiceQuestions.length - 1 ? "Next Question" : "Complete Practice"}</span>
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ) : (
-          /* ═══════════════════════════════════════════════════════════════
-              FINISHED / SCORE SCREEN
-              ═══════════════════════════════════════════════════════════════ */
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="space-y-4 max-w-2xl mx-auto"
-          >
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs text-center space-y-6">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-                <Trophy className="w-8 h-8" />
-              </div>
+        </div>
 
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">Practice Completed!</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Topic: <span className="font-semibold text-slate-800 font-bengali">{selectedTopic || selectedSubject}</span>
-                </p>
-              </div>
-
-              {/* Stats Row */}
-              <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
-                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100">
-                  <p className="text-2xl font-black text-slate-900">{correct}/{total}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Score</p>
-                </div>
-                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100">
-                  <p className="text-2xl font-black text-blue-600">{accuracy}%</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Accuracy</p>
-                </div>
-                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100">
-                  <p className="text-2xl font-black text-emerald-600">{elapsedSeconds}s</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Time Spent</p>
-                </div>
-              </div>
-
-              {/* Action Recommendation */}
-              <div className="bg-blue-50/70 rounded-2xl p-4 sm:p-5 border border-blue-100 text-left space-y-1.5">
-                <div className="flex items-center gap-2 text-blue-900 font-bold text-xs sm:text-sm">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  <span>Recommendation:</span>
-                </div>
-                <p className="text-xs text-blue-950 leading-relaxed">
-                  {accuracy >= 80
-                    ? "Great job! You have strong command over this topic. Try practicing another chapter or take a full mock test."
-                    : `You scored ${accuracy}%. Missed questions are saved to your Mistakes Notebook so you can review and improve.`}
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2.5 justify-center pt-2">
-                <Button
-                  onClick={startPractice}
-                  className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-10 px-4 flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Practice Again</span>
-                </Button>
-                <Button
-                  onClick={() => setIsPracticing(false)}
-                  variant="outline"
-                  className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold h-10 px-4 cursor-pointer"
-                >
-                  Change Topic
-                </Button>
-                <Button
-                  onClick={() => navigate("/student/mistakes")}
-                  className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-10 px-4 cursor-pointer"
-                >
-                  View Mistakes
-                </Button>
-              </div>
-            </div>
-          </motion.div>
+        {/* Active Interactive Drill Modal */}
+        {activeDrillConfig && (
+          <InteractiveDrillRunner
+            config={activeDrillConfig}
+            questions={previewQuestions.slice(0, activeDrillConfig.questionCount)}
+            onClose={() => setActiveDrillConfig(null)}
+          />
         )}
+
       </div>
     </StudentLayout>
   );
