@@ -19,6 +19,7 @@ import {
   Newspaper
 } from "lucide-react";
 import { Exam, MockTest } from "@/services/examService";
+import { EXAM_CATALOG } from "@/data/examCatalog";
 
 interface DashboardSearchProps {
   exams?: Exam[];
@@ -64,7 +65,7 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-pyq-drills",
     category: "practice",
-    title: "PYQ Practice Archive",
+    title: "PYQ Question Vault",
     subtitle: "Previous years questions with instant explanations & speed mode",
     badge: "PYQ",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
@@ -75,7 +76,7 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
     id: "tool-mistakes-book",
     category: "practice",
     title: "Mistakes Notebook",
-    subtitle: "Review your past mistakes, classify error causes & master concepts",
+    subtitle: "Review past mistakes, classify root causes & achieve zero negative marking",
     badge: "Revision",
     badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
     icon: RotateCcw,
@@ -189,13 +190,28 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
   const allItems: SearchItem[] = React.useMemo(() => {
     const items: SearchItem[] = [];
 
-    // 1. Target Exams
-    exams.forEach((exam) => {
+    // 1. Target Exams (uses DB exams or falls back to official EXAM_CATALOG)
+    const examList = exams.length > 0
+      ? exams.map((e) => {
+          const matchedCatalog = EXAM_CATALOG.find((c) => c.id === e.id);
+          return {
+            id: e.id,
+            name: e.name,
+            bengaliName: matchedCatalog?.bengaliName,
+          };
+        })
+      : EXAM_CATALOG.map((c) => ({
+          id: c.id,
+          name: c.name,
+          bengaliName: c.bengaliName,
+        }));
+
+    examList.forEach((exam) => {
       items.push({
         id: `exam-${exam.id}`,
         category: "exam",
         title: exam.name,
-        subtitle: "Official Target Exam • Full Mocks & Cutoffs",
+        subtitle: exam.bengaliName ? `${exam.bengaliName} • Full Mocks & Cutoffs` : "Official Target Exam • Full Mocks & Cutoffs",
         badge: "Target Exam",
         badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
         icon: Target,
@@ -299,16 +315,17 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
 
   const popularChips = [
     { label: "WB Police", query: "Police" },
-    { label: "Panchayet 2026", query: "Panchayet" },
-    { label: "PYQ Drills", query: "PYQ" },
-    { label: "Mistakes Book", query: "Mistakes" },
+    { label: "Panchayat 2026", query: "Panchayat" },
+    { label: "Topic Drills", query: "Drills" },
+    { label: "PYQ Vault", query: "PYQ" },
+    { label: "Mistakes Notebook", query: "Mistakes" },
     { label: "Mathematics", query: "Math" },
   ];
 
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 max-w-[190px] xs:max-w-[240px] sm:max-w-sm md:max-w-md lg:max-w-lg mx-1.5 sm:mx-3 md:mx-4"
+      className="relative flex-1 min-w-0 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-xl mx-2 sm:mx-4"
     >
       {/* Search Input Bar */}
       <div
@@ -316,15 +333,15 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
           setIsOpen(true);
           inputRef.current?.focus();
         }}
-        className={`group relative flex items-center h-8 sm:h-8.5 md:h-9 px-2.5 sm:px-3.5 rounded-full border transition-all cursor-text shadow-2xs ${
+        className={`group relative flex items-center h-8.5 sm:h-9 md:h-9.5 px-3 sm:px-3.5 rounded-full border transition-all cursor-text shadow-2xs ${
           isOpen
-            ? "bg-white border-blue-500 ring-2 ring-blue-500/20"
+            ? "bg-white border-[#0066FF] ring-2 ring-[#0066FF]/20"
             : "bg-slate-100/90 hover:bg-slate-100 border-slate-200/90 hover:border-slate-300"
         }`}
       >
         <Search
           className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 transition-colors ${
-            isOpen ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+            isOpen ? "text-[#0066FF]" : "text-slate-400 group-hover:text-slate-600"
           }`}
         />
 
@@ -339,7 +356,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search exams, mock tests, topics..."
-          className="w-full bg-transparent outline-none border-none text-[11.5px] sm:text-xs md:text-sm text-slate-900 placeholder:text-slate-400 font-medium px-1.5 sm:px-2 min-w-0"
+          className="w-full bg-transparent outline-none border-none text-[11.5px] sm:text-xs md:text-sm text-slate-900 placeholder:text-slate-400 font-medium px-2 min-w-0"
         />
 
         {query ? (
@@ -350,14 +367,14 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
               setQuery("");
               inputRef.current?.focus();
             }}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors shrink-0"
+            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors shrink-0 cursor-pointer"
             aria-label="Clear search"
           >
-            <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <X className="w-3.5 h-3.5" />
           </button>
         ) : (
-          <div className="hidden md:flex items-center gap-1 shrink-0 select-none pointer-events-none">
-            <kbd className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold text-slate-400 bg-white border border-slate-200 rounded shadow-3xs">
+          <div className="hidden lg:flex items-center gap-1 shrink-0 select-none pointer-events-none pr-1">
+            <kbd className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold text-slate-400 bg-white border border-slate-200/90 rounded shadow-3xs">
               ⌘K
             </kbd>
           </div>

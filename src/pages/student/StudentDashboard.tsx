@@ -29,6 +29,7 @@ import StudentLayout from "@/components/student/StudentLayout";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { TestDetailsModal } from "@/components/student/TestDetailsModal";
+import { DashboardSearch } from "@/components/student/DashboardSearch";
 import { initRazorpayPayment } from "@/utils/payment";
 import { useStudentAuth } from "@/contexts/StudentContext";
 import {
@@ -431,14 +432,16 @@ const StudentDashboard = () => {
       <StudentLayout title="PracticeKoro" subtitle="Your Exam Preparation Partner">
         <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-3 md:py-4 space-y-4 md:space-y-5 animate-pulse">
           {/* Header Skeleton */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-slate-200" />
-              <div className="h-5 w-28 bg-slate-200 rounded-md" />
+          <div className="flex items-center justify-between gap-2.5 sm:gap-3.5 pt-1">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200" />
+              <div className="h-5 w-24 sm:w-28 bg-slate-200 rounded-md hidden sm:block" />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-slate-200" />
-              <div className="w-9 h-9 rounded-full bg-slate-200" />
+            <div className="flex-1 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg h-8.5 sm:h-9 md:h-9.5 bg-slate-200 rounded-full mx-2 sm:mx-4" />
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              <div className="w-18 sm:w-22 h-8 rounded-full bg-slate-200 hidden xs:block" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200" />
             </div>
           </div>
 
@@ -517,21 +520,21 @@ const StudentDashboard = () => {
       <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-2 md:py-4 pb-24 md:pb-10 space-y-4 md:space-y-5">
         
         {/* ═══════════════════════════════════════════════════════════════
-            SECTION 1: HEADER (Logo Left + Pro Plan Badge + Bell + Avatar Right)
+            SECTION 1: HEADER (Logo Left + Center Search + Pro Plan Badge + Bell + Avatar Right)
             ═══════════════════════════════════════════════════════════════ */}
-        <header className="flex items-center justify-between gap-2.5 pt-1 pb-1">
+        <header className="flex items-center justify-between gap-2 sm:gap-3.5 pt-1 pb-1">
           {/* Left: PracticeKoro Brand */}
           <div
             onClick={() => navigate("/student/dashboard")}
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0"
           >
-            <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow-xs border border-slate-200/80 group-hover:scale-105 transition-transform bg-white">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0 shadow-xs border border-slate-200/80 group-hover:scale-105 transition-transform bg-white">
               <img src="/logo-circle.png" alt="PracticeKoro" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center leading-none">
-                <span className="text-lg font-black tracking-tight text-[#0F172A]">Practice</span>
-                <span className="text-lg font-black tracking-tight text-[#0066FF]">Koro</span>
+                <span className="text-base sm:text-lg font-black tracking-tight text-[#0F172A]">Practice</span>
+                <span className="text-base sm:text-lg font-black tracking-tight text-[#0066FF]">Koro</span>
               </div>
               <span className="text-[10px] text-slate-400 font-medium tracking-tight mt-0.5 hidden sm:block">
                 Your Exam Preparation Partner
@@ -539,12 +542,19 @@ const StudentDashboard = () => {
             </div>
           </div>
 
+          {/* Center: Search Bar (In Red Mark Area) */}
+          <DashboardSearch
+            exams={exams}
+            mockTests={dbTests}
+            onSelectTest={(test) => setSelectedTestForModal(test)}
+          />
+
           {/* Right: Pro Plan Badge + Notifications Bell + Avatar */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Pro Plan pill button */}
             <button
               onClick={handleProPlanClick}
-              className={`h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border ${
+              className={`h-8 sm:h-8.5 px-2 sm:px-3 rounded-full flex items-center gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border ${
                 hasSubscription
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                   : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-200/80"
@@ -552,7 +562,7 @@ const StudentDashboard = () => {
               title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
             >
               <Crown className={`w-3.5 h-3.5 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
-              <span className="text-[11px] sm:text-xs font-bold">
+              <span className="text-[11px] sm:text-xs font-bold hidden xs:inline">
                 {hasSubscription ? "Pro Plan" : "Upgrade to Pro"}
               </span>
             </button>
