@@ -611,67 +611,85 @@ const StudentDashboard = () => {
         {/* ═══════════════════════════════════════════════════════════════
             SECTION 3: TODAY'S PROGRESS (Questions, Accuracy, Study Time, Streak)
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="font-black text-sm text-slate-900 tracking-tight">Today's Progress</h3>
-              {todayMetrics.streakDays > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
-                  <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  Active Streak 🔥
+        <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 p-3.5 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight">
+                  Today's Progress
+                </h3>
+              </div>
+              {todayMetrics.streakDays > 0 ? (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-amber-900 bg-gradient-to-r from-amber-100/90 to-orange-100/80 px-2.5 py-0.5 rounded-full border border-amber-300/60 shadow-2xs">
+                  <Flame className="w-3 h-3 text-amber-600 fill-amber-500 animate-pulse" />
+                  {todayMetrics.streakDays} Day Streak
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  Daily Goal
                 </span>
               )}
             </div>
             <button
               onClick={() => navigate("/student/results")}
-              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-1 transition-all group shrink-0"
             >
               <span>View Details</span>
-              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.2] group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
 
           <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
-            {/* Metric 1: Questions */}
-            <div className="p-2 sm:p-3 rounded-2xl bg-slate-50/80 border border-slate-100">
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+            {/* Metric 1: Questions Solved */}
+            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-blue-50/70 to-indigo-50/30 border border-blue-100/80 hover:border-blue-300 hover:shadow-2xs transition-all flex flex-col items-center justify-between">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center mb-1.5 shadow-2xs">
+                <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
+              </div>
+              <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {todayMetrics.questions}
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                Questions Solved
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5 truncate max-w-full">
+                Solved
               </p>
             </div>
 
             {/* Metric 2: Accuracy */}
-            <div className="p-2 sm:p-3 rounded-2xl bg-slate-50/80 border border-slate-100">
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-purple-50/70 to-violet-50/30 border border-purple-100/80 hover:border-purple-300 hover:shadow-2xs transition-all flex flex-col items-center justify-between">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center mb-1.5 shadow-2xs">
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
+              </div>
+              <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {todayMetrics.accuracy}%
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5 truncate max-w-full">
                 Accuracy
               </p>
             </div>
 
             {/* Metric 3: Study Time */}
-            <div className="p-2 sm:p-3 rounded-2xl bg-slate-50/80 border border-slate-100">
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-amber-50/70 to-orange-50/30 border border-amber-100/80 hover:border-amber-300 hover:shadow-2xs transition-all flex flex-col items-center justify-between">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-1.5 shadow-2xs">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
+              </div>
+              <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {todayMetrics.studyTimeMinutes}m
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5 truncate max-w-full">
                 Study Time
               </p>
             </div>
 
             {/* Metric 4: Day Streak */}
-            <div className="p-2 sm:p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100/80">
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-xl sm:text-2xl font-black text-emerald-700 leading-tight">
-                  {todayMetrics.streakDays}
-                </span>
-                <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+            <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 hover:border-emerald-300 hover:shadow-2xs transition-all flex flex-col items-center justify-between">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center mb-1.5 shadow-2xs">
+                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 animate-pulse" />
               </div>
-              <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-0.5">
-                Day Streak 🔥
+              <p className="text-lg sm:text-2xl font-black text-emerald-800 tracking-tight leading-none">
+                {todayMetrics.streakDays}
+              </p>
+              <p className="text-[10px] sm:text-[11px] font-black text-emerald-700 mt-1 sm:mt-1.5 truncate max-w-full">
+                Streak
               </p>
             </div>
           </div>
