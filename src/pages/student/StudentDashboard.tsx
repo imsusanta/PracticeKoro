@@ -42,6 +42,8 @@ import {
   useUserAttempts,
 } from "@/hooks/useStudentData";
 import { formatDistanceToNow } from "date-fns";
+import { fetchStudentReadiness } from "@/services/readinessService";
+import { ExamReadinessResult } from "@/types/readiness";
 
 // Ashoka Emblem SVG for State Govt Exams
 const AshokaEmblem = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -361,6 +363,18 @@ const StudentDashboard = () => {
     refetchAttempts();
   };
 
+  const [readiness, setReadiness] = useState<ExamReadinessResult | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    fetchStudentReadiness(user?.id, "wb-panchayat").then((res) => {
+      if (!isCancelled) setReadiness(res);
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id]);
+
   // Student details
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "Aspirant";
   const firstName = displayName.split(" ")[0] || "Aspirant";
@@ -652,6 +666,65 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 3.5: TARGET EXAM READINESS CARD (Phase 4 Diagnostic Engine)
+            ═══════════════════════════════════════════════════════════════ */}
+        {readiness && (
+          <div
+            onClick={() => navigate("/student/performance")}
+            className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 shadow-sm border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-indigo-500/50 transition-all group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" className="text-white/10" strokeWidth="12" stroke="currentColor" fill="transparent" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    className="text-[#FBBF24] transition-all duration-700"
+                    strokeWidth="12"
+                    strokeDasharray={2 * Math.PI * 40}
+                    strokeDashoffset={2 * Math.PI * 40 * (1 - readiness.overallReadiness / 100)}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                  />
+                </svg>
+                <span className="absolute text-sm font-black font-mono text-white">
+                  {readiness.overallReadiness}%
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    {readiness.readinessLabel}
+                  </span>
+                  <span className="text-xs font-bold text-slate-300">
+                    {readiness.targetExamName}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm font-bold text-white mt-1">
+                  Projected: <span className="text-amber-300 font-mono font-black">{readiness.projectedScore}</span> / {readiness.maxScore} marks
+                  {readiness.weakestSubject && (
+                    <span className="text-slate-300 font-normal ml-2 hidden md:inline">
+                      • Weakest: <span className="text-rose-400 font-bold">{readiness.weakestSubject.subject}</span>
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
+              <span className="text-xs font-bold text-blue-300 group-hover:text-white transition-colors">
+                View Diagnostic Breakdown
+              </span>
+              <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════
             SECTION 4: POPULAR EXAMS (Side-scrollable, right below Today's Progress)

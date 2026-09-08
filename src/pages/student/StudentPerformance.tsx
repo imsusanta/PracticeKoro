@@ -1,289 +1,434 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentAuth } from "@/contexts/StudentContext";
-import { useUserAttempts } from "@/hooks/useStudentData";
 import StudentLayout from "@/components/student/StudentLayout";
-import {
-  ScoreTrendChart,
-  SubjectProgressItem,
-  StatCard
-} from "@/components/ui/PracticeKoroDesignSystem";
 import {
   BarChart3,
   TrendingUp,
   Award,
   Target,
   ArrowRight,
-  ChevronDown,
+  ChevronRight,
   Calendar,
   AlertTriangle,
   Sparkles,
   BookOpen,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  CheckCircle2,
+  Clock,
+  Flame,
+  ShieldCheck,
+  HelpCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { EXAM_CATALOG } from "@/data/examCatalog";
+import { fetchStudentReadiness } from "@/services/readinessService";
+import { ExamReadinessResult } from "@/types/readiness";
 
 export const StudentPerformance = () => {
   const navigate = useNavigate();
   const { user } = useStudentAuth();
-  const { data: testAttempts = {}, isLoading } = useUserAttempts(user?.id);
-  const [timePeriod, setTimePeriod] = useState<"7days" | "30days" | "all">("30days");
 
-  const attemptsList = useMemo(() => {
-    return Object.values(testAttempts);
-  }, [testAttempts]);
+  const [selectedExamId, setSelectedExamId] = useState<string>("wb-panchayat");
+  const [loading, setLoading] = useState(true);
+  const [readiness, setReadiness] = useState<ExamReadinessResult | null>(null);
 
-  // Compute analytics
-  const analytics = useMemo(() => {
-    const count = attemptsList.length;
-    if (count === 0) {
-      return {
-        testsAttempted: 0,
-        averageScore: 0,
-        accuracy: 0,
-        bestScore: 0,
-        passedCount: 0,
-        trendData: [
-          { label: "Aug 10", score: 65 },
-          { label: "Aug 17", score: 72 },
-          { label: "Aug 24", score: 68 },
-          { label: "Aug 31", score: 75 },
-          { label: "Sep 6", score: 82 },
-        ],
-        subjectBreakdown: [
-          { name: "General Knowledge", letter: "G", percent: 80, color: "bg-amber-500", bg: "bg-amber-50 text-amber-700 border-amber-200" },
-          { name: "Bengali Language", letter: "B", percent: 65, color: "bg-purple-600", bg: "bg-purple-50 text-purple-700 border-purple-200" },
-          { name: "English Language", letter: "E", percent: 58, color: "bg-sky-500", bg: "bg-sky-50 text-sky-700 border-sky-200" },
-          { name: "Mathematics", letter: "M", percent: 42, color: "bg-rose-500", bg: "bg-rose-50 text-rose-700 border-rose-200" },
-          { name: "Reasoning Ability", letter: "R", percent: 55, color: "bg-emerald-600", bg: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-        ],
-        weakArea: "Mathematics",
-        weakPercent: 42,
-        strongArea: "General Knowledge",
-        strongPercent: 80,
-      };
-    }
+  useEffect(() => {
+    let isCancelled = false;
+    setLoading(true);
 
-    let totalScorePercent = 0;
-    let totalPassed = 0;
-    let maxScore = 0;
-
-    const trendPoints: { label: string; score: number }[] = [];
-
-    attemptsList.forEach((att, idx) => {
-      totalScorePercent += att.best_percentage;
-      if (att.passed) totalPassed++;
-      if (att.best_percentage > maxScore) maxScore = att.best_percentage;
-
-      if (idx < 7) {
-        trendPoints.push({
-          label: `T${idx + 1}`,
-          score: att.best_percentage,
-        });
+    fetchStudentReadiness(user?.id, selectedExamId).then((res) => {
+      if (!isCancelled) {
+        setReadiness(res);
+        setLoading(false);
       }
     });
 
-    const averageScore = Math.round(totalScorePercent / count);
-    const accuracy = Math.round((averageScore * 1.05 > 100 ? 100 : averageScore * 1.05));
-
-    return {
-      testsAttempted: count,
-      averageScore,
-      accuracy,
-      bestScore: maxScore,
-      passedCount: totalPassed,
-      trendData: trendPoints.length > 0 ? trendPoints : [
-        { label: "Test 1", score: averageScore },
-        { label: "Test 2", score: averageScore + 5 },
-      ],
-      subjectBreakdown: [
-        { name: "General Knowledge", letter: "G", percent: Math.min(100, Math.round(averageScore * 1.1)), color: "bg-amber-500", bg: "bg-amber-50 text-amber-700 border-amber-200" },
-        { name: "Bengali Language", letter: "B", percent: Math.min(100, Math.round(averageScore * 0.95)), color: "bg-purple-600", bg: "bg-purple-50 text-purple-700 border-purple-200" },
-        { name: "English Language", letter: "E", percent: Math.min(100, Math.round(averageScore * 0.88)), color: "bg-sky-500", bg: "bg-sky-50 text-sky-700 border-sky-200" },
-        { name: "Mathematics", letter: "M", percent: Math.max(25, Math.round(averageScore * 0.65)), color: "bg-rose-500", bg: "bg-rose-50 text-rose-700 border-rose-200" },
-        { name: "Reasoning Ability", letter: "R", percent: Math.min(100, Math.round(averageScore * 0.85)), color: "bg-emerald-600", bg: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-      ],
-      weakArea: "Mathematics",
-      weakPercent: Math.max(25, Math.round(averageScore * 0.65)),
-      strongArea: "General Knowledge",
-      strongPercent: Math.min(100, Math.round(averageScore * 1.1)),
+    return () => {
+      isCancelled = true;
     };
-  }, [attemptsList]);
+  }, [user?.id, selectedExamId]);
 
-  if (isLoading) {
-    return (
-      <StudentLayout title="Performance" subtitle="Exam Analytics">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium text-sm">Calculating your performance metrics...</p>
-        </div>
-      </StudentLayout>
-    );
-  }
+  const selectedExam = EXAM_CATALOG.find((e) => e.id === selectedExamId) || EXAM_CATALOG[0];
+
+  const getBandBadge = (band: string) => {
+    switch (band) {
+      case "exam_ready":
+        return "bg-emerald-50 text-emerald-800 border-emerald-300";
+      case "competitive":
+        return "bg-blue-50 text-blue-800 border-blue-300";
+      case "developing":
+        return "bg-amber-50 text-amber-800 border-amber-300";
+      default:
+        return "bg-rose-50 text-rose-800 border-rose-300";
+    }
+  };
 
   return (
-    <StudentLayout title="Performance" subtitle="Track Your Exam Readiness">
-      <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
-
-        {/* TOP HEADER Matching Screen 12 */}
-        <div className="flex items-center justify-between gap-3 pt-1">
+    <StudentLayout title="Performance" subtitle="Exam Readiness & Cutoff Analytics">
+      <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-5">
+        
+        {/* TOP HEADER */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              My Performance
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-display">
+                Exam Readiness Dashboard
+              </h1>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                Phase 4 Engine
+              </span>
+            </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Comprehensive analytics across your mock test attempts
+              Multi-factor statistical readiness, projected scores & historical cutoff benchmarking
             </p>
           </div>
 
-          {/* Period Selector Dropdown */}
-          <div className="relative">
-            <select
-              value={timePeriod}
-              onChange={(e) => setTimePeriod(e.target.value as any)}
-              className="h-9 px-3 pr-8 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none"
-            >
-              <option value="7days">Last 7 Days</option>
-              <option value="30days">Last 30 Days</option>
-              <option value="all">All Time</option>
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-          </div>
+          <button
+            onClick={() => navigate("/student/practice")}
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <span>Practice Center</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* 3 KPI STAT CARDS Matching Screen 12 */}
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
-          <StatCard
-            label="Tests Attempted"
-            value={analytics.testsAttempted}
-            icon={Target}
-            iconColor="text-blue-600"
-            iconBg="bg-blue-50"
-            subtext={`${analytics.passedCount} Passed`}
-          />
-          <StatCard
-            label="Average Score"
-            value={`${analytics.averageScore}%`}
-            icon={Award}
-            iconColor="text-emerald-600"
-            iconBg="bg-emerald-50"
-            subtext={`Best: ${analytics.bestScore}%`}
-          />
-          <StatCard
-            label="Accuracy"
-            value={`${analytics.accuracy}%`}
-            icon={TrendingUp}
-            iconColor="text-amber-600"
-            iconBg="bg-amber-50"
-            subtext="Response Precision"
-          />
-        </div>
-
-        {/* SCORE TREND CHART CARD Matching Screen 12 */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3">
+        {/* ═══════════════════════════════════════════════════════════════
+            TARGET EXAM SELECTOR RIBBON
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Score Trend</h3>
-              <p className="text-xs text-slate-500 font-medium">Progress trajectory across consecutive tests</p>
-            </div>
-            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-              +{analytics.accuracy > 70 ? "Positive Growth" : "Consistent"}
+            <span className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-blue-600" /> Target Examination Benchmark:
+            </span>
+            <span className="text-xs font-bold text-blue-600 font-mono">
+              Total {readiness?.maxScore || 100} Marks
             </span>
           </div>
 
-          <div className="pt-2">
-            <ScoreTrendChart data={analytics.trendData} height={160} />
-          </div>
-        </div>
-
-        {/* SUBJECT PERFORMANCE PROGRESS BARS Matching Screen 12 */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Subject Performance</h3>
-              <p className="text-xs text-slate-500 font-medium">Accuracy rate breakdown per subject syllabus</p>
-            </div>
-            <button
-              onClick={() => navigate("/student/exam")}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <span>Topic Tests</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="space-y-3.5 pt-1">
-            {analytics.subjectBreakdown.map((item, idx) => (
-              <SubjectProgressItem
-                key={idx}
-                label={item.name}
-                letter={item.letter}
-                percentage={item.percent}
-                colorClass={item.color}
-                bgColorClass={item.bg}
-              />
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            {EXAM_CATALOG.map((exam) => (
+              <button
+                key={exam.id}
+                onClick={() => setSelectedExamId(exam.id)}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                  selectedExamId === exam.id
+                    ? "bg-slate-900 text-white shadow-sm ring-2 ring-slate-900/20"
+                    : "bg-white border border-slate-200/90 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                <span>{exam.name}</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-800 font-bold font-mono">
+                  {exam.defaultQuestions}Q
+                </span>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* INSIGHTS & WEAK AREA RECOMMENDATION */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          {/* Weak Topics Card */}
-          <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 flex flex-col justify-between space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <AlertTriangle className="w-4 h-4" />
+        {/* ═══════════════════════════════════════════════════════════════
+            HERO EXAM READINESS GAUGE CARD
+            ═══════════════════════════════════════════════════════════════ */}
+        {readiness && (
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-7 md:p-8 shadow-xl relative overflow-hidden border border-slate-800">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+            <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-amber-500/10 rounded-full blur-2xl pointer-events-none -mb-20" />
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              
+              {/* Left Gauge & Status */}
+              <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6 text-center sm:text-left">
+                {/* Circular Meter */}
+                <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      className="text-white/10"
+                      strokeWidth="10"
+                      stroke="currentColor"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      className="text-[#FBBF24] transition-all duration-1000 ease-out"
+                      strokeWidth="10"
+                      strokeDasharray={2 * Math.PI * 40}
+                      strokeDashoffset={2 * Math.PI * 40 * (1 - readiness.overallReadiness / 100)}
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="transparent"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-black font-mono tracking-tight text-white leading-none">
+                      {readiness.overallReadiness}%
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mt-0.5">
+                      Readiness
+                    </span>
+                  </div>
+                </div>
+
+                {/* Score & Verdict Info */}
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white/10 backdrop-blur-sm border border-white/20 text-[#FBBF24]">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{readiness.readinessLabel} • {readiness.bengaliBandLabel}</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white font-display">
+                    {selectedExam.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-md leading-relaxed">
+                    Projected Score: <strong className="text-amber-300 font-mono text-base">{readiness.projectedScore}</strong> / {readiness.maxScore} marks based on your mock consistency and error mastery.
+                  </p>
+                </div>
               </div>
+
+              {/* Right 4-Factor Breakdown Bars */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-2.5 min-w-[260px] sm:min-w-[300px]">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-1 border-b border-white/10">
+                  <span>Readiness Components</span>
+                  <span className="text-amber-400">Weightage</span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-slate-200">
+                    <span>Full Mocks Precision</span>
+                    <span className="font-mono font-bold">{readiness.mockAccuracy}% (40%)</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="bg-blue-400 h-full rounded-full" style={{ width: `${readiness.mockAccuracy}%` }} />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-slate-200">
+                    <span>Topic & PYQ Drills</span>
+                    <span className="font-mono font-bold">{readiness.topicDrillAccuracy}% (25%)</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="bg-emerald-400 h-full rounded-full" style={{ width: `${readiness.topicDrillAccuracy}%` }} />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-slate-200">
+                    <span>Mistakes Mastery Rate</span>
+                    <span className="font-mono font-bold">{readiness.mistakeMasteryRate}% (20%)</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="bg-purple-400 h-full rounded-full" style={{ width: `${readiness.mistakeMasteryRate}%` }} />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-slate-200">
+                    <span>Daily Consistency</span>
+                    <span className="font-mono font-bold">{readiness.consistencyScore}% (15%)</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="bg-amber-400 h-full rounded-full" style={{ width: `${readiness.consistencyScore}%` }} />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            PREDICTIVE CUTOFF BENCHMARK COMPARISON
+            ═══════════════════════════════════════════════════════════════ */}
+        {readiness && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">
-                  Needs Attention
+                <h3 className="text-base font-black text-slate-900 font-display flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-600" />
+                  <span>Historical Cutoff Benchmark ({readiness.cutoffBenchmark.examName})</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Expected category cutoffs based on previous examination cycles
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-xs font-bold text-slate-600">Your Projected:</span>
+                <span className="px-3 py-1 rounded-xl bg-blue-600 text-white font-mono font-black text-sm shadow-xs">
+                  {readiness.projectedScore} / {readiness.maxScore}
                 </span>
-                <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                  Focus on {analytics.weakArea}
-                </h4>
-                <p className="text-xs text-slate-600 font-medium mt-1">
-                  Your accuracy is {analytics.weakPercent}%. Drilling topic questions will directly boost your rank.
+              </div>
+            </div>
+
+            {/* Cutoff Category Comparison Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { cat: "UR (General)", cutoff: readiness.cutoffBenchmark.expectedCutoffUR, color: "border-blue-200 bg-blue-50/40" },
+                { cat: "OBC", cutoff: readiness.cutoffBenchmark.expectedCutoffOBC, color: "border-emerald-200 bg-emerald-50/40" },
+                { cat: "SC", cutoff: readiness.cutoffBenchmark.expectedCutoffSC, color: "border-purple-200 bg-purple-50/40" },
+                { cat: "ST", cutoff: readiness.cutoffBenchmark.expectedCutoffST, color: "border-amber-200 bg-amber-50/40" },
+              ].map((c) => {
+                const diff = Math.round((readiness.projectedScore - c.cutoff) * 10) / 10;
+                const isCleared = diff >= 0;
+
+                return (
+                  <div key={c.cat} className={`p-4 rounded-2xl border ${c.color} space-y-1.5`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600">{c.cat}</span>
+                      <span className="text-xs font-mono font-black text-slate-900">{c.cutoff} Marks</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-1">
+                      {isCleared ? (
+                        <span className="text-[11px] font-black text-emerald-700 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> +{diff} above
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-black text-rose-600 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" /> {diff} gap
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            PRESCRIBED NEXT BEST ACTIONS ("আজকের করণীয়")
+            ═══════════════════════════════════════════════════════════════ */}
+        {readiness && readiness.recommendedActions.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-slate-900 font-display flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
+                  <span>Prioritized Action Plan (আজকের করণীয়)</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Daily high-impact steps to boost your exam readiness score
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={() => navigate("/student/mistakes")}
-              className="w-full py-2 px-3 rounded-xl bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Practice Mistakes in {analytics.weakArea}</span>
-            </button>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {readiness.recommendedActions.map((act) => (
+                <div
+                  key={act.id}
+                  onClick={() => navigate(act.actionUrl)}
+                  className="bg-white rounded-2xl border border-slate-200/90 hover:border-blue-400 p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {act.impactLabel}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
 
-          {/* Strong Topics Card */}
-          <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex flex-col justify-between space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Sparkles className="w-4 h-4" />
-              </div>
+                    <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {act.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed font-bengali">
+                      {act.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-auto">
+                    <span className="text-xs font-bold text-blue-600 group-hover:underline flex items-center gap-1">
+                      Start Now <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            9-SUBJECT DIAGNOSTIC MATRIX
+            ═══════════════════════════════════════════════════════════════ */}
+        {readiness && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                  Strong Fortress
-                </span>
-                <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                  High Mastery in {analytics.strongArea}
-                </h4>
-                <p className="text-xs text-slate-600 font-medium mt-1">
-                  Your accuracy is {analytics.strongPercent}%. Maintain your edge by taking timed full mocks.
+                <h3 className="text-base font-black text-slate-900 font-display">
+                  Subject Performance Breakdown
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Precision rating and pending mistakes across syllabus chapters
                 </p>
               </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/student/practice/subject")}
+                className="rounded-xl text-xs font-bold gap-1"
+              >
+                <span>Practice All Subjects</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
             </div>
 
-            <button
-              onClick={() => navigate("/student/exam?type=full_mock")}
-              className="w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Take Full Mock Test</span>
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+              {readiness.subjectReadiness.map((item) => (
+                <div
+                  key={item.subject}
+                  onClick={() => navigate(`/student/practice/subject?subject=${encodeURIComponent(item.subject)}`)}
+                  className="p-3.5 rounded-2xl border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/50 transition-all cursor-pointer space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                      <h4 className="font-bold text-xs text-slate-900 truncate">
+                        {item.subject}
+                      </h4>
+                    </div>
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                        item.status === "strong"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : item.status === "weak"
+                          ? "bg-rose-50 text-rose-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{item.bengaliName}</span>
+                      <span className="font-mono font-black text-slate-800">{item.scorePercent}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          item.status === "strong"
+                            ? "bg-emerald-500"
+                            : item.status === "weak"
+                            ? "bg-rose-500"
+                            : "bg-blue-500"
+                        }`}
+                        style={{ width: `${item.scorePercent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </StudentLayout>
