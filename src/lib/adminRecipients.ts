@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { subscriptionCutoffIso } from "@/lib/subscription";
 
 export type NotificationAudience = "all" | "approved" | "premium" | "pending";
 
@@ -43,15 +44,12 @@ export async function getNotificationRecipients(
     return { userIds, label };
   }
 
-  const since = new Date();
-  since.setFullYear(since.getFullYear() - 1);
-
   const { data, error } = await supabase
     .from("purchases")
     .select("user_id")
     .eq("content_type", "subscription")
     .eq("status", "completed")
-    .gte("created_at", since.toISOString());
+    .gt("created_at", subscriptionCutoffIso());
 
   if (error) throw error;
   const unique = new Set(

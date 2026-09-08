@@ -1,9 +1,6 @@
-const { createClient } = require('@supabase/supabase-js');
+const { createScriptClient } = require("./loadEnv.cjs");
 
-const supabaseUrl = "https://tbxqueyivslrmapwmsvx.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieHF1ZXlpdnNscm1hcHdtc3Z4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDUzODUzMCwiZXhwIjoyMDgwMTE0NTMwfQ.8c6VEmh1d-OG_K6cL8KfAYQlDKlZJY6qMaV1nJX3uHM";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createScriptClient({ privileged: true });
 
 async function checkQuestionExplanations() {
     console.log("Checking questions with explanations...\n");

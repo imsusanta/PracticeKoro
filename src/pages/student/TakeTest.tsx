@@ -30,6 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast as sonnerToast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { initRazorpayPayment } from "@/utils/payment";
+import { getYearlySubscriptionFee, hasActiveSubscription } from "@/lib/subscription";
 
 interface Question {
   id: string;
@@ -231,13 +232,8 @@ const TakeTest = () => {
   const loadTest = useCallback(async () => {
     if (!testId) return;
 
-    // Fetch subscription fee
-    const { data: settingsData } = await (supabase
-      .from("site_settings" as any)
-      .select("value")
-      .eq("key", "yearly_subscription_fee")
-      .maybeSingle() as any);
-    if (settingsData) setSubscriptionFee(parseFloat(settingsData.value) || 0);
+    const fee = await getYearlySubscriptionFee();
+    if (fee) setSubscriptionFee(fee);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -272,21 +268,8 @@ const TakeTest = () => {
 
     // Check if test is paid and if user has active subscription
     if (testData.is_paid) {
-      const oneYearAgo = new Date();
-      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-      const { data: purchaseData } = await (supabase
-        .from("purchases" as any)
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("content_type", "subscription")
-        .eq("status", "completed")
-        .gt("created_at", oneYearAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle() as any);
-
-      if (!purchaseData) {
+      const purchased = await hasActiveSubscription(session.user.id);
+      if (!purchased) {
         setTest(testData);
         setIsPurchased(false);
         setLoading(false);

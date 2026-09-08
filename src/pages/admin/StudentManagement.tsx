@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseFunctionUrl } from "@/lib/env";
+import { isActiveYearlySubscription } from "@/lib/subscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -151,12 +153,7 @@ const StudentManagement = () => {
 
     // Helper to check for active subscription
     const hasActiveSubscription = (s: any) => {
-      return s.purchases?.some(p => {
-        if (p.content_type !== 'subscription') return false;
-        const expiryDate = new Date(p.created_at || "");
-        expiryDate.setDate(expiryDate.getDate() + 365);
-        return new Date() < expiryDate;
-      });
+      return s.purchases?.some(p => p.content_type === "subscription" && isActiveYearlySubscription(p.created_at));
     };
 
     if (searchQuery) {
@@ -332,7 +329,7 @@ const StudentManagement = () => {
       }
 
       // Call the edge function to properly delete the user (including auth)
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-auth-user`, {
+      const response = await fetch(supabaseFunctionUrl("delete-auth-user"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -449,7 +446,7 @@ const StudentManagement = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No session");
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-student-password`, {
+      const response = await fetch(supabaseFunctionUrl("reset-student-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ userId: selectedStudent.id, newPassword })
