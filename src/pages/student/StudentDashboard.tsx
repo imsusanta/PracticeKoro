@@ -274,7 +274,6 @@ const HeroBannerCarousel = ({
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-
   const {
     user,
     profile,

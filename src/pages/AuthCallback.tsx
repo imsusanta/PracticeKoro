@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { dashboardPathFor, getAccessFlags } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 
 const AuthCallback = () => {
@@ -43,9 +44,14 @@ const AuthCallback = () => {
             ({ data: { session } } = await supabase.auth.getSession());
 
             if (session) {
-                const intendedPath = sessionStorage.getItem("authRedirect") || "/student/dashboard";
+                const intendedPath = sessionStorage.getItem("authRedirect");
                 sessionStorage.removeItem("authRedirect");
-                navigate(intendedPath, { replace: true });
+                if (intendedPath) {
+                    navigate(intendedPath, { replace: true });
+                    return;
+                }
+                const flags = await getAccessFlags(session.user.id);
+                navigate(dashboardPathFor(flags), { replace: true });
             } else {
                 navigate("/login", { replace: true });
             }

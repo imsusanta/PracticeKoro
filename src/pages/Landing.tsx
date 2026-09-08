@@ -13,6 +13,7 @@ import SplashScreen from "../components/landing/SplashScreen";
 // import PWAInstallPrompt removed to avoid conflict with global App.tsx version
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { toast } from "sonner";
 import { getVisibleExamIds, getVisibleTestIds } from "@/config/landingVisibility"; // Kept for potential admin toggle feature
@@ -85,32 +86,51 @@ const Landing = () => {
     onRefresh: handleRefresh
   });
 
-  useEffect(() => {
-    // Run all initial loads in parallel for faster loading
-    Promise.all([checkAuth(), loadExams(), loadFeaturedTests()]);
-  }, []);
-  const checkAuth = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Single query to get role and profile together for faster loading
-        const [roleResult, profileResult] = await Promise.all([
-          supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["student", "admin"]).maybeSingle(),
-          supabase.from("profiles").select("*").eq("id", session.user.id).single()
-        ]);
+  const { session, isAdmin, isStudent, status: authStatus } = useAuth();
 
-        if (roleResult.data && profileResult.data) {
-          setUserProfile(profileResult.data);
-          setUserRole(roleResult.data.role as "student" | "admin");
-          setIsLoggedIn(true);
+  useEffect(() => {
+    Promise.all([loadExams(), loadFeaturedTests()]);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      if (authStatus === "loading") return;
+      if (!session) {
+        if (!cancelled) {
+          setIsLoggedIn(false);
+          setUserProfile(null);
+          setUserRole(null);
+          setLoading(false);
         }
+        return;
       }
-    } catch (error) {
-      console.error("Auth check error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      try {
+        const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+        if (cancelled) return;
+        if (data && (isAdmin || isStudent)) {
+          setUserProfile(data);
+          setUserRole(isAdmin ? "admin" : "student");
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
+          setUserProfile(null);
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, authStatus, isAdmin, isStudent]);
   const loadExams = async () => {
     try {
       console.log("[Landing] Loading exams from database...");
@@ -171,7 +191,6 @@ const Landing = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-    localStorage.clear();
     setIsLoggedIn(false);
     setUserProfile(null);
     setUserRole(null);

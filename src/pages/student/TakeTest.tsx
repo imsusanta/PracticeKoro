@@ -41,6 +41,7 @@ import { toast as sonnerToast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { initRazorpayPayment } from "@/utils/payment";
 import { MathText } from "@/components/ui/MathText";
+import { getYearlySubscriptionFee, hasActiveSubscription } from "@/lib/subscription";
 
 interface QuestionDetails {
   id: string;
@@ -360,16 +361,8 @@ const TakeTest = () => {
   const loadTest = useCallback(async () => {
     if (!testId) return;
 
-    // Fetch site subscription fee
-    const { data: settingsData } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "yearly_subscription_fee")
-      .maybeSingle();
-
-    if (settingsData?.value) {
-      setSubscriptionFee(parseFloat(settingsData.value) || 0);
-    }
+    const fee = await getYearlySubscriptionFee();
+    if (fee) setSubscriptionFee(fee);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -486,21 +479,8 @@ const TakeTest = () => {
     } else {
       // Entitlement Check for Paid Tests
       if (activeTest.is_paid) {
-        const oneYearAgo = new Date();
-        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-
-        const { data: purchaseData } = await supabase
-          .from("purchases" as any)
-          .select("id")
-          .eq("user_id", session.user.id)
-          .eq("content_type", "subscription")
-          .eq("status", "completed")
-          .gt("created_at", oneYearAgo.toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!purchaseData) {
+        const purchased = await hasActiveSubscription(session.user.id);
+        if (!purchased) {
           setTest(activeTest as any);
           setIsPurchased(false);
           setLoading(false);

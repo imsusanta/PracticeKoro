@@ -1,12 +1,13 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { Navigate, Routes, Route, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { PWALogic } from "./components/PWALogic";
 import OfflineIndicator from "./components/OfflineIndicator";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import { PageLoader } from "./components/PageLoader";
+import { RequireAdmin, RequireStudent } from "./components/auth/RequireAuth";
 import { HelmetProvider } from "react-helmet-async";
-import ProtectedRoute from "./components/ProtectedRoute";
 import { StudentProvider } from "./contexts/StudentContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -16,7 +17,6 @@ const StudentProviderRoute = () => (
   </StudentProvider>
 );
 
-// Lazy loaded pages
 const Landing = lazy(() => import("./pages/Landing"));
 const Install = lazy(() => import("./pages/Install"));
 const Register = lazy(() => import("./pages/Register"));
@@ -28,7 +28,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const BlogDetail = lazy(() => import("./pages/BlogDetail"));
 const BlogList = lazy(() => import("./pages/BlogList"));
 
-// Legal Pages
 const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
 const RefundPolicy = lazy(() => import("./pages/legal/RefundPolicy"));
@@ -57,7 +56,6 @@ const StudentLeaderboard = lazy(() => import("./pages/student/StudentLeaderboard
 const CurrentAffairs = lazy(() => import("./pages/student/CurrentAffairs"));
 
 // Admin Pages
-const AdminIndex = lazy(() => import("./pages/admin/AdminIndex"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
 const StudentManagement = lazy(() => import("./pages/admin/StudentManagement"));
@@ -69,6 +67,7 @@ const AdminChatInbox = lazy(() => import("./pages/admin/AdminChatInbox"));
 const AIQuestionGenerator = lazy(() => import("./pages/admin/AIQuestionGenerator"));
 const QuestionBank = lazy(() => import("./pages/admin/QuestionBank"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AIConfigSettings = lazy(() => import("./pages/admin/AIConfigSettings"));
 const SendNotifications = lazy(() => import("./pages/admin/SendNotifications"));
 const SubjectManagement = lazy(() => import("./pages/admin/SubjectManagement"));
@@ -79,96 +78,89 @@ const BlogManagement = lazy(() => import("./pages/admin/BlogManagement"));
 const AddBlog = lazy(() => import("./pages/admin/AddBlog"));
 const AddNote = lazy(() => import("./pages/admin/AddNote"));
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/40">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-slate-500 font-medium">Loading PracticeKoro...</p>
-    </div>
-  </div>
-);
-
 const AppContent = () => {
   return (
     <div className="min-h-screen">
       <PWALogic />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Admin Public Route */}
-          <Route path="/admin" element={<AdminIndex />} />
-          <Route path="/admin/login" element={<AdminLoginPage />} />
-
-          {/* Admin Protected Routes */}
-          <Route path="/admin/dashboard" element={<ProtectedRoute requireRole="admin"><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute requireRole="admin"><StudentManagement /></ProtectedRoute>} />
-          <Route path="/admin/students" element={<ProtectedRoute requireRole="admin"><StudentManagement /></ProtectedRoute>} />
-          <Route path="/admin/exams" element={<ProtectedRoute requireRole="admin"><ExamManagement /></ProtectedRoute>} />
-          <Route path="/admin/mock-tests" element={<ProtectedRoute requireRole="admin"><MockTestCreation /></ProtectedRoute>} />
-          <Route path="/admin/tests" element={<ProtectedRoute requireRole="admin"><MockTestCreation /></ProtectedRoute>} />
-          <Route path="/admin/courses" element={<ProtectedRoute requireRole="admin"><CourseManagement /></ProtectedRoute>} />
-          <Route path="/admin/notes" element={<ProtectedRoute requireRole="admin"><NotesManagement /></ProtectedRoute>} />
-          <Route path="/admin/support" element={<ProtectedRoute requireRole="admin"><AdminChatInbox /></ProtectedRoute>} />
-          <Route path="/admin/chat" element={<ProtectedRoute requireRole="admin"><AdminChatInbox /></ProtectedRoute>} />
-          <Route path="/admin/ai-question-generator" element={<ProtectedRoute requireRole="admin"><AIQuestionGenerator /></ProtectedRoute>} />
-          <Route path="/admin/ai-generator" element={<ProtectedRoute requireRole="admin"><AIQuestionGenerator /></ProtectedRoute>} />
-          <Route path="/admin/question-bank" element={<ProtectedRoute requireRole="admin"><QuestionBank /></ProtectedRoute>} />
-          <Route path="/admin/questions" element={<ProtectedRoute requireRole="admin"><QuestionBank /></ProtectedRoute>} />
-          <Route path="/admin/settings" element={<ProtectedRoute requireRole="admin"><AdminSettings /></ProtectedRoute>} />
-          <Route path="/admin/ai-config" element={<ProtectedRoute requireRole="admin"><AIConfigSettings /></ProtectedRoute>} />
-          <Route path="/admin/ai-settings" element={<ProtectedRoute requireRole="admin"><AIConfigSettings /></ProtectedRoute>} />
-          <Route path="/admin/notifications" element={<ProtectedRoute requireRole="admin"><SendNotifications /></ProtectedRoute>} />
-          <Route path="/admin/subjects" element={<ProtectedRoute requireRole="admin"><SubjectManagement /></ProtectedRoute>} />
-          <Route path="/admin/question-subjects" element={<ProtectedRoute requireRole="admin"><QuestionSubjectManagement /></ProtectedRoute>} />
-          <Route path="/admin/bulk-upload" element={<ProtectedRoute requireRole="admin"><BulkMCQUpload /></ProtectedRoute>} />
-          <Route path="/admin/add-question" element={<ProtectedRoute requireRole="admin"><AddQuestion /></ProtectedRoute>} />
-          <Route path="/admin/add-note" element={<ProtectedRoute requireRole="admin"><AddNote /></ProtectedRoute>} />
-          <Route path="/admin/blogs" element={<ProtectedRoute requireRole="admin"><BlogManagement /></ProtectedRoute>} />
-          <Route path="/admin/blogs/new" element={<ProtectedRoute requireRole="admin"><AddBlog /></ProtectedRoute>} />
-
-          {/* Public Routes */}
+          {/* Public */}
           <Route path="/" element={<Landing />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/blog" element={<BlogList />} />
-          <Route path="/:slug" element={<BlogDetail />} />
           <Route path="/install" element={<Install />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-
-          {/* Legal Routes */}
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
 
-          {/* Student Protected Routes */}
-          <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
-          <Route element={<StudentProviderRoute />}>
-            <Route path="/student/dashboard" element={<ProtectedRoute requireRole="student"><StudentDashboard /></ProtectedRoute>} />
-            <Route path="/student/exam" element={<ProtectedRoute requireRole="student"><StudentExams /></ProtectedRoute>} />
-            <Route path="/student/exam/:examId" element={<ProtectedRoute requireRole="student"><ExamDetail /></ProtectedRoute>} />
-            <Route path="/student/exams" element={<Navigate to="/student/exam" replace />} />
-            <Route path="/student/mocktest" element={<Navigate to="/student/exam" replace />} />
-            <Route path="/student/results" element={<ProtectedRoute requireRole="student"><StudentResults /></ProtectedRoute>} />
-            <Route path="/student/take-test/:testId" element={<ProtectedRoute requireRole="student"><TakeTest /></ProtectedRoute>} />
-            <Route path="/student/test-review/:attemptId" element={<ProtectedRoute requireRole="student"><ReviewTest /></ProtectedRoute>} />
-            <Route path="/student/profile" element={<ProtectedRoute requireRole="student"><StudentProfile /></ProtectedRoute>} />
-            <Route path="/student/notes" element={<ProtectedRoute requireRole="student"><StudentNotes /></ProtectedRoute>} />
-            <Route path="/student/notifications" element={<ProtectedRoute requireRole="student"><StudentNotifications /></ProtectedRoute>} />
-
-            {/* New Core Student Practice & Retention Routes */}
-            <Route path="/student/practice" element={<ProtectedRoute requireRole="student"><PracticeHub /></ProtectedRoute>} />
-            <Route path="/student/practice/subject" element={<ProtectedRoute requireRole="student"><SubjectPractice /></ProtectedRoute>} />
-            <Route path="/student/current-affairs" element={<ProtectedRoute requireRole="student"><CurrentAffairs /></ProtectedRoute>} />
-            <Route path="/student/pyq" element={<ProtectedRoute requireRole="student"><PYQPractice /></ProtectedRoute>} />
-            <Route path="/student/mistakes" element={<ProtectedRoute requireRole="student"><MistakesNotebook /></ProtectedRoute>} />
-            <Route path="/student/bookmarks" element={<ProtectedRoute requireRole="student"><BookmarksPage /></ProtectedRoute>} />
-            <Route path="/student/daily" element={<ProtectedRoute requireRole="student"><DailyPractice /></ProtectedRoute>} />
-            <Route path="/student/leaderboard" element={<ProtectedRoute requireRole="student"><StudentLeaderboard /></ProtectedRoute>} />
+          {/* Admin — canonical paths live here; aliases redirect */}
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/students" element={<StudentManagement />} />
+            <Route path="/admin/users" element={<Navigate to="/admin/students" replace />} />
+            <Route path="/admin/exams" element={<ExamManagement />} />
+            <Route path="/admin/tests" element={<MockTestCreation />} />
+            <Route path="/admin/mock-tests" element={<Navigate to="/admin/tests" replace />} />
+            <Route path="/admin/courses" element={<CourseManagement />} />
+            <Route path="/admin/notes" element={<NotesManagement />} />
+            <Route path="/admin/add-note" element={<AddNote />} />
+            <Route path="/admin/chat" element={<AdminChatInbox />} />
+            <Route path="/admin/support" element={<Navigate to="/admin/chat" replace />} />
+            <Route path="/admin/ai-generator" element={<AIQuestionGenerator />} />
+            <Route path="/admin/ai-question-generator" element={<Navigate to="/admin/ai-generator" replace />} />
+            <Route path="/admin/questions" element={<QuestionBank />} />
+            <Route path="/admin/question-bank" element={<Navigate to="/admin/questions" replace />} />
+            <Route path="/admin/add-question" element={<AddQuestion />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/ai-settings" element={<AIConfigSettings />} />
+            <Route path="/admin/ai-config" element={<Navigate to="/admin/ai-settings" replace />} />
+            <Route path="/admin/notifications" element={<SendNotifications />} />
+            <Route path="/admin/subjects" element={<SubjectManagement />} />
+            <Route path="/admin/question-subjects" element={<QuestionSubjectManagement />} />
+            <Route path="/admin/bulk-upload" element={<BulkMCQUpload />} />
+            <Route path="/admin/blogs" element={<BlogManagement />} />
+            <Route path="/admin/blogs/new" element={<AddBlog />} />
           </Route>
 
+          {/* Student */}
+          <Route element={<RequireStudent />}>
+            <Route element={<StudentProviderRoute />}>
+              <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
+              <Route path="/student/dashboard" element={<StudentDashboard />} />
+              <Route path="/student/exam" element={<StudentExams />} />
+              <Route path="/student/exam/:examId" element={<ExamDetail />} />
+              <Route path="/student/exams" element={<Navigate to="/student/exam" replace />} />
+              <Route path="/student/mocktest" element={<Navigate to="/student/exam" replace />} />
+              <Route path="/student/results" element={<StudentResults />} />
+              <Route path="/student/take-test/:testId" element={<TakeTest />} />
+              <Route path="/student/test-review/:attemptId" element={<ReviewTest />} />
+              <Route path="/student/profile" element={<StudentProfile />} />
+              <Route path="/student/notes" element={<StudentNotes />} />
+              <Route path="/student/notifications" element={<StudentNotifications />} />
+
+              {/* Core Student Practice & Retention Routes */}
+              <Route path="/student/practice" element={<PracticeHub />} />
+              <Route path="/student/practice/subject" element={<SubjectPractice />} />
+              <Route path="/student/current-affairs" element={<CurrentAffairs />} />
+              <Route path="/student/pyq" element={<PYQPractice />} />
+              <Route path="/student/mistakes" element={<MistakesNotebook />} />
+              <Route path="/student/bookmarks" element={<BookmarksPage />} />
+              <Route path="/student/daily" element={<DailyPractice />} />
+              <Route path="/student/leaderboard" element={<StudentLeaderboard />} />
+            </Route>
+          </Route>
+
+          {/* Blog slugs after every static route so they cannot shadow /login etc. */}
+          <Route path="/:slug" element={<BlogDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

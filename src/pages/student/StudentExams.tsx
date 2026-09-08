@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell,
@@ -88,7 +89,9 @@ function getPyqsForExam(examId: string, examName?: string): ExamPYQ[] {
 
 const StudentExams = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isPracticeHub = location.pathname === "/student/practice";
   const { toast } = useToast();
 
   const { user, hasSubscription, subscriptionFee, refreshSubscription } = useStudentAuth();
@@ -110,7 +113,7 @@ const StudentExams = () => {
 
   const urlType = searchParams.get("type");
   const [filterType, setFilterType] = useState<"all" | "full_mock" | "topic_wise">(
-    urlType === "full_mock" || urlType === "topic_wise" ? (urlType as any) : "all"
+    isPracticeHub ? "topic_wise" : urlType === "full_mock" || urlType === "topic_wise" ? (urlType as any) : "all"
   );
 
   useEffect(() => {
@@ -201,7 +204,7 @@ const StudentExams = () => {
 
   if (loading) {
     return (
-      <StudentLayout title="Tests" subtitle="West Bengal Mock Test Series">
+      <StudentLayout title={isPracticeHub ? "Practice" : "Tests"} subtitle={isPracticeHub ? "Topic-wise drills" : "West Bengal Mock Test Series"}>
         <div className="w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4 py-8 space-y-4">
           <div className="h-12 bg-slate-200/60 rounded-2xl animate-pulse" />
           <div className="h-44 bg-slate-200/60 rounded-3xl animate-pulse" />
@@ -215,7 +218,7 @@ const StudentExams = () => {
   }
 
   return (
-    <StudentLayout title="Tests" subtitle="West Bengal Mock Test Series">
+    <StudentLayout title={isPracticeHub ? "Practice" : "Tests"} subtitle={isPracticeHub ? "Topic-wise drills" : "West Bengal Mock Test Series"}>
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
 
         {/* ═══════════════════════════════════════════════════════════════
