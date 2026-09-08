@@ -96,43 +96,43 @@ const HeroBannerCarousel = ({
   const slides: BannerSlide[] = [
     {
       image: "/images/student_hero_banner.jpg",
-      badge: "Daily Practice",
+      badge: "লক্ষ্য এবার সরকারি চাকরি 🎯",
       title: (
         <>
           Turn Preparation Into{" "}
-          <span className="text-[#FBBF24]">Success</span>
+          <span className="text-[#FBBF24]">Selection 🔥</span>
         </>
       ),
-      subtitle: `${greeting}, ${firstName}! Practice • Analyze • Improve • Crack`,
-      buttonText: "Start Practicing",
+      subtitle: `${greeting}, ${firstName}! প্র্যাকটিস • ভুলের খাতা • স্পিড ড্রিল • সিলেকশন`,
+      buttonText: "প্র্যাকটিস শুরু করো 🚀",
       buttonLink: "/student/practice",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
       badgeColor: "bg-blue-500/30 border-blue-300/40 text-blue-100",
     },
     {
       image: "/images/student_hero_himalaya.jpg",
-      badge: "Target Exams",
+      badge: "ফুল মক টেস্ট ও লাইভ র‍্যাঙ্ক",
       title: (
         <>
-          Crack WB & <span className="text-[#60A5FA]">Central Exams</span>
+          WB & Central <span className="text-[#60A5FA]">কাট-অফ ক্র্যাক করো</span>
         </>
       ),
-      subtitle: "Full-length WBCS, WBP, SSC & Rail mock tests with live ranks.",
-      buttonText: "Explore Exams",
+      subtitle: "পুলিশ, ক্লার্কশিপ, পঞ্চায়েত, টেট, WBCS ও রেলওয়ের আসল পরীক্ষার পরিবেশ ও নেগেটিভ মার্কিং।",
+      buttonText: "মক টেস্ট দেখো",
       buttonLink: "/student/exam",
       buttonStyle: "bg-[#0066FF] hover:bg-blue-600 text-white font-bold shadow-blue-500/30",
       badgeColor: "bg-indigo-500/30 border-indigo-300/40 text-indigo-100",
     },
     {
       image: "/images/student_mountains.jpg",
-      badge: "Speed Challenge",
+      badge: "ডেইলি স্পিড বুস্টার",
       title: (
         <>
-          Daily 10 <span className="text-[#FBBF24]">Speed Test</span>
+          ডেইলি ১০ <span className="text-[#FBBF24]">স্পিড টেস্ট ⏱️</span>
         </>
       ),
-      subtitle: "10 high-yield questions in 5 minutes to sharpen your speed.",
-      buttonText: "Start Daily 10",
+      subtitle: "প্রতিদিন ১০টি হাই-ইল্ড MCQ দিয়ে স্পিড বাড়াও আর টাইমার সামলানোর ভয় কাটাও।",
+      buttonText: "ডেইলি টেস্ট দাও",
       buttonLink: "/student/daily",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
       badgeColor: "bg-amber-500/30 border-amber-300/40 text-amber-100",
@@ -604,19 +604,19 @@ const StudentDashboard = () => {
         <div className="rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h3 className="font-black text-sm text-slate-900 tracking-tight">Today's Progress</h3>
+              <h3 className="font-black text-sm text-slate-900 tracking-tight font-bengali">আজকের প্রস্তুতি ও অগ্রগতি (Today's Progress)</h3>
               {todayMetrics.streakDays > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 font-bengali">
                   <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  Active Streak
+                  অ্যাক্টিভ স্ট্রিক 🔥
                 </span>
               )}
             </div>
             <button
               onClick={() => navigate("/student/results")}
-              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors font-bengali"
             >
-              <span>View Details</span>
+              <span>বিস্তারিত দেখুন</span>
               <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>
           </div>
@@ -627,8 +627,8 @@ const StudentDashboard = () => {
               <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                 {todayMetrics.questions}
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                Questions
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 font-bengali">
+                MCQ সমাধান
               </p>
             </div>
 
@@ -637,8 +637,8 @@ const StudentDashboard = () => {
               <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                 {todayMetrics.accuracy}%
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                Accuracy
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 font-bengali">
+                সঠিক উত্তর
               </p>
             </div>
 
@@ -647,8 +647,8 @@ const StudentDashboard = () => {
               <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                 {todayMetrics.studyTimeMinutes}m
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                Study Time
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 font-bengali">
+                পড়ার সময়
               </p>
             </div>
 
@@ -660,8 +660,8 @@ const StudentDashboard = () => {
                 </span>
                 <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
               </div>
-              <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-0.5">
-                Day Streak
+              <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-0.5 font-bengali">
+                ধারাবাহিকতা 🔥
               </p>
             </div>
           </div>
@@ -699,27 +699,27 @@ const StudentDashboard = () => {
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    {readiness.readinessLabel}
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bengali">
+                    🎯 {readiness.readinessLabel}
                   </span>
-                  <span className="text-xs font-bold text-slate-300">
+                  <span className="text-xs font-bold text-slate-300 font-bengali">
                     {readiness.targetExamName}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm font-bold text-white mt-1">
-                  Projected: <span className="text-amber-300 font-mono font-black">{readiness.projectedScore}</span> / {readiness.maxScore} marks
+                <p className="text-xs sm:text-sm font-bold text-white mt-1 font-bengali">
+                  সম্ভাব্য স্কোর: <span className="text-amber-300 font-mono font-black">{readiness.projectedScore}</span> / {readiness.maxScore} নম্বর
                   {readiness.weakestSubject && (
                     <span className="text-slate-300 font-normal ml-2 hidden md:inline">
-                      • Weakest: <span className="text-rose-400 font-bold">{readiness.weakestSubject.subject}</span>
+                      • দুর্বল বিষয়: <span className="text-rose-400 font-bold">{readiness.weakestSubject.subject}</span>
                     </span>
                   )}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
+            <div className="flex items-center gap-2 self-start sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 font-bengali">
               <span className="text-xs font-bold text-blue-300 group-hover:text-white transition-colors">
-                View Diagnostic Breakdown
+                কাট-অফ ও ৩টি মিশন দেখো
               </span>
               <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -1107,41 +1107,41 @@ const StudentDashboard = () => {
             SECTION 6: QUICK ACTIONS (6 Practice & Study Tools)
             ═══════════════════════════════════════════════════════════════ */}
         <div className="space-y-2">
-          <h3 className="font-black text-sm text-slate-900 tracking-tight">Quick Actions</h3>
+          <h3 className="font-black text-sm text-slate-900 tracking-tight font-bengali">কুইক প্র্যাকটিস টুলস (Quick Actions)</h3>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
             {[
               {
-                title: "Daily Challenge",
+                title: "ডেইলি কুইজ",
                 icon: Zap,
                 bg: "bg-amber-50 border-amber-200/80 text-amber-600",
                 path: "/student/daily",
               },
               {
-                title: "Topic Practice",
+                title: "টপিক ড্রিল",
                 icon: Target,
                 bg: "bg-purple-50 border-purple-200/80 text-purple-600",
                 path: "/student/practice/subject",
               },
               {
-                title: "Previous Year",
+                title: "বিগত বছরের PYQ",
                 icon: Calendar,
                 bg: "bg-emerald-50 border-emerald-200/80 text-emerald-600",
                 path: "/student/pyq",
               },
               {
-                title: "Mistake Book",
+                title: "ভুলের খাতা",
                 icon: RotateCcw,
                 bg: "bg-rose-50 border-rose-200/80 text-rose-600",
                 path: "/student/mistakes",
               },
               {
-                title: "Study Notes",
+                title: "স্টাডি নোটস",
                 icon: BookOpen,
                 bg: "bg-blue-50 border-blue-200/80 text-[#0066FF]",
                 path: "/student/notes",
               },
               {
-                title: "Saved Bookmarks",
+                title: "সেভ করা প্রশ্ন",
                 icon: Bookmark,
                 bg: "bg-cyan-50 border-cyan-200/80 text-cyan-600",
                 path: "/student/bookmarks",
@@ -1159,7 +1159,7 @@ const StudentDashboard = () => {
                 >
                   <action.icon className="w-5 h-5 stroke-[2.2]" />
                 </div>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight font-bengali">
                   {action.title}
                 </span>
               </motion.button>

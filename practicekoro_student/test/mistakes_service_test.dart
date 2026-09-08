@@ -31,10 +31,14 @@ void main() {
     });
 
     test('error type labels map correctly in Bengali and English', () {
-      expect(ErrorType.conceptual.bengaliLabel, equals('ধারণাগত ভুল'));
-      expect(ErrorType.careless.bengaliLabel, equals('অসাবধানতা'));
-      expect(ErrorType.timePressure.bengaliLabel, equals('সময়ের অভাব'));
-      expect(ErrorType.guess.bengaliLabel, equals('অনুমান'));
+      expect(ErrorType.conceptual.label, equals('Concept Gap'));
+      expect(ErrorType.conceptual.bengaliLabel, equals('কনসেপ্ট পরিষ্কার ছিল না'));
+      expect(ErrorType.careless.label, equals('Silly Mistake'));
+      expect(ErrorType.careless.bengaliLabel, equals('তাড়াহুড়োয় জানা প্রশ্ন ভুল'));
+      expect(ErrorType.timePressure.label, equals('Time Panic'));
+      expect(ErrorType.timePressure.bengaliLabel, equals('সময়ের টান ও নার্ভাসনেস'));
+      expect(ErrorType.guess.label, equals('Blind Guess'));
+      expect(ErrorType.guess.bengaliLabel, equals('আন্দাজে তুকা মেরেছি'));
     });
   });
 }

@@ -67,30 +67,30 @@ export const StudentPerformance = () => {
   };
 
   return (
-    <StudentLayout title="Performance" subtitle="Exam Readiness & Cutoff Analytics">
+    <StudentLayout title="প্রস্তুতি মিটার" subtitle="সিলেকশন ও কাট-অফ অ্যানালিটিক্স">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-5">
         
         {/* TOP HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-display">
-                Exam Readiness Dashboard
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-display font-bengali">
+                সিলেকশন প্রস্তুতি ও কাট-অফ মিটার
               </h1>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                Phase 4 Engine
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bengali">
+                লাইভ স্কোর
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Multi-factor statistical readiness, projected scores & historical cutoff benchmarking
+            <p className="text-xs text-slate-500 font-medium mt-0.5 font-bengali">
+              তোমার টার্গেট পরীক্ষার কাট-অফ, সম্ভাব্য স্কোর এবং বিষয়ভিত্তিক প্রস্তুতি
             </p>
           </div>
 
           <button
             onClick={() => navigate("/student/practice")}
-            className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors font-bengali"
           >
-            <span>Practice Center</span>
+            <span>প্র্যাকটিস হাব</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -184,23 +184,23 @@ export const StudentPerformance = () => {
                   <h2 className="text-xl sm:text-2xl font-black text-white font-display">
                     {selectedExam.name}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-md leading-relaxed">
-                    Projected Score: <strong className="text-amber-300 font-mono text-base">{readiness.projectedScore}</strong> / {readiness.maxScore} marks based on your mock consistency and error mastery.
+                  <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-md leading-relaxed font-bengali">
+                    সম্ভাব্য স্কোর: <strong className="text-amber-300 font-mono text-base">{readiness.projectedScore}</strong> / {readiness.maxScore} (মক টেস্টের পারফরম্যান্স ও ভুলের খাতার রিভিশন অনুযায়ী)
                   </p>
                 </div>
               </div>
 
               {/* Right 4-Factor Breakdown Bars */}
               <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-2.5 min-w-[260px] sm:min-w-[300px]">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-1 border-b border-white/10">
-                  <span>Readiness Components</span>
-                  <span className="text-amber-400">Weightage</span>
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-1 border-b border-white/10 font-bengali">
+                  <span>প্রস্তুতির ৪টি ফ্যাক্টর</span>
+                  <span className="text-amber-400">ওয়েটেজ</span>
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] text-slate-200">
-                    <span>Full Mocks Precision</span>
-                    <span className="font-mono font-bold">{readiness.mockAccuracy}% (40%)</span>
+                  <div className="flex justify-between text-[11px] text-slate-200 font-bengali">
+                    <span>ফুল মক টেস্টের নির্ভুলতা</span>
+                    <span className="font-mono font-bold">{readiness.mockAccuracy}% (৪০%)</span>
                   </div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div className="bg-blue-400 h-full rounded-full" style={{ width: `${readiness.mockAccuracy}%` }} />
@@ -208,9 +208,9 @@ export const StudentPerformance = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] text-slate-200">
-                    <span>Topic & PYQ Drills</span>
-                    <span className="font-mono font-bold">{readiness.topicDrillAccuracy}% (25%)</span>
+                  <div className="flex justify-between text-[11px] text-slate-200 font-bengali">
+                    <span>বিগত বছরের PYQ ও ড্রিল</span>
+                    <span className="font-mono font-bold">{readiness.topicDrillAccuracy}% (২৫%)</span>
                   </div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div className="bg-emerald-400 h-full rounded-full" style={{ width: `${readiness.topicDrillAccuracy}%` }} />
@@ -218,9 +218,9 @@ export const StudentPerformance = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] text-slate-200">
-                    <span>Mistakes Mastery Rate</span>
-                    <span className="font-mono font-bold">{readiness.mistakeMasteryRate}% (20%)</span>
+                  <div className="flex justify-between text-[11px] text-slate-200 font-bengali">
+                    <span>ভুলের খাতার রিভিশন রেট</span>
+                    <span className="font-mono font-bold">{readiness.mistakeMasteryRate}% (২০%)</span>
                   </div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div className="bg-purple-400 h-full rounded-full" style={{ width: `${readiness.mistakeMasteryRate}%` }} />
@@ -228,9 +228,9 @@ export const StudentPerformance = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] text-slate-200">
-                    <span>Daily Consistency</span>
-                    <span className="font-mono font-bold">{readiness.consistencyScore}% (15%)</span>
+                  <div className="flex justify-between text-[11px] text-slate-200 font-bengali">
+                    <span>ডেইলি পড়ার ধারাবাহিকতা</span>
+                    <span className="font-mono font-bold">{readiness.consistencyScore}% (১৫%)</span>
                   </div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div className="bg-amber-400 h-full rounded-full" style={{ width: `${readiness.consistencyScore}%` }} />
@@ -249,17 +249,17 @@ export const StudentPerformance = () => {
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="text-base font-black text-slate-900 font-display flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900 font-display flex items-center gap-2 font-bengali">
                   <Target className="w-5 h-5 text-blue-600" />
-                  <span>Historical Cutoff Benchmark ({readiness.cutoffBenchmark.examName})</span>
+                  <span>কাট-অফ মিটার — পাস মার্কসের তুলনা ({readiness.cutoffBenchmark.examName})</span>
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Expected category cutoffs based on previous examination cycles
+                <p className="text-xs text-slate-500 font-medium mt-0.5 font-bengali">
+                  বিগত বছরের অফিশিয়াল কাট-অফের তুলনায় তোমার বর্তমান পজিশন
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <span className="text-xs font-bold text-slate-600">Your Projected:</span>
+              <div className="flex items-center gap-2 self-start sm:self-auto font-bengali">
+                <span className="text-xs font-bold text-slate-600">সম্ভাব্য স্কোর:</span>
                 <span className="px-3 py-1 rounded-xl bg-blue-600 text-white font-mono font-black text-sm shadow-xs">
                   {readiness.projectedScore} / {readiness.maxScore}
                 </span>
@@ -284,14 +284,14 @@ export const StudentPerformance = () => {
                       <span className="text-xs font-mono font-black text-slate-900">{c.cutoff} Marks</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 pt-1">
+                    <div className="flex items-center gap-1.5 pt-1 font-bengali">
                       {isCleared ? (
                         <span className="text-[11px] font-black text-emerald-700 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> +{diff} above
+                          <CheckCircle2 className="w-3.5 h-3.5" /> +{diff} সেফ জোনে 🔥
                         </span>
                       ) : (
                         <span className="text-[11px] font-black text-rose-600 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5" /> {diff} gap
+                          <AlertTriangle className="w-3.5 h-3.5" /> {Math.abs(diff)} ঘাটতি ⚠️
                         </span>
                       )}
                     </div>
@@ -309,12 +309,12 @@ export const StudentPerformance = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-slate-900 font-display flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900 font-display flex items-center gap-2 font-bengali">
                   <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
-                  <span>Prioritized Action Plan (আজকের করণীয়)</span>
+                  <span>আজকের মিশন — স্কোর বাড়ানোর ৩টি স্টেপ (Today's Mission)</span>
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Daily high-impact steps to boost your exam readiness score
+                <p className="text-xs text-slate-500 font-bengali">
+                  এই ৩টি কাজ করলে তোমার সিলেকশন প্রস্তুতি দ্রুত এগিয়ে যাবে
                 </p>
               </div>
             </div>
@@ -334,8 +334,8 @@ export const StudentPerformance = () => {
                       <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-transform" />
                     </div>
 
-                    <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
-                      {act.title}
+                    <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors font-bengali">
+                      {act.bengaliTitle || act.title}
                     </h4>
                     <p className="text-xs text-slate-500 leading-relaxed font-bengali">
                       {act.subtitle}
@@ -343,8 +343,8 @@ export const StudentPerformance = () => {
                   </div>
 
                   <div className="pt-4 mt-auto">
-                    <span className="text-xs font-bold text-blue-600 group-hover:underline flex items-center gap-1">
-                      Start Now <ArrowRight className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold text-blue-600 group-hover:underline flex items-center gap-1 font-bengali">
+                      শুরু করো <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>
@@ -360,11 +360,11 @@ export const StudentPerformance = () => {
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-slate-900 font-display">
-                  Subject Performance Breakdown
+                <h3 className="text-base font-black text-slate-900 font-display font-bengali">
+                  সাবজেক্ট ডায়াগনস্টিক — কোন বিষয়ে কত পার্সেন্ট রেডি
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Precision rating and pending mistakes across syllabus chapters
+                <p className="text-xs text-slate-500 font-bengali">
+                  সিলেবাস অনুযায়ী তোমার স্ট্রং ও দুর্বল জায়গাগুলো চিনে নাও
                 </p>
               </div>
 
@@ -372,9 +372,9 @@ export const StudentPerformance = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/student/practice/subject")}
-                className="rounded-xl text-xs font-bold gap-1"
+                className="rounded-xl text-xs font-bold gap-1 font-bengali"
               >
-                <span>Practice All Subjects</span>
+                <span>সব বিষয় প্র্যাকটিস করো</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -389,12 +389,12 @@ export const StudentPerformance = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                      <h4 className="font-bold text-xs text-slate-900 truncate">
-                        {item.subject}
+                      <h4 className="font-bold text-xs text-slate-900 truncate font-bengali">
+                        {item.bengaliName || item.subject}
                       </h4>
                     </div>
                     <span
-                      className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase font-bengali ${
                         item.status === "strong"
                           ? "bg-emerald-50 text-emerald-700"
                           : item.status === "weak"
@@ -402,13 +402,13 @@ export const StudentPerformance = () => {
                           : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {item.status}
+                      {item.status === "strong" ? "মজবুত 🔥" : item.status === "weak" ? "দুর্বল ⚠️" : "মোটামুটি ⚡"}
                     </span>
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px] text-slate-500">
-                      <span>{item.bengaliName}</span>
+                      <span>নির্ভুলতা (Accuracy)</span>
                       <span className="font-mono font-black text-slate-800">{item.scorePercent}%</span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">

@@ -58,32 +58,32 @@ class ReadinessService {
 
     if (overallReadiness >= 80) {
       band = ReadinessBand.examReady;
-      label = "Exam Ready";
-      bengaliBand = "পরীক্ষার জন্য সম্পূর্ণ প্রস্তুত";
+      label = "Selection Ready 🏆";
+      bengaliBand = "সিলেকশন জোনে সম্পূর্ণ প্রস্তুত";
     } else if (overallReadiness >= 65) {
       band = ReadinessBand.competitive;
-      label = "Competitive Zone";
-      bengaliBand = "প্রতিদ্বন্দ্বিতাপূর্ণ স্কোরে আছেন";
+      label = "Competitive Zone 🔥";
+      bengaliBand = "কাট-অফের খুব কাছে আছো";
     } else if (overallReadiness >= 45) {
       band = ReadinessBand.developing;
-      label = "Developing";
-      bengaliBand = "উন্নতির পথে আছেন";
+      label = "Building Momentum ⚡";
+      bengaliBand = "প্রস্তুতি চলছে, স্পিড বাড়াও";
     } else {
       band = ReadinessBand.critical;
-      label = "Needs Focus";
-      bengaliBand = "বিশেষ নজর দেওয়া প্রয়োজন";
+      label = "Focus on Basics ⚠️";
+      bengaliBand = "বেসিক মজবুত করতে হবে";
     }
 
     final projectedScore =
         ((overallReadiness / 100.0) * benchmark.totalMarks * 10).round() / 10.0;
 
     final coreSubjects = [
-      {'name': 'General Knowledge', 'bn': 'সাধারণ জ্ঞান', 'mult': 1.05},
-      {'name': 'Mathematics', 'bn': 'পাটিগণিত ও অঙ্ক', 'mult': 0.72},
-      {'name': 'General Science', 'bn': 'সাধারণ বিজ্ঞান', 'mult': 0.90},
-      {'name': 'English', 'bn': 'ইংরেজি', 'mult': 0.82},
-      {'name': 'Bengali', 'bn': 'বাংলা সাহিত্য', 'mult': 1.02},
-      {'name': 'Reasoning', 'bn': 'রিজনিং', 'mult': 0.85},
+      {'name': 'General Knowledge', 'bn': 'সাধারণ জ্ঞান ও কারেন্ট অ্যাফেয়ার্স', 'mult': 1.05},
+      {'name': 'Mathematics', 'bn': 'পাটিগণিত ও অঙ্ক (শর্টকাট ট্রিক)', 'mult': 0.72},
+      {'name': 'General Science', 'bn': 'সাধারণ বিজ্ঞান (ফিজিক্স, কেমিস্ট্রি, বায়ো)', 'mult': 0.90},
+      {'name': 'English', 'bn': 'ইংরেজি গ্রামার ও ভোক্যাব', 'mult': 0.82},
+      {'name': 'Bengali', 'bn': 'বাংলা ব্যাকরণ ও সাহিত্য', 'mult': 1.02},
+      {'name': 'Reasoning', 'bn': 'লজিক্যাল রিজনিং (GI)', 'mult': 0.85},
     ];
 
     final subjectReadiness = coreSubjects.map((s) {
@@ -110,26 +110,26 @@ class ReadinessService {
       RecommendedAction(
         id: 'act-weak',
         title: 'Practice ${weakest.subject}',
-        bengaliTitle: '${weakest.bengaliName} অনুশীলন করুন',
-        subtitle: 'Current accuracy is ${weakest.scorePercent}%. Solve 10 MCQs.',
+        bengaliTitle: '${weakest.bengaliName} রিভিশন ও ড্রিল',
+        subtitle: 'বর্তমান নির্ভুলতা ${weakest.scorePercent}%। ১০টি প্রশ্ন সলভ করে দুর্বলতা কাটাও।',
         actionUrl: '/practice',
-        impactLabel: '+4% Readiness',
+        impactLabel: '+৪% স্কোর বুস্ট',
       ),
       RecommendedAction(
         id: 'act-mistakes',
         title: 'Revise Mistakes Notebook',
-        bengaliTitle: 'ভুল নোটবুক রিভাইজ করুন',
-        subtitle: 'Master pending mistakes to eliminate negative marking.',
+        bengaliTitle: 'ভুলের খাতা রিভিশন করো',
+        subtitle: 'পেন্ডিং ভুলগুলো প্র্যাকটিস করে নেগেটিভ মার্কিং শূন্য করো।',
         actionUrl: '/mistakes',
-        impactLabel: '+5% Readiness',
+        impactLabel: '+৫% সিলেকশন চান্স',
       ),
       RecommendedAction(
         id: 'act-mock',
         title: 'Take ${targetExam.name} Mock',
-        bengaliTitle: '${targetExam.bengaliName} টেস্ট দিন',
-        subtitle: 'Full timed exam with official negative marking.',
+        bengaliTitle: '${targetExam.bengaliName} ফুল মক টেস্ট',
+        subtitle: 'আসল পরীক্ষার টাইমার ও নেগেটিভ মার্কিং সহ ফুল স্পিড টেস্ট।',
         actionUrl: '/exams',
-        impactLabel: '+6% Readiness',
+        impactLabel: '+৬% কাট-অফ বুস্ট',
       ),
     ];
 

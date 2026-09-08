@@ -167,25 +167,25 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
 
   // Band Determination
   let readinessBand: ReadinessBand = "developing";
-  let readinessLabel = "Developing";
-  let bengaliBandLabel = "উন্নতির পথে আছেন";
+  let readinessLabel = "Building Momentum ⚡";
+  let bengaliBandLabel = "স্পিড বাড়াতে হবে";
 
   if (overallReadiness >= 80) {
     readinessBand = "exam_ready";
-    readinessLabel = "Exam Ready";
-    bengaliBandLabel = "পরীক্ষার জন্য সম্পূর্ণ প্রস্তুত";
+    readinessLabel = "Selection Ready 🏆";
+    bengaliBandLabel = "সিলেকশন জোনে সম্পূর্ণ প্রস্তুত";
   } else if (overallReadiness >= 65) {
     readinessBand = "competitive";
-    readinessLabel = "Competitive Zone";
-    bengaliBandLabel = "প্রতিদ্বন্দ্বিতাপূর্ণ স্কোরে আছেন";
+    readinessLabel = "Competitive Zone 🔥";
+    bengaliBandLabel = "কাট-অফের খুব কাছে আছো";
   } else if (overallReadiness >= 45) {
     readinessBand = "developing";
-    readinessLabel = "Developing";
-    bengaliBandLabel = "অগ্রগতি হচ্ছে";
+    readinessLabel = "Building Momentum ⚡";
+    bengaliBandLabel = "প্রস্তুতি চলছে, স্পিড বাড়াও";
   } else {
     readinessBand = "critical";
-    readinessLabel = "Needs Immediate Focus";
-    bengaliBandLabel = "বিশেষ নজর দেওয়া প্রয়োজন";
+    readinessLabel = "Focus on Basics ⚠️";
+    bengaliBandLabel = "বেসিক মজবুত করতে হবে";
   }
 
   // Projected Score on Target Exam
@@ -193,15 +193,15 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
 
   // Subject Readiness Matrix across Core Subjects
   const coreSubjects = [
-    { name: "General Knowledge", bn: "সাধারণ জ্ঞান", baseMultiplier: 1.05, color: "bg-amber-500" },
+    { name: "General Knowledge", bn: "সাধারণ জ্ঞান ও জিকে", baseMultiplier: 1.05, color: "bg-amber-500" },
     { name: "Mathematics", bn: "পাটিগণিত ও অঙ্ক", baseMultiplier: 0.72, color: "bg-blue-500" },
     { name: "General Science", bn: "সাধারণ বিজ্ঞান", baseMultiplier: 0.9, color: "bg-emerald-500" },
-    { name: "English", bn: "ইংরেজি", baseMultiplier: 0.82, color: "bg-indigo-500" },
+    { name: "English", bn: "ইংরেজি গ্রামার ও ভোক্যাব", baseMultiplier: 0.82, color: "bg-indigo-500" },
     { name: "Bengali", bn: "বাংলা সাহিত্য ও ব্যাকরণ", baseMultiplier: 1.02, color: "bg-pink-500" },
-    { name: "Indian Polity", bn: "সংবিধান ও শাসন", baseMultiplier: 0.88, color: "bg-rose-500" },
+    { name: "Indian Polity", bn: "সংবিধান ও শাসনব্যবস্থা", baseMultiplier: 0.88, color: "bg-rose-500" },
     { name: "History", bn: "ভারতের ইতিহাস", baseMultiplier: 0.95, color: "bg-orange-500" },
     { name: "Geography", bn: "পশ্চিমবঙ্গ ও ভারত ভূগোল", baseMultiplier: 0.92, color: "bg-teal-500" },
-    { name: "Reasoning", bn: "লজিক্যাল রিজনিং", baseMultiplier: 0.85, color: "bg-purple-500" },
+    { name: "Reasoning", bn: "লজিক্যাল রিজনিং (GI)", baseMultiplier: 0.85, color: "bg-purple-500" },
   ];
 
   const subjectReadiness: SubjectReadinessItem[] = coreSubjects.map((s) => {
@@ -233,8 +233,8 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
     recommendedActions.push({
       id: "act-weak-subject",
       title: `Practice ${weakestSubject.subject}`,
-      bengaliTitle: `${weakestSubject.bengaliName} অধ্যায় ড্রিল`,
-      subtitle: `Your current accuracy is ${weakestSubject.scorePercent}%. Practice 10 MCQs to boost readiness.`,
+      bengaliTitle: `${weakestSubject.bengaliName} দুর্বল চ্যাপ্টার ড্রিল`,
+      subtitle: `এই বিষয়ে অ্যাকুরেসি ${weakestSubject.scorePercent}%। ১০টি প্রশ্ন প্র্যাকটিস করে স্কোর বাড়াও।`,
       actionUrl: `/student/practice/subject?subject=${encodeURIComponent(weakestSubject.subject)}`,
       impactLabel: "+4% Readiness",
       type: "topic_drill",
@@ -246,8 +246,8 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
     recommendedActions.push({
       id: "act-revise-mistakes",
       title: `Revise ${unmasteredMistakes} Active Mistakes`,
-      bengaliTitle: `${unmasteredMistakes}টি পূর্বের ভুল রিভাইজ করুন`,
-      subtitle: `Master your past mistakes in the Mistakes Vault to eliminate negative marking.`,
+      bengaliTitle: `${unmasteredMistakes}টি ভুল প্রশ্ন রিভাইজ দাও`,
+      subtitle: `ভুলের খাতার এই প্রশ্নগুলো আবার চেষ্টা করে নেগেটিভ মার্কিং শূন্য করো।`,
       actionUrl: `/student/mistakes`,
       impactLabel: "+5% Readiness",
       type: "mistake_revision",
@@ -256,8 +256,8 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
     recommendedActions.push({
       id: "act-pyq-drill",
       title: `${targetExamName} PYQ Drill`,
-      bengaliTitle: `${targetExamName} বিগত বছরের ড্রিল`,
-      subtitle: `Solve 10 verified past exam questions with step-by-step solutions.`,
+      bengaliTitle: `${targetExamName} বিগত বছরের PYQ ড্রিল`,
+      subtitle: `বিগত বছরের ১০টি আসল প্রশ্ন ব্যাখ্যা ও ট্রিক সহ প্র্যাকটিস করো।`,
       actionUrl: `/student/pyq`,
       impactLabel: "+3% Readiness",
       type: "pyq_drill",
@@ -267,8 +267,8 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
   recommendedActions.push({
     id: "act-full-mock",
     title: `Take ${targetExamName} Full Mock`,
-    bengaliTitle: `${targetExamName} সম্পূর্ণ মক টেস্ট দিন`,
-    subtitle: `Timed exam simulation with official negative marking and performance percentile.`,
+    bengaliTitle: `${targetExamName} ফুল মক টেস্ট দাও`,
+    subtitle: `আসল পরীক্ষার ইন্টারফেসে টাইমার ও নেগেটিভ মার্কিং সহ মক টেস্ট দিয়ে র‍্যাংক দেখো।`,
     actionUrl: `/student/exams?exam=${targetExamId}`,
     impactLabel: "+6% Readiness",
     type: "mock_test",

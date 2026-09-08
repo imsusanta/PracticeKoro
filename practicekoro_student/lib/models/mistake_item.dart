@@ -38,13 +38,13 @@ enum ErrorType {
   String get label {
     switch (this) {
       case ErrorType.conceptual:
-        return 'Conceptual';
+        return 'Concept Gap';
       case ErrorType.careless:
-        return 'Careless';
+        return 'Silly Mistake';
       case ErrorType.timePressure:
-        return 'Time Pressure';
+        return 'Time Panic';
       case ErrorType.guess:
-        return 'Guess';
+        return 'Blind Guess';
       case ErrorType.unclassified:
         return 'Unclassified';
     }
@@ -53,13 +53,28 @@ enum ErrorType {
   String get bengaliLabel {
     switch (this) {
       case ErrorType.conceptual:
-        return 'ধারণাগত ভুল';
+        return 'কনসেপ্ট পরিষ্কার ছিল না';
       case ErrorType.careless:
-        return 'অসাবধানতা';
+        return 'তাড়াহুড়োয় জানা প্রশ্ন ভুল';
       case ErrorType.timePressure:
-        return 'সময়ের অভাব';
+        return 'সময়ের টান ও নার্ভাসনেস';
       case ErrorType.guess:
-        return 'অনুমান';
+        return 'আন্দাজে তুকা মেরেছি';
+      case ErrorType.unclassified:
+        return 'কারণ সিলেক্ট করা হয়নি';
+    }
+  }
+
+  String get shortBengaliLabel {
+    switch (this) {
+      case ErrorType.conceptual:
+        return 'কনসেপ্ট গ্যাপ';
+      case ErrorType.careless:
+        return 'সিলি মিস্টেক';
+      case ErrorType.timePressure:
+        return 'টাইম প্যানিক';
+      case ErrorType.guess:
+        return 'আন্দাজে তুকা';
       case ErrorType.unclassified:
         return 'অনির্ধারিত';
     }

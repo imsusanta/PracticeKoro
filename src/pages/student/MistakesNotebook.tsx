@@ -204,13 +204,13 @@ export const MistakesNotebook = () => {
             <div className="space-y-2.5 max-w-xl">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
                 <AlertOctagon className="w-3.5 h-3.5" />
-                Error Elimination Engine
+                নেগেটিভ মার্কিং কমাও (Zero Negative Marking)
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
-                Personalized <span className="text-[#FBBF24]">Mistakes Vault</span>
+                ভুলের খাতা <span className="text-[#FBBF24]">— Mistakes Notebook</span>
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
-                Classify why you lost marks (conceptual, careless, time pressure, or guess) and drill your weak areas until you reach 100% mastery.
+              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed font-bengali">
+                মক টেস্ট ও ড্রিল দেওয়ার পর যেসব প্রশ্নে মার্কস কাটা গেছে, সেগুলোকে ভালো করে রিভাইজ দিয়ে পাক্কা করো — যাতে আসল পরীক্ষায় ১ নম্বরও নষ্ট না হয়!
               </p>
             </div>
 
@@ -222,7 +222,7 @@ export const MistakesNotebook = () => {
                   className="h-12 px-6 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  Launch Revision Drill ({analytics.activeMistakes})
+                  রিভিশন ড্রিল শুরু করো 🚀 ({analytics.activeMistakes})
                 </Button>
                 {analytics.weakestSubject && (
                   <Button
@@ -236,7 +236,7 @@ export const MistakesNotebook = () => {
                     className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5"
                   >
                     <Layers className="w-3.5 h-3.5" />
-                    Drill Weakest Subject: {analytics.weakestSubject}
+                    দুর্বল বিষয় রিভাইজ: {analytics.weakestSubject}
                   </Button>
                 )}
               </div>
@@ -249,8 +249,8 @@ export const MistakesNotebook = () => {
               <span className="text-2xl sm:text-3xl font-black text-rose-300 leading-tight block">
                 {analytics.activeMistakes}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
-                Active Mistakes
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
+                রিভিশন বাকি (Pending)
               </span>
             </div>
 
@@ -258,8 +258,8 @@ export const MistakesNotebook = () => {
               <span className="text-2xl sm:text-3xl font-black text-emerald-300 leading-tight block">
                 {analytics.masteredMistakes}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
-                Questions Mastered
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
+                পাক্কা রেডি (Mastered 🔥)
               </span>
             </div>
 
@@ -267,17 +267,17 @@ export const MistakesNotebook = () => {
               <span className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-tight block">
                 {analytics.masteryRate}%
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
-                Mastery Rate
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
+                মাস্টারি রেট (Accuracy)
               </span>
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
               <span className="text-base sm:text-lg font-black text-cyan-300 leading-tight block truncate">
-                {analytics.weakestSubject || "All Clear"}
+                {analytics.weakestSubject || "সব ক্লিয়ার"}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
-                Priority Subject
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
+                বেশি ভুল হওয়া বিষয়
               </span>
             </div>
           </div>
@@ -289,12 +289,12 @@ export const MistakesNotebook = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-blue-600" />
-                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight">
-                  Error Cause Distribution (ভুলের কারণ বিশ্লেষণ)
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight font-bengali">
+                  ভুলের কারণ অ্যানালিসিস (কেন মার্কস কেটেছিল?)
                 </h3>
               </div>
-              <span className="text-[11px] font-bold text-slate-500">
-                {analytics.totalMistakes} Recorded Errors
+              <span className="text-[11px] font-bold text-slate-500 font-bengali">
+                মোট {analytics.totalMistakes}টি ভুলের রেকর্ড
               </span>
             </div>
 
@@ -327,8 +327,8 @@ export const MistakesNotebook = () => {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-slate-400 font-bold mt-1 block">
-                      {count} questions
+                    <span className="text-[10px] text-slate-400 font-bold mt-1 block font-bengali">
+                      {count}টি প্রশ্ন
                     </span>
                   </button>
                 );
@@ -345,7 +345,7 @@ export const MistakesNotebook = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search mistake questions, subjects, topics, or your reflection notes..."
+              placeholder="ভুল প্রশ্ন, বিষয়, চ্যাপ্টার বা তোমার রিফ্লেকশন নোট খুঁজুন..."
               className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bengali"
             />
           </div>
@@ -356,35 +356,35 @@ export const MistakesNotebook = () => {
               <button
                 type="button"
                 onClick={() => setFilterMastered("active")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all font-bengali ${
                   filterMastered === "active"
                     ? "bg-rose-500 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                Active ({analytics.activeMistakes})
+                রিভিশন বাকি ({analytics.activeMistakes})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterMastered("mastered")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all font-bengali ${
                   filterMastered === "mastered"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                Mastered ({analytics.masteredMistakes})
+                পাক্কা রেডি ({analytics.masteredMistakes})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterMastered("all")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all font-bengali ${
                   filterMastered === "all"
                     ? "bg-[#0F172A] text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                All ({analytics.totalMistakes})
+                সব প্রশ্ন ({analytics.totalMistakes})
               </button>
             </div>
 
@@ -393,13 +393,13 @@ export const MistakesNotebook = () => {
               <button
                 type="button"
                 onClick={() => setFilterErrorType("all")}
-                className={`px-3 py-1 text-xs rounded-xl font-bold transition-all ${
+                className={`px-3 py-1 text-xs rounded-xl font-bold transition-all font-bengali ${
                   filterErrorType === "all"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                All Reasons
+                সব কারণ
               </button>
               {(["conceptual", "careless", "time_pressure", "guess"] as ErrorType[]).map((t) => {
                 const def = ERROR_TYPE_DEFINITIONS[t];
@@ -459,19 +459,19 @@ export const MistakesNotebook = () => {
         ) : filteredMistakes.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center bg-white space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-            <h3 className="text-base font-bold text-slate-900">
-              {filterMastered === "active" ? "Zero Unresolved Mistakes! 🎉" : "No Questions Found"}
+            <h3 className="text-base font-bold text-slate-900 font-bengali">
+              {filterMastered === "active" ? "দারুণ! কোনো ভুল পেন্ডিং নেই! 🎉" : "কোনো প্রশ্ন পাওয়া যায়নি"}
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <p className="text-xs text-slate-500 max-w-sm mx-auto font-bengali leading-relaxed">
               {filterMastered === "active"
-                ? "You have mastered all recorded errors or answered all test questions correctly. Keep up the high accuracy!"
-                : "No mistakes match your current search and filters."}
+                ? "ভুলের খাতার সব প্রশ্ন রিভাইজ করে পাক্কা করে নিয়েছো। এই অ্যাকুরেসি বজায় রাখলে আসল পরীক্ষায় নেগেটিভ মার্কিং শূন্য হবে!"
+                : "তোমার সিলেক্ট করা ফিল্টারে কোনো ভুল প্রশ্ন নেই।"}
             </p>
             <Button
               onClick={() => navigate("/student/exams")}
-              className="mt-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+              className="mt-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold font-bengali"
             >
-              Take a Mock Test
+              নতুন মক টেস্ট দাও 🚀
             </Button>
           </div>
         ) : (
@@ -618,17 +618,17 @@ export const MistakesNotebook = () => {
                     <button
                       type="button"
                       onClick={() => setClassifyingItem(item)}
-                      className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors font-bengali"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      <span>+ Add Personal Reflection Note</span>
+                      <span>✍️ + ভুলের কারণ ট্যাগ করো ও কী শিখলে নোট লেখো</span>
                     </button>
                   )}
 
                   {/* Explanation Toggle */}
                   {item.questions.explanation && (
                     <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 leading-relaxed font-bengali border border-slate-200/80">
-                      <strong className="text-slate-900 block mb-0.5 font-bold">💡 Explanation (ব্যাখ্যা):</strong>
+                      <strong className="text-slate-900 block mb-0.5 font-bold">💡 সঠিক ব্যাখ্যা ও ট্রিক:</strong>
                       <MathText text={item.questions.explanation} />
                     </div>
                   )}
@@ -639,23 +639,23 @@ export const MistakesNotebook = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => handleLaunchDrill([item], "Single Mistake Re-attempt")}
-                      className="rounded-xl h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 flex items-center gap-1.5"
+                      className="rounded-xl h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 flex items-center gap-1.5 font-bengali"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      Re-attempt Question
+                      আবার চেষ্টা করো (Re-attempt)
                     </Button>
 
                     <Button
                       size="sm"
                       variant={item.is_mastered ? "outline" : "default"}
                       onClick={() => handleToggleMastered(item.id, item.is_mastered)}
-                      className={`rounded-xl h-8 text-xs font-bold ${
+                      className={`rounded-xl h-8 text-xs font-bold font-bengali ${
                         item.is_mastered
                           ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
                           : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
                       }`}
                     >
-                      {item.is_mastered ? "✓ Mastered" : "Mark as Mastered"}
+                      {item.is_mastered ? "✓ পাক্কা রেডি (Mastered)" : "পাক্কা রেডি মার্ক করো 🔥"}
                     </Button>
                   </div>
                 </motion.div>

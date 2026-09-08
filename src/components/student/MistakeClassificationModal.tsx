@@ -43,39 +43,39 @@ const ERROR_OPTIONS: Array<{
 }> = [
   {
     type: "conceptual",
-    labelEn: "Conceptual Error",
-    labelBn: "ধারণাগত ভুল",
+    labelEn: "Concept Gap",
+    labelBn: "কনসেপ্ট ক্লিয়ার ছিল না",
     icon: Brain,
     colorClass: "text-indigo-600 border-indigo-200 hover:bg-indigo-50",
     bgSelected: "bg-indigo-50 border-indigo-600 text-indigo-950 ring-2 ring-indigo-500/20",
-    description: "Didn't know the core concept, rule, or formula.",
+    description: "থিওরি, ফর্মুলা বা নিয়ম না জানার কারণে ভুল হয়েছে।",
   },
   {
     type: "careless",
-    labelEn: "Careless Mistake",
-    labelBn: "অসাবধানতা",
+    labelEn: "Silly Mistake",
+    labelBn: "জানা প্রশ্ন তাড়াহুড়োয় ভুল",
     icon: Zap,
     colorClass: "text-amber-600 border-amber-200 hover:bg-amber-50",
     bgSelected: "bg-amber-50 border-amber-600 text-amber-950 ring-2 ring-amber-500/20",
-    description: "Knew the concept, but misread the question or made a calculation slip.",
+    description: "জানা প্রশ্ন ছিল, কিন্তু তাড়াহুড়ো বা সহজ ক্যালকুলেশনে ভুল দাগিয়েছি।",
   },
   {
     type: "time_pressure",
-    labelEn: "Time Pressure",
-    labelBn: "সময়ের অভাব",
+    labelEn: "Time Panic",
+    labelBn: "সময়ের টান ও নার্ভাসনেস",
     icon: Clock,
     colorClass: "text-rose-600 border-rose-200 hover:bg-rose-50",
     bgSelected: "bg-rose-50 border-rose-600 text-rose-950 ring-2 ring-rose-500/20",
-    description: "Clock was ticking down and rushed through the options.",
+    description: "টাইমার দেখে নার্ভাস হয়ে বা শেষ মুহূর্তে না ভেবে দাগিয়ে ভুল।",
   },
   {
     type: "guess",
-    labelEn: "Guess / Unsure",
-    labelBn: "অনুমান",
+    labelEn: "Blind Guess",
+    labelBn: "আন্দাজে তুকা মেরেছি",
     icon: Dices,
     colorClass: "text-purple-600 border-purple-200 hover:bg-purple-50",
     bgSelected: "bg-purple-50 border-purple-600 text-purple-950 ring-2 ring-purple-500/20",
-    description: "Guessed between 50-50 options without complete certainty.",
+    description: "সঠিক উত্তর না জেনেও আন্দাজে দাগিয়ে নেগেটিভ মার্কস খেয়েছি।",
   },
 ];
 
@@ -115,28 +115,28 @@ export const MistakeClassificationModal: React.FC<MistakeClassificationModalProp
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xl">
         <DialogHeader className="space-y-1.5 text-left">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100 self-start">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100 self-start font-bengali">
             <Tag className="w-3.5 h-3.5" />
-            <span>Error Classification & Reflection</span>
+            <span>ভুলের খাতা — ভুলের কারণ ও নোট</span>
           </div>
-          <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">
-            Why Did You Lose Marks?
+          <DialogTitle className="text-xl font-black text-slate-900 tracking-tight font-bengali">
+            এই প্রশ্নে মার্কস কেন কাটল?
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500 font-medium">
-            Categorizing your mistakes turns lost marks into permanent retention.
+          <DialogDescription className="text-xs text-slate-500 font-medium font-bengali">
+            ভুলের কারণ চিহ্নিত করে রাখলে আসল পরীক্ষায় নেগেটিভ মার্কিং এড়ানো যায়।
           </DialogDescription>
         </DialogHeader>
 
         {questionSnippet && (
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 font-medium line-clamp-2">
-            <span className="font-bold text-slate-900">Question: </span>
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 font-medium line-clamp-2 font-bengali">
+            <span className="font-bold text-slate-900">প্রশ্ন: </span>
             {questionSnippet}
           </div>
         )}
 
         {/* Error Type Options */}
         <div className="space-y-2 py-1">
-          <label className="text-xs font-bold text-slate-700">Select Error Cause:</label>
+          <label className="text-xs font-bold text-slate-700 font-bengali">ভুলের কারণ বেছে নিন:</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {ERROR_OPTIONS.map((opt) => {
               const Icon = opt.icon;
@@ -188,14 +188,14 @@ export const MistakeClassificationModal: React.FC<MistakeClassificationModalProp
 
         {/* Student Learning Note / Reflection */}
         <div className="space-y-1.5 pt-1">
-          <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-            <span>Personal Learning Note (আমার নোট):</span>
-            <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+          <label className="text-xs font-bold text-slate-700 flex items-center justify-between font-bengali">
+            <span>আমার নোট / কী শিখলাম (Key Takeaway):</span>
+            <span className="text-[10px] text-slate-400 font-normal">ঐচ্ছিক (Optional)</span>
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Remember that 24 Parganas is the largest district, not Midnapore... or Formula is..."
+            placeholder="যেমন: মনে রাখবে চব্বিশ পরগণা সবচেয়ে বড় জেলা, মেদিনীপুর নয়... অথবা এই সূত্রের শর্টকাট ট্রিক হলো..."
             rows={3}
             className="w-full p-3 rounded-2xl bg-slate-50/70 border border-slate-200/90 text-xs font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none font-bengali"
           />
@@ -206,17 +206,17 @@ export const MistakeClassificationModal: React.FC<MistakeClassificationModalProp
             type="button"
             variant="outline"
             onClick={onClose}
-            className="rounded-xl text-xs h-9 font-bold"
+            className="rounded-xl text-xs h-9 font-bold font-bengali"
           >
-            Cancel
+            বাতিল
           </Button>
           <Button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="rounded-xl text-xs h-9 font-black bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+            className="rounded-xl text-xs h-9 font-black bg-blue-600 hover:bg-blue-700 text-white shadow-xs font-bengali"
           >
-            {saving ? "Saving..." : "Save Classification"}
+            {saving ? "সেভ হচ্ছে..." : "সংরক্ষণ করুন (Save Note)"}
           </Button>
         </DialogFooter>
       </DialogContent>

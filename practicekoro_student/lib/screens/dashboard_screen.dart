@@ -965,7 +965,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // QUICK ACTIONS - Native Cards (Primary + 2x2 Grid)
                 // ═══════════════════════════════════════════════════════════
                 Text(
-                  'QUICK ACTIONS',
+                  'কুইক প্র্যাকটিস (QUICK ACTIONS)',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -1015,7 +1015,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Start Mock Test',
+                                'ফুল মক টেস্ট শুরু করো 🚀',
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
@@ -1023,10 +1023,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
                               Text(
-                                'Full exam simulation with timer',
+                                'টাইমার ও নেগেটিভ মার্কিং সহ আসল পরীক্ষার মতো',
                                 style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.75),
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.85),
                                 ),
                               ),
                             ],
@@ -1049,8 +1049,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Expanded(
                       child: _actionCard(
-                        title: 'Results',
-                        subtitle: 'View analytics',
+                        title: 'রেজাল্ট ও অ্যানালিসিস',
+                        subtitle: 'তোমার পারফরম্যান্স',
                         icon: Icons.bar_chart_rounded,
                         color: const Color(0xFF10B981),
                         bgColor: const Color(0xFFD1FAE5),
@@ -1060,8 +1060,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _actionCard(
-                        title: 'Topic Tests',
-                        subtitle: 'Practice by topic',
+                        title: 'টপিক ড্রিল',
+                        subtitle: 'চ্যাপ্টার অনুযায়ী MCQ',
                         icon: Icons.gps_fixed_rounded,
                         color: const Color(0xFF3B82F6),
                         bgColor: const Color(0xFFDBEAFE),
@@ -1077,8 +1077,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Expanded(
                       child: _actionCard(
-                        title: 'Study Notes',
-                        subtitle: 'Read materials',
+                        title: 'স্টাডি নোটস',
+                        subtitle: 'রিভিশন মেটেরিয়ালস',
                         icon: Icons.description_outlined,
                         color: const Color(0xFFF59E0B),
                         bgColor: const Color(0xFFFEF3C7),
@@ -1088,8 +1088,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _actionCard(
-                        title: 'All Exams',
-                        subtitle: '${_exams.length} available',
+                        title: 'সকল পরীক্ষা',
+                        subtitle: '${_exams.length}টি টার্গেট পরীক্ষা',
                         icon: Icons.menu_book_rounded,
                         color: const Color(0xFF8B5CF6),
                         bgColor: const Color(0xFFEDE9FE),
@@ -1105,8 +1105,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Expanded(
                       child: _actionCard(
-                        title: 'PYQ Drills',
-                        subtitle: 'Speed & accuracy',
+                        title: 'বিগত বছরের PYQ',
+                        subtitle: '১০ বছরের আসল প্রশ্ন',
                         icon: Icons.bolt_rounded,
                         color: const Color(0xFF0284C7),
                         bgColor: const Color(0xFFE0F2FE),
@@ -1116,8 +1116,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _actionCard(
-                        title: 'Mistakes Vault',
-                        subtitle: 'Notebook & review',
+                        title: 'ভুলের খাতা',
+                        subtitle: 'ভুল শুধরে মার্কস বাড়াও',
                         icon: Icons.menu_book_rounded,
                         color: const Color(0xFFDC2626),
                         bgColor: const Color(0xFFFEE2E2),
@@ -1963,7 +1963,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Exam Readiness Index',
+                        'সিলেকশন প্রস্তুতি মিটার (Readiness)',
                         style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -1971,7 +1971,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       Text(
-                        'Multi-factor AI readiness score',
+                        'টার্গেট কাট-অফ ও সিলেকশন অ্যানালিসিস',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: const Color(0xFF64748B),
@@ -2045,10 +2045,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         Text(
-                          'Readiness',
+                          'প্রস্তুতি',
                           style: GoogleFonts.inter(
                             fontSize: 9,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: const Color(0xFF64748B),
                           ),
                         ),
@@ -2094,7 +2094,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       children: [
                         Text(
-                          'Projected: ${projected.toStringAsFixed(1)}',
+                          'সম্ভাব্য: ${projected.toStringAsFixed(1)}',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -2102,7 +2102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         Text(
-                          ' / Cutoff: ${cutoff.toStringAsFixed(0)}',
+                          ' / কাট-অফ: ${cutoff.toStringAsFixed(0)}',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: const Color(0xFF64748B),
@@ -2113,8 +2113,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 2),
                     Text(
                       gap >= 0
-                          ? '+${gap.toStringAsFixed(1)} marks above UR cutoff'
-                          : '${gap.abs().toStringAsFixed(1)} marks below UR cutoff',
+                          ? '+${gap.toStringAsFixed(1)} নম্বর সেফ জোনে 🔥'
+                          : '-${gap.abs().toStringAsFixed(1)} নম্বর ঘাটতি ⚠️',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -2136,8 +2136,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Expanded(
                 child: _factorMeter(
-                  label: 'Full Mocks',
-                  weight: '40%',
+                  label: 'ফুল মক',
+                  weight: '৪০%',
                   percent: readiness?.mockAccuracy ?? 0,
                   color: const Color(0xFF4F46E5),
                 ),
@@ -2145,8 +2145,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _factorMeter(
-                  label: 'PYQ Drills',
-                  weight: '25%',
+                  label: 'PYQ ড্রিল',
+                  weight: '২৫%',
                   percent: readiness?.topicDrillAccuracy ?? 0,
                   color: const Color(0xFF06B6D4),
                 ),
@@ -2154,8 +2154,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _factorMeter(
-                  label: 'Mistakes',
-                  weight: '20%',
+                  label: 'ভুলের খাতা',
+                  weight: '২০%',
                   percent: readiness?.mistakeMasteryRate ?? 0,
                   color: const Color(0xFFEC4899),
                 ),
@@ -2163,8 +2163,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _factorMeter(
-                  label: 'Streak',
-                  weight: '15%',
+                  label: 'ধারাবাহিকতা',
+                  weight: '১৫%',
                   percent: readiness?.consistencyScore ?? 0,
                   color: const Color(0xFFF59E0B),
                 ),
@@ -2181,7 +2181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).pushNamed('/practice'),
                   icon: const Icon(Icons.bolt_rounded, size: 18),
-                  label: const Text('PYQ Drills'),
+                  label: const Text('বিগত বছরের PYQ'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0A2655),
                     foregroundColor: Colors.white,
@@ -2198,7 +2198,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () => Navigator.of(context).pushNamed('/mistakes'),
                   icon: const Icon(Icons.menu_book_rounded, size: 18),
-                  label: const Text('Mistakes Vault'),
+                  label: const Text('ভুলের খাতা'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
                     side: const BorderSide(color: Color(0xFFFCA5A5)),
