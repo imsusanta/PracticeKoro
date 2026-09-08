@@ -508,8 +508,8 @@ const TakeTest = () => {
             <span className="text-lg font-black tracking-tight text-[#0F172A]">Practice</span>
             <span className="text-lg font-black tracking-tight text-[#2563EB]">Koro</span>
           </div>
-          <h2 className="text-base font-bold text-slate-800 mb-1">পরীক্ষার পরিবেশ লোড হচ্ছে...</h2>
-          <p className="text-slate-400 text-xs mb-6">প্রশ্নপত্র সুরক্ষিত হচ্ছে ও টাইমার প্রস্তুত করা হচ্ছে</p>
+          <h2 className="text-base font-bold text-slate-800 mb-1">Loading Exam Environment...</h2>
+          <p className="text-slate-400 text-xs mb-6">Securing question paper and synchronizing exam timer</p>
           <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-5" />
           <Button
             onClick={enterFullscreen}

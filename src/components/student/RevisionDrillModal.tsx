@@ -247,7 +247,7 @@ export const RevisionDrillModal: React.FC<RevisionDrillModalProps> = ({
                       {/* Explanation */}
                       <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm leading-relaxed font-bengali border border-slate-200/80">
                         <strong className="text-slate-900 block mb-1 font-bold">
-                          💡 ব্যাখ্যা (Explanation):
+                          💡 Explanation & Key Rule:
                         </strong>
                         {q.explanation ? (
                           <MathText text={q.explanation} />

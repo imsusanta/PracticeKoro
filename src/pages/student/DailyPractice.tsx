@@ -758,7 +758,7 @@ export const DailyPractice = () => {
 
                     {q.explanation && (
                       <div className="mt-3 p-3 bg-slate-50 rounded-xl text-xs text-slate-700 border border-slate-100 font-bengali">
-                        <strong className="text-slate-900 block mb-0.5 font-bold">ব্যাখ্যা (Explanation):</strong>
+                        <strong className="text-slate-900 block mb-0.5 font-bold">💡 Solution & Key Rule:</strong>
                         <MathText text={q.explanation} />
                       </div>
                     )}

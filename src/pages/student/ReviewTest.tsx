@@ -420,7 +420,7 @@ export const ReviewTest = () => {
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
                   attempt.passed ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-rose-500/20 text-rose-300 border border-rose-400/30"
                 }`}>
-                  {attempt.passed ? "✓ Cutoff Passed / সফল" : "Needs Improvement"}
+                  {attempt.passed ? "✓ Cutoff Cleared 🎉" : "Needs Improvement"}
                 </span>
                 <span className="text-white/60 text-xs">•</span>
                 <span className="text-white/80 text-xs font-semibold">
@@ -774,7 +774,7 @@ export const ReviewTest = () => {
                       })()}
                       {a.questions.explanation ? (
                         <div className="text-slate-700 pt-1 border-t border-slate-200/60">
-                          <strong className="text-slate-900 block mb-0.5">ব্যাখ্যা (Explanation):</strong>
+                          <strong className="text-slate-900 block mb-0.5">💡 Solution & Key Rule:</strong>
                           <MathText text={a.questions.explanation} />
                         </div>
                       ) : (
@@ -805,9 +805,6 @@ export const ReviewTest = () => {
                         >
                           <Tag className="w-3 h-3" />
                           <span>{ERROR_TYPE_DEFINITIONS[mistakeMetaMap[a.question_id].errorType!]?.labelEn}</span>
-                          <span className="text-[10px] opacity-75 font-bengali">
-                            ({ERROR_TYPE_DEFINITIONS[mistakeMetaMap[a.question_id].errorType!]?.labelBn})
-                          </span>
                         </button>
                       ) : (
                         <button
@@ -822,7 +819,7 @@ export const ReviewTest = () => {
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors"
                         >
                           <Tag className="w-3 h-3 text-amber-600" />
-                          <span>Classify Error (ভুলের কারণ চিহ্নিত করুন)</span>
+                          <span>Tag Error Cause & Takeaway</span>
                         </button>
                       )}
 

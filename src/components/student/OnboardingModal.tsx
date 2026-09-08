@@ -12,7 +12,7 @@ const slides = [
   {
     title: "Achieve Your Dream Job",
     subtitle: "Practice with mock tests, previous year questions and expert study materials.",
-    bengali: "তোমার স্বপ্নের চাকরির পথে এক ধাপ এগিয়ে চলো",
+    badge: "Take one step closer to your dream govt job",
     icon: Award,
     color: "bg-blue-600 text-white",
     bg: "from-blue-50 to-indigo-50",
@@ -20,7 +20,7 @@ const slides = [
   {
     title: "Know Your Weakness",
     subtitle: "Analyze your performance and improve weak topics with smart accuracy tracking.",
-    bengali: "ভুল উত্তরগুলো শনাক্ত করে নিখুঁত প্রস্তুতি নাও",
+    badge: "Zero negative marking with error root-cause tracking",
     icon: Target,
     color: "bg-purple-600 text-white",
     bg: "from-purple-50 to-violet-50",
@@ -28,7 +28,7 @@ const slides = [
   {
     title: "Prepare Smarter",
     subtitle: "Follow a personalized preparation journey designed for West Bengal exams.",
-    bengali: "প্রস্তুতি আজ, সফলতা আগামীকাল",
+    badge: "Consistent daily effort yields real selection results",
     icon: TrendingUp,
     color: "bg-emerald-600 text-white",
     bg: "from-emerald-50 to-teal-50",
@@ -106,7 +106,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
             </p>
 
             <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-              {slide.bengali}
+              {slide.badge}
             </span>
 
             {/* Carousel Dots */}

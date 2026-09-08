@@ -182,7 +182,7 @@ export const PYQPractice = () => {
   };
 
   return (
-    <StudentLayout title="বিগত বছরের প্রশ্ন" subtitle="PYQ বুস্টার ও স্পিড ড্রিল">
+    <StudentLayout title="PYQ Vault" subtitle="Previous Year Questions & Speed Drills">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
         
         {/* Top Brand Header */}
@@ -196,11 +196,11 @@ export const PYQPractice = () => {
                 <span className="font-black text-base sm:text-lg tracking-tight text-slate-900 font-display">
                   Practice<span className="text-blue-600">Koro</span>
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-bengali">
-                  PYQ বুস্টার
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  PYQ Vault
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium font-bengali">বিগত ১০ বছরের আসল প্রশ্ন ও চ্যাপ্টার ড্রিল</p>
+              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with topic drills</p>
             </div>
           </div>
 
@@ -235,32 +235,32 @@ export const PYQPractice = () => {
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2.5 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider font-bengali">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
-                আসল পরীক্ষার প্রশ্নমালা (Official Exam Archive)
+                Official Exam Archive
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
-                বিগত বছরের প্রশ্ন <span className="text-[#FBBF24]">— PYQ Booster</span>
+                Previous Year Questions <span className="text-[#FBBF24]">— PYQ Vault</span>
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed font-bengali">
-                পঞ্চায়েত, পুলিশ কনস্টেবল/এসআই, ক্লার্কশিপ, প্রাইমারি টেট, WBCS ও রেলওয়ের বিগত ১০ বছরের আসল প্রশ্ন — টাইমার অন করে বা ব্যাখ্যা সহ প্র্যাকটিস করো!
+              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
+                Authentic questions from Panchayat, Police Constable/SI, Clerkship, Primary TET, WBCS & Railways — practice with timer or solutions!
               </p>
 
               {/* Quick Launch Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Button
                   onClick={() => launchDrill("instant_feedback", 10)}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 h-9 font-bengali"
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 h-9"
                 >
                   <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>১০টি MCQ স্পিড ড্রিল</span>
+                  <span>10 MCQ Speed Drill</span>
                 </Button>
                 <Button
                   onClick={() => launchDrill("timed_quiz", 20)}
-                  className="bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold text-xs rounded-xl gap-1.5 h-9 backdrop-blur-sm font-bengali"
+                  className="bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold text-xs rounded-xl gap-1.5 h-9 backdrop-blur-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-white" />
-                  <span>২০টি MCQ টাইমার টেস্ট</span>
+                  <span>20 MCQ Timed Quiz</span>
                 </Button>
               </div>
             </div>
@@ -300,7 +300,7 @@ export const PYQPractice = () => {
                   : "bg-white border border-slate-200/90 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
-              All Exams (সকল পরীক্ষা)
+              All Exams
             </button>
             {EXAM_CATALOG.map((exam) => (
               <button
@@ -348,10 +348,10 @@ export const PYQPractice = () => {
 
             <Button
               onClick={() => launchDrill("instant_feedback", 15)}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold gap-1.5 h-9 shrink-0 shadow-sm font-bengali"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold gap-1.5 h-9 shrink-0 shadow-sm"
             >
               <Zap className="w-3.5 h-3.5" />
-              <span>⚡ {selectedExam.name} ড্রিল শুরু করো</span>
+              <span>⚡ Start {selectedExam.name} Drill</span>
             </Button>
           </div>
         )}
@@ -365,25 +365,25 @@ export const PYQPractice = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="টপিক, সূত্র বা প্রশ্ন দিয়ে সার্চ করো (যেমন: লসাগু, অনুচ্ছেদ, সংবিধান)..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bengali"
+              placeholder="Search by topic, formula, or question keywords (e.g. LCM, Constitution, Governor)..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
 
           {/* Year Filter Chips */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs font-bold text-slate-400 flex items-center gap-1 uppercase tracking-wider mr-1 font-bengali">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" /> বছর (Year):
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1 uppercase tracking-wider mr-1">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" /> Year:
             </span>
             <button
               onClick={() => setSelectedYear("all")}
-              className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all font-bengali ${
+              className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${
                 selectedYear === "all"
                   ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              সব বছর
+              All Years
             </button>
             {availableYears.map(yr => (
               <button
@@ -403,18 +403,18 @@ export const PYQPractice = () => {
           {/* Subject Filter Chips */}
           {availableSubjects.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-              <span className="text-xs font-bold text-slate-400 flex items-center gap-1 uppercase tracking-wider mr-1 font-bengali">
-                <Layers className="w-3.5 h-3.5 text-emerald-600" /> বিষয় (Subject):
+              <span className="text-xs font-bold text-slate-400 flex items-center gap-1 uppercase tracking-wider mr-1">
+                <Layers className="w-3.5 h-3.5 text-emerald-600" /> Subject:
               </span>
               <button
                 onClick={() => setSelectedSubject("all")}
-                className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all font-bengali ${
+                className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all ${
                   selectedSubject === "all"
                     ? "bg-[#0F172A] text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                সব বিষয়
+                All Subjects
               </button>
               {availableSubjects.map(sub => (
                 <button
@@ -435,8 +435,8 @@ export const PYQPractice = () => {
 
         {/* Counter and Action Bar */}
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs font-bold text-slate-600 font-bengali">
-            মোট <span className="text-blue-600 font-black">{filteredQuestions.length}</span>টি বিগত বছরের সলভড প্রশ্ন
+          <p className="text-xs font-bold text-slate-600">
+            Total <span className="text-blue-600 font-black">{filteredQuestions.length}</span> Solved PYQs
           </p>
           <div className="flex items-center gap-3">
             <button
@@ -444,25 +444,25 @@ export const PYQPractice = () => {
                 if (revealedAnswers.size > 0) setRevealedAnswers(new Set());
                 else setRevealedAnswers(new Set(filteredQuestions.map(q => q.id)));
               }}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors font-bengali"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
             >
               {revealedAnswers.size > 0 ? (
                 <>
-                  <EyeOff className="w-3.5 h-3.5" /> সমাধান লুকান
+                  <EyeOff className="w-3.5 h-3.5" /> Hide Solutions
                 </>
               ) : (
                 <>
-                  <Eye className="w-3.5 h-3.5" /> 💡 সঠিক উত্তর ও সমাধান দেখুন
+                  <Eye className="w-3.5 h-3.5" /> 💡 View Answers & Solutions
                 </>
               )}
             </button>
             <Button
               size="sm"
               onClick={() => launchDrill("instant_feedback", 10)}
-              className="h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold gap-1 shadow-2xs font-bengali"
+              className="h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold gap-1 shadow-2xs"
             >
               <Play className="w-3 h-3" />
-              <span>স্পিড টেস্ট শুরু করো ⏱️</span>
+              <span>Start Speed Drill ⏱️</span>
             </Button>
           </div>
         </div>
@@ -477,9 +477,9 @@ export const PYQPractice = () => {
         ) : filteredQuestions.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center bg-white">
             <HelpCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <h3 className="text-base font-bold text-slate-800 font-bengali">এই ফিল্টারে কোনো প্রশ্ন পাওয়া যায়নি</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto font-bengali">
-              অন্য বছর বা বিষয় বেছে নিয়ে বিগত বছরের আসল প্রশ্ন প্র্যাকটিস করো।
+            <h3 className="text-base font-bold text-slate-800">No questions found with these filters</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Try selecting a different year or subject to practice authentic previous year questions.
             </p>
             <Button
               variant="outline"
@@ -489,9 +489,9 @@ export const PYQPractice = () => {
                 setSelectedSubject("all");
                 setSearchQuery("");
               }}
-              className="mt-4 rounded-xl text-xs font-bold font-bengali"
+              className="mt-4 rounded-xl text-xs font-bold"
             >
-              ফিল্টার রিসেট করো
+              Reset Filters
             </Button>
           </div>
         ) : (
@@ -597,29 +597,29 @@ export const PYQPractice = () => {
                   <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
                     <button
                       onClick={() => toggleReveal(q.id)}
-                      className="self-start inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors font-bengali"
+                      className="self-start inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
                     >
                       {isRevealed ? (
                         <>
-                          <EyeOff className="w-3.5 h-3.5" /> সমাধান লুকান
+                          <EyeOff className="w-3.5 h-3.5" /> Hide Solution
                         </>
                       ) : (
                         <>
-                          <Eye className="w-3.5 h-3.5" /> 💡 সঠিক উত্তর ও ব্যাখ্যা দেখুন
+                          <Eye className="w-3.5 h-3.5" /> 💡 View Answer & Solution
                         </>
                       )}
                     </button>
 
                     {isRevealed && (
-                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-xs sm:text-sm leading-relaxed font-bengali mt-1 space-y-1">
+                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-xs sm:text-sm leading-relaxed mt-1 space-y-1">
                         {(() => {
                           const ans = (q.correct_answer || '').toUpperCase().trim();
                           const correctText = ans === 'A' ? q.option_a : ans === 'B' ? q.option_b : ans === 'C' ? q.option_c : ans === 'D' ? q.option_d : null;
                           return (
-                            <div className="font-bold text-emerald-800 flex items-center flex-wrap gap-1.5 font-bengali">
-                              <span>✓ সঠিক উত্তর: ({ans})</span>
+                            <div className="font-bold text-emerald-800 flex items-center flex-wrap gap-1.5">
+                              <span>✓ Correct Answer: ({ans})</span>
                               {correctText && (
-                                <span className="font-semibold text-emerald-950">
+                                <span className="font-semibold text-emerald-950 font-bengali">
                                   <MathText text={correctText} formatBullets={false} />
                                 </span>
                               )}
@@ -628,11 +628,11 @@ export const PYQPractice = () => {
                         })()}
                         {q.explanation ? (
                           <div className="text-slate-700 pt-1 border-t border-slate-200/60 font-bengali">
-                            <strong className="text-slate-900 block mb-0.5">💡 বিস্তারিত সমাধান ও ট্রিক (Explanation):</strong>
+                            <strong className="text-slate-900 block mb-0.5">💡 Solution & Shortcut:</strong>
                             <MathText text={q.explanation} />
                           </div>
                         ) : (
-                          <p className="text-slate-400 text-xs italic font-bengali">পশ্চিমবঙ্গের সরকারি চাকরির বিগত বছরের গুরুত্বপূর্ণ প্রশ্ন।</p>
+                          <p className="text-slate-400 text-xs italic">Standard previous year exam question.</p>
                         )}
                       </div>
                     )}

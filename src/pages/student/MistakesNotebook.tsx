@@ -150,7 +150,7 @@ export const MistakesNotebook = () => {
   };
 
   return (
-    <StudentLayout title="Mistakes Vault" subtitle="Personalized Error Revision">
+    <StudentLayout title="Mistakes Notebook" subtitle="Personalized Error Revision">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
         {/* Top Brand Header */}
         <div className="flex items-center justify-between gap-2 pb-1">
@@ -164,7 +164,7 @@ export const MistakesNotebook = () => {
                   Practice<span className="text-blue-600">Koro</span>
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                  Mistakes Vault
+                  Mistakes Notebook
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">Automatic Error Notebook & Targeted Drills</p>
@@ -204,13 +204,13 @@ export const MistakesNotebook = () => {
             <div className="space-y-2.5 max-w-xl">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[11px] font-black uppercase tracking-wider">
                 <AlertOctagon className="w-3.5 h-3.5" />
-                নেগেটিভ মার্কিং কমাও (Zero Negative Marking)
+                Zero Negative Marking
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display text-white">
-                ভুলের খাতা <span className="text-[#FBBF24]">— Mistakes Notebook</span>
+                Mistakes Notebook <span className="text-[#FBBF24]">— Zero Mark Loss</span>
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed font-bengali">
-                মক টেস্ট ও ড্রিল দেওয়ার পর যেসব প্রশ্নে মার্কস কাটা গেছে, সেগুলোকে ভালো করে রিভাইজ দিয়ে পাক্কা করো — যাতে আসল পরীক্ষায় ১ নম্বরও নষ্ট না হয়!
+              <p className="text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
+                Review questions you missed in mocks & drills, understand why you lost marks, and master them to eliminate negative marking in the actual exam.
               </p>
             </div>
 
@@ -222,7 +222,7 @@ export const MistakesNotebook = () => {
                   className="h-12 px-6 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  রিভিশন ড্রিল শুরু করো 🚀 ({analytics.activeMistakes})
+                  Start Revision Drill 🚀 ({analytics.activeMistakes})
                 </Button>
                 {analytics.weakestSubject && (
                   <Button
@@ -236,7 +236,7 @@ export const MistakesNotebook = () => {
                     className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5"
                   >
                     <Layers className="w-3.5 h-3.5" />
-                    দুর্বল বিষয় রিভাইজ: {analytics.weakestSubject}
+                    Revise Weak Area: {analytics.weakestSubject}
                   </Button>
                 )}
               </div>
@@ -249,8 +249,8 @@ export const MistakesNotebook = () => {
               <span className="text-2xl sm:text-3xl font-black text-rose-300 leading-tight block">
                 {analytics.activeMistakes}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
-                রিভিশন বাকি (Pending)
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Needs Revision (Pending)
               </span>
             </div>
 
@@ -258,8 +258,8 @@ export const MistakesNotebook = () => {
               <span className="text-2xl sm:text-3xl font-black text-emerald-300 leading-tight block">
                 {analytics.masteredMistakes}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
-                পাক্কা রেডি (Mastered 🔥)
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Mastered 🔥
               </span>
             </div>
 
@@ -267,17 +267,17 @@ export const MistakesNotebook = () => {
               <span className="text-2xl sm:text-3xl font-black text-[#FBBF24] leading-tight block">
                 {analytics.masteryRate}%
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
-                মাস্টারি রেট (Accuracy)
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Mastery Rate
               </span>
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/15">
               <span className="text-base sm:text-lg font-black text-cyan-300 leading-tight block truncate">
-                {analytics.weakestSubject || "সব ক্লিয়ার"}
+                {analytics.weakestSubject || "All Cleared"}
               </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block font-bengali">
-                বেশি ভুল হওয়া বিষয়
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 uppercase tracking-wider mt-1 block">
+                Most Mistakes In
               </span>
             </div>
           </div>
@@ -289,12 +289,12 @@ export const MistakesNotebook = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-blue-600" />
-                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight font-bengali">
-                  ভুলের কারণ অ্যানালিসিস (কেন মার্কস কেটেছিল?)
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight">
+                  Error Cause Breakdown (Why did you lose marks?)
                 </h3>
               </div>
-              <span className="text-[11px] font-bold text-slate-500 font-bengali">
-                মোট {analytics.totalMistakes}টি ভুলের রেকর্ড
+              <span className="text-[11px] font-bold text-slate-500">
+                Total {analytics.totalMistakes} mistake records
               </span>
             </div>
 
@@ -320,15 +320,15 @@ export const MistakesNotebook = () => {
                       <span className="text-xs font-black text-slate-900">{def.labelEn}</span>
                       <span className="text-xs font-black text-blue-600">{pct}%</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 font-bengali mt-0.5">{def.labelBn}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{def.description}</p>
                     <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden mt-2">
                       <div
                         className={`h-full ${def.pillBgClass}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-slate-400 font-bold mt-1 block font-bengali">
-                      {count}টি প্রশ্ন
+                    <span className="text-[10px] text-slate-400 font-bold mt-1 block">
+                      {count} {count === 1 ? "question" : "questions"}
                     </span>
                   </button>
                 );
@@ -345,8 +345,8 @@ export const MistakesNotebook = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ভুল প্রশ্ন, বিষয়, চ্যাপ্টার বা তোমার রিফ্লেকশন নোট খুঁজুন..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bengali"
+              placeholder="Search mistakes by question, subject, topic, or reflection note..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
 
@@ -356,35 +356,35 @@ export const MistakesNotebook = () => {
               <button
                 type="button"
                 onClick={() => setFilterMastered("active")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all font-bengali ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
                   filterMastered === "active"
                     ? "bg-rose-500 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                রিভিশন বাকি ({analytics.activeMistakes})
+                Needs Revision ({analytics.activeMistakes})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterMastered("mastered")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all font-bengali ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
                   filterMastered === "mastered"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                পাক্কা রেডি ({analytics.masteredMistakes})
+                Mastered 🔥 ({analytics.masteredMistakes})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterMastered("all")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all font-bengali ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
                   filterMastered === "all"
                     ? "bg-[#0F172A] text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                সব প্রশ্ন ({analytics.totalMistakes})
+                All Questions ({analytics.totalMistakes})
               </button>
             </div>
 
@@ -393,13 +393,13 @@ export const MistakesNotebook = () => {
               <button
                 type="button"
                 onClick={() => setFilterErrorType("all")}
-                className={`px-3 py-1 text-xs rounded-xl font-bold transition-all font-bengali ${
+                className={`px-3 py-1 text-xs rounded-xl font-bold transition-all ${
                   filterErrorType === "all"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                সব কারণ
+                All Causes
               </button>
               {(["conceptual", "careless", "time_pressure", "guess"] as ErrorType[]).map((t) => {
                 const def = ERROR_TYPE_DEFINITIONS[t];
@@ -459,19 +459,19 @@ export const MistakesNotebook = () => {
         ) : filteredMistakes.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center bg-white space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-            <h3 className="text-base font-bold text-slate-900 font-bengali">
-              {filterMastered === "active" ? "দারুণ! কোনো ভুল পেন্ডিং নেই! 🎉" : "কোনো প্রশ্ন পাওয়া যায়নি"}
+            <h3 className="text-base font-bold text-slate-900">
+              {filterMastered === "active" ? "Awesome! No pending mistakes! 🎉" : "No questions found"}
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto font-bengali leading-relaxed">
+            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
               {filterMastered === "active"
-                ? "ভুলের খাতার সব প্রশ্ন রিভাইজ করে পাক্কা করে নিয়েছো। এই অ্যাকুরেসি বজায় রাখলে আসল পরীক্ষায় নেগেটিভ মার্কিং শূন্য হবে!"
-                : "তোমার সিলেক্ট করা ফিল্টারে কোনো ভুল প্রশ্ন নেই।"}
+                ? "You have reviewed and mastered all pending mistakes. Keep this up to eliminate negative marking in the actual exam!"
+                : "No mistakes match your selected filter criteria."}
             </p>
             <Button
               onClick={() => navigate("/student/exams")}
-              className="mt-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold font-bengali"
+              className="mt-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
             >
-              নতুন মক টেস্ট দাও 🚀
+              Take a New Mock Test 🚀
             </Button>
           </div>
         ) : (
@@ -517,8 +517,7 @@ export const MistakesNotebook = () => {
                             title="Click to change error category"
                           >
                             <Tag className="w-3 h-3" />
-                            <span>{errDef?.labelEn}</span>
-                            <span className="opacity-75 font-bengali">({errDef?.labelBn})</span>
+                            <span>{errDef?.labelEn || "Unclassified"}</span>
                           </button>
 
                           {/* Retry Count */}
@@ -598,7 +597,7 @@ export const MistakesNotebook = () => {
                         <MessageSquareQuote className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <span className="font-bold text-blue-950 block text-[11px]">
-                            My Learning Takeaway (আমার নোট):
+                            My Learning Takeaway:
                           </span>
                           <p className="text-blue-900 font-medium font-bengali leading-relaxed pt-0.5">
                             {item.student_notes}
@@ -618,17 +617,17 @@ export const MistakesNotebook = () => {
                     <button
                       type="button"
                       onClick={() => setClassifyingItem(item)}
-                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors font-bengali"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      <span>✍️ + ভুলের কারণ ট্যাগ করো ও কী শিখলে নোট লেখো</span>
+                      <span>✍️ + Tag Error Cause & Add Takeaway Note</span>
                     </button>
                   )}
 
                   {/* Explanation Toggle */}
                   {item.questions.explanation && (
-                    <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 leading-relaxed font-bengali border border-slate-200/80">
-                      <strong className="text-slate-900 block mb-0.5 font-bold">💡 সঠিক ব্যাখ্যা ও ট্রিক:</strong>
+                    <div className="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm text-slate-700 leading-relaxed border border-slate-200/80">
+                      <strong className="text-slate-900 block mb-0.5 font-bold">💡 Detailed Explanation & Shortcut:</strong>
                       <MathText text={item.questions.explanation} />
                     </div>
                   )}
@@ -639,23 +638,23 @@ export const MistakesNotebook = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => handleLaunchDrill([item], "Single Mistake Re-attempt")}
-                      className="rounded-xl h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 flex items-center gap-1.5 font-bengali"
+                      className="rounded-xl h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 flex items-center gap-1.5"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      আবার চেষ্টা করো (Re-attempt)
+                      Re-attempt Question
                     </Button>
 
                     <Button
                       size="sm"
                       variant={item.is_mastered ? "outline" : "default"}
                       onClick={() => handleToggleMastered(item.id, item.is_mastered)}
-                      className={`rounded-xl h-8 text-xs font-bold font-bengali ${
+                      className={`rounded-xl h-8 text-xs font-bold ${
                         item.is_mastered
                           ? "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
                           : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
                       }`}
                     >
-                      {item.is_mastered ? "✓ পাক্কা রেডি (Mastered)" : "পাক্কা রেডি মার্ক করো 🔥"}
+                      {item.is_mastered ? "✓ Mastered" : "Mark as Mastered 🔥"}
                     </Button>
                   </div>
                 </motion.div>

@@ -188,7 +188,9 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      target.bengaliName,
+                      target.conductingBody.isNotEmpty
+                          ? '${target.conductingBody} • ${target.badge}'
+                          : target.badge,
                       style: GoogleFonts.inter(
                         color: const Color(0xFFFBBF24),
                         fontSize: 13,
@@ -372,7 +374,7 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  '💡 ব্যাখ্যা: ${q.explanation}',
+                                  '💡 Solution & Explanation: ${q.explanation}',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Color(0xFF334155),
@@ -448,7 +450,7 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
               const Icon(Icons.emoji_events_rounded, size: 64, color: Color(0xFFF59E0B)),
               const SizedBox(height: 16),
               Text(
-                'অনুশীলন সম্পন্ন!',
+                'Drill Completed! 🎉',
                 style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -468,9 +470,27 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text('সঠিক: ${_drillResult!.correctCount}'),
-                  Text('ভুল: ${_drillResult!.wrongCount}'),
-                  Text('নির্ভুলতা: ${_drillResult!.accuracyPercentage}%'),
+                  Text(
+                    'Correct: ${_drillResult!.correctCount}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                  Text(
+                    'Incorrect: ${_drillResult!.wrongCount}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                  Text(
+                    'Accuracy: ${_drillResult!.accuracyPercentage}%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4F46E5),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -483,7 +503,7 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
                   ),
                 ),
                 onPressed: () => setState(() => _isDrilling = false),
-                child: const Text('ফিরে যান (Back to Practice)', style: TextStyle(color: Colors.white)),
+                child: const Text('Back to Practice Drills', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

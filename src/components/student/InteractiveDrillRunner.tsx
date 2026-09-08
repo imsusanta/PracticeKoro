@@ -77,7 +77,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
       setElapsedSeconds(elapsed);
 
       if (isTimed && elapsed >= totalAllowedSeconds) {
-        toast.warning("সময় সমাপ্ত! (Time is up!) অটো-সাবমিট হচ্ছে...");
+        toast.warning("Time is up! Auto-submitting your drill...");
         handleFinish();
       }
     }, 1000);
@@ -90,7 +90,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
 
   const toggleBookmark = async (qId: string) => {
     if (!user) {
-      toast.info("বুকমার্ক সংরক্ষণ করতে লগইন করুন");
+      toast.info("Please log in to save bookmarks");
       return;
     }
     const isBookmarked = bookmarkedIds.has(qId);
@@ -101,11 +101,11 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
         next.delete(qId);
         return next;
       });
-      toast.info("বুকমার্ক থেকে সরানো হয়েছে");
+      toast.info("Removed from Bookmarks");
     } else {
       await supabase.from("student_bookmarks").insert({ user_id: user.id, question_id: qId });
       setBookmarkedIds((prev) => new Set(prev).add(qId));
-      toast.success("বুকমার্কে সংরক্ষিত হয়েছে ⭐");
+      toast.success("Saved to Bookmarks ⭐");
     }
   };
 
@@ -154,7 +154,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
     if (evalResult.incorrectQuestions.length > 0) {
       await syncDrillMistakesToVault(user?.id, evalResult.incorrectQuestions);
       toast.info(
-        `${evalResult.incorrectQuestions.length} টি ভুল উত্তর আপনার Mistakes Notebook-এ জমা হয়েছে।`
+        `${evalResult.incorrectQuestions.length} mistakes saved to your Mistakes Notebook!`
       );
     }
   };
@@ -209,7 +209,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
               onClick={() => {
                 if (isFinished || Object.keys(answers).length === 0) {
                   onClose();
-                } else if (confirm("অনুশীলন বন্ধ করতে চান? আপনার প্রগ্রেস জমা দেওয়া হবে।")) {
+                } else if (confirm("Exit drill? Your current progress and score will be submitted.")) {
                   handleFinish();
                 }
               }}
@@ -226,11 +226,11 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
           <div className="bg-slate-100 border-b border-slate-200/80 px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-bold text-slate-600">
             <div className="flex items-center gap-2">
               <span className="text-blue-600 font-mono font-black">
-                প্রশ্ন {currentIndex + 1} / {questions.length}
+                Question {currentIndex + 1} of {questions.length}
               </span>
               <span className="text-slate-400">•</span>
               <span className="text-slate-500 font-medium">
-                {Object.keys(answers).length} উত্তর দেওয়া হয়েছে
+                {Object.keys(answers).length} answered
               </span>
             </div>
             <div className="w-24 sm:w-32 bg-slate-200 h-2 rounded-full overflow-hidden">
@@ -356,25 +356,25 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                     <div className="flex items-center gap-2">
                       {answers[currentQ.id]?.toUpperCase() === currentQ.correct_answer.toUpperCase() ? (
                         <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> সঠিক উত্তর! (+{config.marksPerQuestion})
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Correct! (+{config.marksPerQuestion})
                         </span>
                       ) : (
                         <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-xs flex items-center gap-1">
-                          <XCircle className="w-3.5 h-3.5" /> ভুল উত্তর (-{config.negativeMarks})
+                          <XCircle className="w-3.5 h-3.5" /> Incorrect (-{config.negativeMarks})
                         </span>
                       )}
                       <span className="text-slate-600 font-bold">
-                        সঠিক অপশন: ({currentQ.correct_answer})
+                        Correct Option: ({currentQ.correct_answer})
                       </span>
                     </div>
 
                     {currentQ.explanation ? (
                       <div className="pt-2 border-t border-slate-200 text-slate-700 leading-relaxed">
-                        <strong className="text-slate-900 block mb-1">ব্যাখ্যা (Solution):</strong>
+                        <strong className="text-slate-900 block mb-1">Explanation & Shortcut:</strong>
                         <MathText text={currentQ.explanation} />
                       </div>
                     ) : (
-                      <p className="text-slate-400 italic">স্ট্যান্ডার্ড বিগত বছরের প্রশ্নব্যাংক।</p>
+                      <p className="text-slate-400 italic">Standard exam-level question.</p>
                     )}
                   </motion.div>
                 )}
@@ -394,10 +394,10 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
 
                 <div>
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-                    অনুশীলন সম্পন্ন! 🎉
+                    Drill Completed! 🎉
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                    আপনার পারফরম্যান্স ও মার্কস হিসাব সম্পূর্ণ হয়েছে
+                    Performance analytics and negative marking breakdown generated.
                   </p>
                 </div>
 
@@ -408,15 +408,15 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                       {result.score}
                     </span>
                     <span className="text-blue-200 text-sm font-bold self-end mb-1">
-                      / {result.maxScore} মার্কস
+                      / {result.maxScore} marks
                     </span>
                   </div>
                   <div className="flex items-center justify-center gap-4 text-xs font-bold text-blue-100 pt-1 border-t border-white/15">
-                    <span>সঠিক: {result.correctCount}</span>
+                    <span>Correct: {result.correctCount}</span>
                     <span>•</span>
-                    <span>ভুল: {result.wrongCount}</span>
+                    <span>Wrong: {result.wrongCount}</span>
                     <span>•</span>
-                    <span>অনাবৃত: {result.unattemptedCount}</span>
+                    <span>Skipped: {result.unattemptedCount}</span>
                   </div>
                 </div>
 
@@ -424,7 +424,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-left">
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
                     <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                      <Target className="w-3.5 h-3.5 text-emerald-600" /> নির্ভুলতা
+                      <Target className="w-3.5 h-3.5 text-emerald-600" /> Accuracy
                     </div>
                     <p className="text-lg font-black text-slate-900 mt-1 font-mono">
                       {result.accuracyPercentage}%
@@ -433,7 +433,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
 
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
                     <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                      <Clock className="w-3.5 h-3.5 text-indigo-600" /> সময় ব্যয়
+                      <Clock className="w-3.5 h-3.5 text-indigo-600" /> Time Spent
                     </div>
                     <p className="text-lg font-black text-slate-900 mt-1 font-mono">
                       {formatSeconds(result.timeSpentSeconds)}
@@ -442,10 +442,10 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
 
                   <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
                     <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                      <Flame className="w-3.5 h-3.5 text-rose-600" /> সেভড ভুল
+                      <Flame className="w-3.5 h-3.5 text-rose-600" /> Saved Mistakes
                     </div>
                     <p className="text-lg font-black text-rose-600 mt-1 font-mono">
-                      {result.wrongCount} টি
+                      {result.wrongCount} {result.wrongCount === 1 ? "mistake" : "mistakes"}
                     </p>
                   </div>
                 </div>
@@ -455,8 +455,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                   <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 text-left flex items-start gap-2.5">
                     <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="font-bold">ভুল উত্তরগুলো সংরক্ষিত হয়েছে:</strong> আপনার ভুল
-                      হওয়া প্রশ্নগুলো স্বয়ংক্রিয়ভাবে Mistakes Notebook-এ সেভ করা হয়েছে যাতে আপনি কারণ চিহ্নিত করতে পারেন।
+                      <strong className="font-bold">Mistakes Saved to Vault:</strong> Your incorrect questions have been automatically logged into your Mistakes Notebook so you can tag the root cause and master them.
                     </div>
                   </div>
                 )}
@@ -476,7 +475,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                 disabled={currentIndex === 0}
                 className="rounded-xl text-xs font-bold gap-1"
               >
-                <ArrowLeft className="w-4 h-4" /> পূর্ববর্তী
+                <ArrowLeft className="w-4 h-4" /> Previous
               </Button>
 
               <div className="flex items-center gap-2">
@@ -486,7 +485,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                     onClick={handleFinish}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold gap-1 px-4 shadow-sm"
                   >
-                    <span>ড্রিল সমাপ্ত করুন</span>
+                    <span>Finish Drill</span>
                     <CheckCircle2 className="w-4 h-4" />
                   </Button>
                 ) : (
@@ -495,7 +494,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                     onClick={handleNext}
                     className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold gap-1 px-4 shadow-sm"
                   >
-                    <span>পরবর্তী প্রশ্ন</span>
+                    <span>Next Question</span>
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 )}
@@ -512,7 +511,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                   className="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold gap-1.5 shadow-sm"
                 >
                   <BookOpen className="w-4 h-4" />
-                  <span>ভুল নোটবুক খুলুন ({result.wrongCount})</span>
+                  <span>Open Mistakes Notebook ({result.wrongCount})</span>
                 </Button>
               )}
 
@@ -528,7 +527,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                 className="w-full sm:w-auto rounded-xl text-xs font-bold gap-1.5"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>পুনরায় অনুশীলন</span>
+                <span>Retry Drill</span>
               </Button>
 
               <Button
@@ -536,7 +535,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                 onClick={onClose}
                 className="w-full sm:w-auto rounded-xl text-xs font-bold"
               >
-                বন্ধ করুন
+                Close
               </Button>
             </div>
           )}

@@ -96,43 +96,43 @@ const HeroBannerCarousel = ({
   const slides: BannerSlide[] = [
     {
       image: "/images/student_hero_banner.jpg",
-      badge: "লক্ষ্য এবার সরকারি চাকরি 🎯",
+      badge: "Target Govt Job Selection 🎯",
       title: (
         <>
           Turn Preparation Into{" "}
           <span className="text-[#FBBF24]">Selection 🔥</span>
         </>
       ),
-      subtitle: `${greeting}, ${firstName}! প্র্যাকটিস • ভুলের খাতা • স্পিড ড্রিল • সিলেকশন`,
-      buttonText: "প্র্যাকটিস শুরু করো 🚀",
+      subtitle: `${greeting}, ${firstName}! Smart Practice • Mistakes Notebook • Speed Drill • Selection`,
+      buttonText: "Start Practice 🚀",
       buttonLink: "/student/practice",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
       badgeColor: "bg-blue-500/30 border-blue-300/40 text-blue-100",
     },
     {
       image: "/images/student_hero_himalaya.jpg",
-      badge: "ফুল মক টেস্ট ও লাইভ র‍্যাঙ্ক",
+      badge: "Full Mock Tests & Live Ranks",
       title: (
         <>
-          WB & Central <span className="text-[#60A5FA]">কাট-অফ ক্র্যাক করো</span>
+          WB & Central <span className="text-[#60A5FA]">Crack Cutoff</span>
         </>
       ),
-      subtitle: "পুলিশ, ক্লার্কশিপ, পঞ্চায়েত, টেট, WBCS ও রেলওয়ের আসল পরীক্ষার পরিবেশ ও নেগেটিভ মার্কিং।",
-      buttonText: "মক টেস্ট দেখো",
+      subtitle: "Real exam simulation with negative marking for Police, Clerkship, Panchayat, TET, WBCS & SSC/Railways.",
+      buttonText: "Explore Mock Tests",
       buttonLink: "/student/exam",
       buttonStyle: "bg-[#0066FF] hover:bg-blue-600 text-white font-bold shadow-blue-500/30",
       badgeColor: "bg-indigo-500/30 border-indigo-300/40 text-indigo-100",
     },
     {
       image: "/images/student_mountains.jpg",
-      badge: "ডেইলি স্পিড বুস্টার",
+      badge: "Daily Speed Booster",
       title: (
         <>
-          ডেইলি ১০ <span className="text-[#FBBF24]">স্পিড টেস্ট ⏱️</span>
+          Daily 10 <span className="text-[#FBBF24]">Speed Drill ⏱️</span>
         </>
       ),
-      subtitle: "প্রতিদিন ১০টি হাই-ইল্ড MCQ দিয়ে স্পিড বাড়াও আর টাইমার সামলানোর ভয় কাটাও।",
-      buttonText: "ডেইলি টেস্ট দাও",
+      subtitle: "Build exam-ready speed and eliminate timer panic with 10 high-yield daily MCQs.",
+      buttonText: "Take Daily Drill",
       buttonLink: "/student/daily",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
       badgeColor: "bg-amber-500/30 border-amber-300/40 text-amber-100",
@@ -494,17 +494,17 @@ const StudentDashboard = () => {
               <AlertCircle className="w-6 h-6 stroke-[2.2]" />
             </div>
             <h3 className="text-base sm:text-lg font-black text-slate-900 mb-1">
-              কিছু সমস্যা হয়েছে। আবার চেষ্টা করুন।
+              Something went wrong. Please try again.
             </h3>
             <p className="text-xs text-slate-500 mb-5">
-              তথ্য লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে পুনরায় চেষ্টা করুন।
+              Unable to load your dashboard data right now. Please retry.
             </p>
             <button
               onClick={handleRetryAll}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
             >
               <RefreshCw className="w-4 h-4 stroke-[2.2]" />
-              <span>আবার চেষ্টা করুন</span>
+              <span>Retry</span>
             </button>
           </div>
         </div>
@@ -604,19 +604,19 @@ const StudentDashboard = () => {
         <div className="rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h3 className="font-black text-sm text-slate-900 tracking-tight font-bengali">আজকের প্রস্তুতি ও অগ্রগতি (Today's Progress)</h3>
+              <h3 className="font-black text-sm text-slate-900 tracking-tight">Today's Progress</h3>
               {todayMetrics.streakDays > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 font-bengali">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
                   <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  অ্যাক্টিভ স্ট্রিক 🔥
+                  Active Streak 🔥
                 </span>
               )}
             </div>
             <button
               onClick={() => navigate("/student/results")}
-              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors font-bengali"
+              className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-0.5 transition-colors"
             >
-              <span>বিস্তারিত দেখুন</span>
+              <span>View Details</span>
               <ArrowRight className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>
           </div>
@@ -627,8 +627,8 @@ const StudentDashboard = () => {
               <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                 {todayMetrics.questions}
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 font-bengali">
-                MCQ সমাধান
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Questions Solved
               </p>
             </div>
 
@@ -637,8 +637,8 @@ const StudentDashboard = () => {
               <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                 {todayMetrics.accuracy}%
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 font-bengali">
-                সঠিক উত্তর
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Accuracy
               </p>
             </div>
 
@@ -647,8 +647,8 @@ const StudentDashboard = () => {
               <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                 {todayMetrics.studyTimeMinutes}m
               </p>
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 font-bengali">
-                পড়ার সময়
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Study Time
               </p>
             </div>
 
@@ -660,8 +660,8 @@ const StudentDashboard = () => {
                 </span>
                 <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
               </div>
-              <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-0.5 font-bengali">
-                ধারাবাহিকতা 🔥
+              <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mt-0.5">
+                Day Streak 🔥
               </p>
             </div>
           </div>
@@ -699,27 +699,27 @@ const StudentDashboard = () => {
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bengali">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                     🎯 {readiness.readinessLabel}
                   </span>
-                  <span className="text-xs font-bold text-slate-300 font-bengali">
+                  <span className="text-xs font-bold text-slate-300">
                     {readiness.targetExamName}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm font-bold text-white mt-1 font-bengali">
-                  সম্ভাব্য স্কোর: <span className="text-amber-300 font-mono font-black">{readiness.projectedScore}</span> / {readiness.maxScore} নম্বর
+                <p className="text-xs sm:text-sm font-bold text-white mt-1">
+                  Projected Score: <span className="text-amber-300 font-mono font-black">{readiness.projectedScore}</span> / {readiness.maxScore}
                   {readiness.weakestSubject && (
                     <span className="text-slate-300 font-normal ml-2 hidden md:inline">
-                      • দুর্বল বিষয়: <span className="text-rose-400 font-bold">{readiness.weakestSubject.subject}</span>
+                      • Focus Area: <span className="text-rose-400 font-bold">{readiness.weakestSubject.subject}</span>
                     </span>
                   )}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 font-bengali">
+            <div className="flex items-center gap-2 self-start sm:self-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
               <span className="text-xs font-bold text-blue-300 group-hover:text-white transition-colors">
-                কাট-অফ ও ৩টি মিশন দেখো
+                View Cutoff & 3 Missions
               </span>
               <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -1107,41 +1107,41 @@ const StudentDashboard = () => {
             SECTION 6: QUICK ACTIONS (6 Practice & Study Tools)
             ═══════════════════════════════════════════════════════════════ */}
         <div className="space-y-2">
-          <h3 className="font-black text-sm text-slate-900 tracking-tight font-bengali">কুইক প্র্যাকটিস টুলস (Quick Actions)</h3>
+          <h3 className="font-black text-sm text-slate-900 tracking-tight">Quick Actions</h3>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
             {[
               {
-                title: "ডেইলি কুইজ",
+                title: "Daily Quiz",
                 icon: Zap,
                 bg: "bg-amber-50 border-amber-200/80 text-amber-600",
                 path: "/student/daily",
               },
               {
-                title: "টপিক ড্রিল",
+                title: "Topic Drill",
                 icon: Target,
                 bg: "bg-purple-50 border-purple-200/80 text-purple-600",
                 path: "/student/practice/subject",
               },
               {
-                title: "বিগত বছরের PYQ",
+                title: "PYQ Vault",
                 icon: Calendar,
                 bg: "bg-emerald-50 border-emerald-200/80 text-emerald-600",
                 path: "/student/pyq",
               },
               {
-                title: "ভুলের খাতা",
+                title: "Mistakes Notebook",
                 icon: RotateCcw,
                 bg: "bg-rose-50 border-rose-200/80 text-rose-600",
                 path: "/student/mistakes",
               },
               {
-                title: "স্টাডি নোটস",
+                title: "Study Notes",
                 icon: BookOpen,
                 bg: "bg-blue-50 border-blue-200/80 text-[#0066FF]",
                 path: "/student/notes",
               },
               {
-                title: "সেভ করা প্রশ্ন",
+                title: "Saved Questions",
                 icon: Bookmark,
                 bg: "bg-cyan-50 border-cyan-200/80 text-cyan-600",
                 path: "/student/bookmarks",

@@ -73,7 +73,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'ভুলের কারণ চিহ্নিত করুন (Error Cause)',
+                'Tag Error Cause & Key Takeaway',
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -93,7 +93,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                   final isSelected = selectedType == type;
                   return ChoiceChip(
                     label: Text(
-                      '${type.label} (${type.shortBengaliLabel})',
+                      type.label,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -113,7 +113,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                 controller: noteController,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  hintText: 'আমার নোট (যেমন: চব্বিশ পরগণা সবচেয়ে বড় জেলা, অথবা শর্টকাট ট্রিক)...',
+                  hintText: 'Add personal takeaway note (e.g. key formula, shortcut trick, trap to avoid)...',
                   hintStyle: const TextStyle(fontSize: 13),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -145,7 +145,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                     }
                   },
                   child: const Text(
-                    'সংরক্ষণ করুন (Save Note)',
+                    'Save Error Note & Takeaway',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -170,7 +170,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          'ভুলের খাতা — Mistakes Notebook',
+          'Mistakes Notebook',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 17,
@@ -210,7 +210,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'রিভিশন ও মাস্টারি প্রোগ্রেস (Zero Negative Marking)',
+                              'Revision & Mastery (Zero Negative Marking)',
                               style: TextStyle(
                                 color: Color(0xFF94A3B8),
                                 fontSize: 11,
@@ -219,7 +219,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '$masteredCount / $totalCount পাক্কা রেডি 🔥',
+                              '$masteredCount / $totalCount Mastered 🔥',
                               style: GoogleFonts.inter(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -238,7 +238,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                             ),
                           ),
                           child: Text(
-                            '$masteryRate% রেডি',
+                            '$masteryRate% Mastered',
                             style: const TextStyle(
                               color: Color(0xFF34D399),
                               fontWeight: FontWeight.w900,
@@ -260,7 +260,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                     child: Row(
                       children: [
                         FilterChip(
-                          label: const Text('রিভিশন বাকি'),
+                          label: const Text('Needs Revision'),
                           selected: _showOnlyNeedsRevision,
                           selectedColor: const Color(0xFFEEF2FF),
                           checkmarkColor: const Color(0xFF4F46E5),
@@ -277,7 +277,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                         ),
                         const SizedBox(width: 8),
                         FilterChip(
-                          label: const Text('পাক্কা রেডি 🔥'),
+                          label: const Text('Mastered 🔥'),
                           selected: !_showOnlyNeedsRevision,
                           selectedColor: const Color(0xFFECFDF5),
                           checkmarkColor: const Color(0xFF10B981),
@@ -300,7 +300,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                         ),
                         const SizedBox(width: 8),
                         FilterChip(
-                          label: const Text('সব কারণ'),
+                          label: const Text('All Causes'),
                           selected: _selectedFilter == ErrorType.unclassified,
                           selectedColor: const Color(0xFFF1F5F9),
                           checkmarkColor: const Color(0xFF475569),
@@ -317,7 +317,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                         ),
                         const SizedBox(width: 6),
                         FilterChip(
-                          label: const Text('🧠 কনসেপ্ট গ্যাপ'),
+                          label: const Text('🧠 Concept Gap'),
                           selected: _selectedFilter == ErrorType.conceptual,
                           selectedColor: const Color(0xFFEFF6FF),
                           checkmarkColor: const Color(0xFF2563EB),
@@ -334,7 +334,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                         ),
                         const SizedBox(width: 6),
                         FilterChip(
-                          label: const Text('⚡ সিলি মিস্টেক'),
+                          label: const Text('⚡ Silly Mistake'),
                           selected: _selectedFilter == ErrorType.careless,
                           selectedColor: const Color(0xFFFEF3C7),
                           checkmarkColor: const Color(0xFFD97706),
@@ -351,7 +351,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                         ),
                         const SizedBox(width: 6),
                         FilterChip(
-                          label: const Text('⏱️ সময়ের চাপ'),
+                          label: const Text('⏱️ Time Panic'),
                           selected: _selectedFilter == ErrorType.timePressure,
                           selectedColor: const Color(0xFFF3E8FF),
                           checkmarkColor: const Color(0xFF9333EA),
@@ -368,7 +368,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                         ),
                         const SizedBox(width: 6),
                         FilterChip(
-                          label: const Text('🎲 আন্দাজে তুকা'),
+                          label: const Text('🎲 Blind Guess'),
                           selected: _selectedFilter == ErrorType.guess,
                           selectedColor: const Color(0xFFFCE7F3),
                           checkmarkColor: const Color(0xFFDB2777),
@@ -404,7 +404,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'দারুণ! কোনো ভুল পেন্ডিং নেই! 🎉',
+                                'Awesome! No pending mistakes! 🎉',
                                 style: GoogleFonts.inter(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -413,7 +413,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                               ),
                               const SizedBox(height: 4),
                               const Text(
-                                'ভুলের খাতা সম্পূর্ণ রিভাইজ করা হয়েছে। আসল পরীক্ষায় নেগেটিভ মার্কিং এড়াতে তুমি প্রস্তুত!',
+                                'Mistakes notebook is fully revised. You are ready to avoid negative marking in your target exam!',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,
@@ -470,7 +470,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
-                                                '🏷️ ${item.errorType.bengaliLabel}',
+                                                '🏷️ ${item.errorType.label}',
                                                 style: const TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.bold,
@@ -579,7 +579,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                                           color: const Color(0xFF4F46E5),
                                         ),
                                         label: Text(
-                                          isRevealed ? 'সমাধান লুকান' : '💡 সমাধান ও ব্যাখ্যা দেখুন',
+                                          isRevealed ? 'Hide Solution' : '💡 View Solution & Explanation',
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -590,7 +590,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                                       TextButton(
                                         onPressed: () => _showClassificationDialog(item),
                                         child: const Text(
-                                          'ভুলের কারণ ও নোট ✍️',
+                                          '✍️ Tag Cause & Add Note',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,

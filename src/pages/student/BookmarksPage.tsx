@@ -543,7 +543,7 @@ export const BookmarksPage = () => {
                         })()}
                         {item.questions.explanation && (
                           <div className="text-slate-700 pt-1 border-t border-slate-200/60">
-                            <strong className="text-slate-900 block mb-0.5 font-bold">ব্যাখ্যা (Explanation):</strong>
+                            <strong className="text-slate-900 block mb-0.5 font-bold">💡 Solution & Key Rule:</strong>
                             <MathText text={item.questions.explanation} />
                           </div>
                         )}
