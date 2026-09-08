@@ -20,59 +20,61 @@ import {
 } from "lucide-react";
 
 // Stylized Vector Illustration for Hero Banner (Checklist + Target Bullseye)
-const HeroPracticeIllustration = () => (
-  <div className="relative w-44 sm:w-56 h-36 sm:h-44 shrink-0 flex items-center justify-center select-none pointer-events-none">
-    {/* Soft ambient background glow */}
-    <div className="absolute w-36 h-36 bg-blue-300/25 rounded-full blur-2xl" />
-    <div className="absolute -top-2 -right-2 w-16 h-16 bg-sky-200/30 rounded-full blur-xl" />
-    <div className="absolute -bottom-2 -left-2 w-14 h-14 bg-indigo-300/25 rounded-full blur-lg" />
+const HeroPracticeIllustration = ({ className = "" }: { className?: string }) => (
+  <div className={`relative shrink-0 flex items-center justify-center select-none pointer-events-none ${className}`}>
+    <div className="relative w-44 sm:w-56 h-36 sm:h-44 flex items-center justify-center origin-center scale-[0.52] sm:scale-80 md:scale-100">
+      {/* Soft ambient background glow */}
+      <div className="absolute w-36 h-36 bg-blue-300/25 rounded-full blur-2xl" />
+      <div className="absolute -top-2 -right-2 w-16 h-16 bg-sky-200/30 rounded-full blur-xl" />
+      <div className="absolute -bottom-2 -left-2 w-14 h-14 bg-indigo-300/25 rounded-full blur-lg" />
 
-    {/* Floating decorative elements */}
-    <div className="absolute top-1 right-6 w-2.5 h-2.5 rounded-full bg-white/40" />
-    <div className="absolute bottom-4 left-3 w-2 h-2 rounded-full bg-white/30" />
+      {/* Floating decorative elements */}
+      <div className="absolute top-1 right-6 w-2.5 h-2.5 rounded-full bg-white/40" />
+      <div className="absolute bottom-4 left-3 w-2 h-2 rounded-full bg-white/30" />
 
-    {/* White Checklist Card */}
-    <div className="relative z-10 w-32 sm:w-40 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-950/20 p-3 sm:p-3.5 border border-white/80 transform -rotate-3">
-      {/* Header bar */}
-      <div className="w-10 h-2 rounded-full bg-blue-100 mx-auto mb-2.5" />
+      {/* White Checklist Card */}
+      <div className="relative z-10 w-32 sm:w-40 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-blue-950/20 p-3 sm:p-3.5 border border-white/80 transform -rotate-3">
+        {/* Header bar */}
+        <div className="w-10 h-2 rounded-full bg-blue-100 mx-auto mb-2.5" />
 
-      {/* Checklist items */}
-      <div className="space-y-2">
-        {[1, 2, 3].map((item) => (
-          <div key={item} className="flex items-center gap-2">
-            <div className="w-4.5 h-4.5 rounded-md bg-[#0066FF] flex items-center justify-center text-white shrink-0 shadow-xs">
-              <Check className="w-3 h-3 stroke-[3]" />
+        {/* Checklist items */}
+        <div className="space-y-2">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="flex items-center gap-2">
+              <div className="w-4.5 h-4.5 rounded-md bg-[#0066FF] flex items-center justify-center text-white shrink-0 shadow-xs">
+                <Check className="w-3 h-3 stroke-[3]" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <div
+                  className={`h-1.5 rounded-full bg-slate-200 ${
+                    item === 1 ? "w-14" : item === 2 ? "w-18" : "w-12"
+                  }`}
+                />
+              </div>
             </div>
-            <div className="flex-1 space-y-1">
-              <div
-                className={`h-1.5 rounded-full bg-slate-200 ${
-                  item === 1 ? "w-14" : item === 2 ? "w-18" : "w-12"
-                }`}
-              />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
 
-    {/* Target Bullseye Board with Arrow (Overlapping bottom right) */}
-    <div className="absolute -bottom-1 -right-1 sm:right-1 z-20 w-20 h-20 sm:w-24 sm:h-24 drop-shadow-xl">
-      <svg viewBox="0 0 100 100" className="w-full h-full">
-        {/* Outer Ring */}
-        <circle cx="50" cy="50" r="44" fill="#EFF6FF" stroke="#3B82F6" strokeWidth="4.5" />
-        {/* Middle Ring */}
-        <circle cx="50" cy="50" r="30" fill="#DBEAFE" stroke="#2563EB" strokeWidth="4.5" />
-        {/* Inner Bullseye */}
-        <circle cx="50" cy="50" r="16" fill="#1D4ED8" />
-        <circle cx="50" cy="50" r="7" fill="#FFFFFF" />
+      {/* Target Bullseye Board with Arrow (Overlapping bottom right) */}
+      <div className="absolute -bottom-1 -right-1 sm:right-1 z-20 w-20 h-20 sm:w-24 sm:h-24 drop-shadow-xl">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          {/* Outer Ring */}
+          <circle cx="50" cy="50" r="44" fill="#EFF6FF" stroke="#3B82F6" strokeWidth="4.5" />
+          {/* Middle Ring */}
+          <circle cx="50" cy="50" r="30" fill="#DBEAFE" stroke="#2563EB" strokeWidth="4.5" />
+          {/* Inner Bullseye */}
+          <circle cx="50" cy="50" r="16" fill="#1D4ED8" />
+          <circle cx="50" cy="50" r="7" fill="#FFFFFF" />
 
-        {/* Dart Shaft */}
-        <line x1="16" y1="16" x2="47" y2="47" stroke="#1E293B" strokeWidth="3.5" strokeLinecap="round" />
-        {/* Dart Tip */}
-        <polygon points="45,39 52,48 43,54" fill="#0284C7" />
-        {/* Dart Fletching */}
-        <path d="M12 18 L18 12 M17 23 L23 17" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
+          {/* Dart Shaft */}
+          <line x1="16" y1="16" x2="47" y2="47" stroke="#1E293B" strokeWidth="3.5" strokeLinecap="round" />
+          {/* Dart Tip */}
+          <polygon points="45,39 52,48 43,54" fill="#0284C7" />
+          {/* Dart Fletching */}
+          <path d="M12 18 L18 12 M17 23 L23 17" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      </div>
     </div>
   </div>
 );
@@ -224,35 +226,43 @@ export const PracticeHub = () => {
         {/* ═══════════════════════════════════════════════════════════════
             2. HERO BLUE BANNER (Practice Today, Score Tomorrow)
             ═══════════════════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl px-4 py-3 sm:px-6 sm:py-5 md:p-8 bg-gradient-to-r from-[#0062E0] via-[#1272F3] to-[#2E82FE] text-white shadow-xl shadow-blue-600/15">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-3 sm:px-6 sm:py-5 md:p-6 bg-gradient-to-r from-[#0062E0] via-[#1272F3] to-[#2E82FE] text-white shadow-xl shadow-blue-600/15">
           {/* Subtle Ambient Background Gradients */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
           <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-blue-300/10 rounded-full blur-2xl pointer-events-none -mb-20" />
 
-          <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-6">
-            <div className="space-y-1 sm:space-y-2 min-w-0">
-              <h2 className="text-base sm:text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
-                Practice Today,<br className="sm:hidden" /> Score Tomorrow
+          <div className="relative z-10 flex items-center justify-between gap-2.5 sm:gap-4 md:gap-6">
+            <div className="space-y-1 sm:space-y-1.5 min-w-0 flex-1">
+              <h2 className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-black text-white leading-tight tracking-tight">
+                Practice Today, Score Tomorrow
               </h2>
-              <p className="hidden sm:block text-xs sm:text-sm text-blue-100 leading-relaxed font-normal max-w-md">
+              <p className="text-[10px] sm:text-xs md:text-sm text-blue-100/90 leading-snug font-normal max-w-sm line-clamp-2 sm:line-clamp-none">
                 Topic-wise questions, previous year papers and smart revision tools — all in one place.
               </p>
+              <div className="pt-1 sm:hidden">
+                <button
+                  onClick={() => navigate("/student/practice/subject")}
+                  className="inline-flex items-center gap-1.5 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-[11px] px-3.5 py-1.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <span>Start Practicing</span>
+                  <ArrowRight className="w-3 h-3 text-[#0062E0] stroke-[2.5]" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0">
+            {/* Desktop Center Button */}
+            <div className="hidden sm:block shrink-0">
               <button
                 onClick={() => navigate("/student/practice/subject")}
-                className="inline-flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-xs sm:text-sm px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-blue-50 text-[#0062E0] active:scale-95 font-bold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-md shadow-blue-900/15 transition-all cursor-pointer whitespace-nowrap"
               >
                 <span>Start Practicing</span>
                 <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0062E0] stroke-[2.5]" />
               </button>
-
-              {/* Right Illustration — shown on md+ screens */}
-              <div className="hidden md:block self-auto shrink-0">
-                <HeroPracticeIllustration />
-              </div>
             </div>
+
+            {/* Right Illustration — visible on all screen sizes */}
+            <HeroPracticeIllustration className="w-20 h-18 sm:w-32 sm:h-26 md:w-44 md:h-36 shrink-0" />
           </div>
         </div>
 
