@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/exam_target.dart';
 import '../models/drill_model.dart';
 import '../services/drill_service.dart';
+import '../theme/responsive.dart';
 
 class PracticeDrillsScreen extends StatefulWidget {
   const PracticeDrillsScreen({super.key});
@@ -468,28 +469,17 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
               ),
               const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Text(
-                    'Correct: ${_drillResult!.correctCount}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF10B981),
-                    ),
+                  Expanded(
+                    child: _metricCard('Correct', '${_drillResult!.correctCount}', const Color(0xFF10B981), const Color(0xFFECFDF5)),
                   ),
-                  Text(
-                    'Incorrect: ${_drillResult!.wrongCount}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFEF4444),
-                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _metricCard('Incorrect', '${_drillResult!.wrongCount}', const Color(0xFFEF4444), const Color(0xFFFEF2F2)),
                   ),
-                  Text(
-                    'Accuracy: ${_drillResult!.accuracyPercentage}%',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4F46E5),
-                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _metricCard('Accuracy', '${_drillResult!.accuracyPercentage}%', const Color(0xFF4F46E5), const Color(0xFFEEF2FF)),
                   ),
                 ],
               ),
@@ -535,88 +525,140 @@ class _PracticeDrillsScreenState extends State<PracticeDrillsScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              q.questionText,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ...['A', 'B', 'C', 'D'].map((optKey) {
-              final text = optKey == 'A'
-                  ? q.optionA
-                  : optKey == 'B'
-                      ? q.optionB
-                      : optKey == 'C'
-                          ? q.optionC
-                          : q.optionD;
-              final isSelected = _userAnswers[q.id] == optKey;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  tileColor: isSelected ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC),
-                  title: Text(
-                    '($optKey) $text',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  onTap: () {
-                    setState(() {
-                      _userAnswers[q.id] = optKey;
-                    });
-                  },
-                ),
-              );
-            }),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: SafeArea(
+        child: ResponsiveCenter(
+          maxWidth: 640,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                if (_currentDrillIndex > 0)
-                  TextButton(
-                    onPressed: () => setState(() => _currentDrillIndex--),
-                    child: const Text('Previous'),
-                  )
-                else
-                  const SizedBox(),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          q.questionText,
+                          style: GoogleFonts.inter(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        ...['A', 'B', 'C', 'D'].map((optKey) {
+                          final text = optKey == 'A'
+                              ? q.optionA
+                              : optKey == 'B'
+                                  ? q.optionB
+                                  : optKey == 'C'
+                                      ? q.optionC
+                                      : q.optionD;
+                          final isSelected = _userAnswers[q.id] == optKey;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              tileColor: isSelected ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC),
+                              title: Text(
+                                '($optKey) $text',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                              onTap: () {
+                                setState(() {
+                                  _userAnswers[q.id] = optKey;
+                                });
+                              },
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                  onPressed: () {
-                    if (_currentDrillIndex < _questions.length - 1) {
-                      setState(() => _currentDrillIndex++);
-                    } else {
-                      _submitDrill();
-                    }
-                  },
-                  child: Text(
-                    _currentDrillIndex == _questions.length - 1 ? 'Submit Drill' : 'Next',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (_currentDrillIndex > 0)
+                      TextButton(
+                        onPressed: () => setState(() => _currentDrillIndex--),
+                        child: const Text('Previous'),
+                      )
+                    else
+                      const SizedBox(),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      onPressed: () {
+                        if (_currentDrillIndex < _questions.length - 1) {
+                          setState(() => _currentDrillIndex++);
+                        } else {
+                          _submitDrill();
+                        }
+                      },
+                      child: Text(
+                        _currentDrillIndex == _questions.length - 1 ? 'Submit Drill' : 'Next',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _metricCard(String label, String value, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: textColor.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

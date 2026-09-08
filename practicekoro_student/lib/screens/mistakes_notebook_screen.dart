@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/mistake_item.dart';
 import '../services/mistakes_service.dart';
+import '../theme/responsive.dart';
 
 class MistakesNotebookScreen extends StatefulWidget {
   const MistakesNotebookScreen({super.key});
@@ -189,8 +190,10 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
+          : ResponsiveCenter(
+              maxWidth: 640,
+              child: Column(
+                children: [
                 // Mastery KPI Strip
                 Container(
                   color: Colors.white,
@@ -206,30 +209,41 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Revision & Mastery (Zero Negative Marking)',
-                              style: TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: const Text(
+                                  'Revision & Mastery (Zero Negative Marking)',
+                                  style: TextStyle(
+                                    color: Color(0xFF94A3B8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$masteredCount / $totalCount Mastered 🔥',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
+                              const SizedBox(height: 4),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '$masteredCount / $totalCount Mastered 🔥',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: const Color(0xFF10B981).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(14),
@@ -558,8 +572,11 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                                   const SizedBox(height: 10),
 
                                   // Toggle Solution Button
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
                                     children: [
                                       TextButton.icon(
                                         onPressed: () {
@@ -579,7 +596,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                                           color: const Color(0xFF4F46E5),
                                         ),
                                         label: Text(
-                                          isRevealed ? 'Hide Solution' : '💡 View Solution & Explanation',
+                                          isRevealed ? 'Hide Solution' : '💡 View Solution',
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -590,7 +607,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                                       TextButton(
                                         onPressed: () => _showClassificationDialog(item),
                                         child: const Text(
-                                          '✍️ Tag Cause & Add Note',
+                                          '✍️ Tag Cause & Note',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -628,6 +645,7 @@ class _MistakesNotebookScreenState extends State<MistakesNotebookScreen> {
                 ),
               ],
             ),
+          ),
     );
   }
 

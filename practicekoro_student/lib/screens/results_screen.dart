@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key});
@@ -70,7 +71,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ],
                 )
-              : CustomScrollView(
+              : ResponsiveCenter(
+                  maxWidth: 640,
+                  child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
@@ -248,6 +251,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     const SliverToBoxAdapter(child: SizedBox(height: 100)),
                   ],
                 ),
+              ),
         ),
       ),
     );

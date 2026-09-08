@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 import '../services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -151,8 +152,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               parent: BouncingScrollPhysics(),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
+            child: ResponsiveCenter(
+              maxWidth: 600,
+              child: Column(
+                children: [
                 const SizedBox(height: 16),
 
                 // Header
@@ -400,8 +403,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _menuItem({
     required IconData icon,

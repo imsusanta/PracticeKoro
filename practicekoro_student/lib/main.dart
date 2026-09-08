@@ -39,6 +39,19 @@ class PracticeKoroApp extends StatelessWidget {
       title: 'PracticeKoro Student',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      builder: (context, child) {
+        final mediaQueryData = MediaQuery.of(context);
+        final clampedData = mediaQueryData.copyWith(
+          textScaler: mediaQueryData.textScaler.clamp(
+            minScaleFactor: 0.85,
+            maxScaleFactor: 1.15,
+          ),
+        );
+        return MediaQuery(
+          data: clampedData,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),

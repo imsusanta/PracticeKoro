@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 import '../models/exam_readiness.dart';
 import '../models/exam_target.dart';
 import '../services/readiness_service.dart';
@@ -583,6 +584,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final fullName = _profile?['full_name']?.toString() ?? 'Student';
     final firstName = fullName.trim().split(' ').first;
+    final isSmall = AppResponsive.isSmallPhone(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -594,81 +596,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ═══════════════════════════════════════════════════════════
-                // PREMIUM HERO CARD - Matches Web Student Dashboard
-                // ═══════════════════════════════════════════════════════════
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: _greetingColors,
+            padding: EdgeInsets.symmetric(
+              horizontal: AppResponsive.horizontalPadding(context),
+              vertical: isSmall ? 8 : 10,
+            ),
+            child: ResponsiveCenter(
+              maxWidth: 640,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ═══════════════════════════════════════════════════════════
+                  // PREMIUM HERO CARD - Matches Web Student Dashboard
+                  // ═══════════════════════════════════════════════════════════
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(AppResponsive.cardPadding(context)),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: _greetingColors,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _greetingColors[0].withValues(alpha: 0.35),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _greetingColors[0].withValues(alpha: 0.35),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      // Decorative Blur Circles
-                      Positioned(
-                        top: -30,
-                        right: -30,
-                        child: Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.12),
+                    child: Stack(
+                      children: [
+                        // Decorative Blur Circles
+                        Positioned(
+                          top: -30,
+                          right: -30,
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.12),
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        bottom: -40,
-                        left: -40,
-                        child: Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black.withValues(alpha: 0.1),
+                        Positioned(
+                          bottom: -40,
+                          left: -40,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withValues(alpha: 0.1),
+                            ),
                           ),
                         ),
-                      ),
 
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // User Info Row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Avatar Container
-                              Container(
-                                width: 58,
-                                height: 58,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.35),
-                                    width: 2,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // User Info Row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Avatar Container
+                                Container(
+                                  width: isSmall ? 50 : 58,
+                                  height: isSmall ? 50 : 58,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.35),
+                                      width: 2,
+                                    ),
                                   ),
-                                ),
-                                child: _profile?['avatar_url'] != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(18),
+                                  child: _profile?['avatar_url'] != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
                                         child: Image.network(
                                           _profile!['avatar_url'],
                                           fit: BoxFit.cover,
@@ -857,8 +864,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Row(
                         children: [
                           Container(
-                            width: 48,
-                            height: 48,
+                            width: isSmall ? 40 : 48,
+                            height: isSmall ? 40 : 48,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [
@@ -867,15 +874,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Color(0xFFD4A017),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(isSmall ? 13 : 16),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.workspace_premium_rounded,
                               color: Colors.white,
-                              size: 26,
+                              size: isSmall ? 22 : 26,
                             ),
                           ),
-                          const SizedBox(width: 14),
+                          SizedBox(width: isSmall ? 10 : 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -885,7 +892,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Text(
                                       'Go Premium',
                                       style: GoogleFonts.inter(
-                                        fontSize: 15,
+                                        fontSize: isSmall ? 14 : 15,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
                                       ),
@@ -913,10 +920,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Text(
                                   'Unlock all tests & notes — ₹$_subscriptionFee/yr',
                                   style: GoogleFonts.inter(
-                                    fontSize: 12,
+                                    fontSize: isSmall ? 11 : 12,
                                     color: const Color(0xFF94A3B8),
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -927,18 +936,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF59E0B),
                               foregroundColor: const Color(0xFF0F172A),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: isSmall ? 10 : 14,
+                                  vertical: isSmall ? 8 : 10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
                             ),
-                            child: Text(
-                              'Upgrade',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Upgrade',
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmall ? 12 : 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
@@ -980,7 +993,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () => _navigateToTab(1),
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(isSmall ? 13 : 16),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -997,19 +1010,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Row(
                       children: [
                         Container(
-                          width: 48,
-                          height: 48,
+                          width: isSmall ? 40 : 48,
+                          height: isSmall ? 40 : 48,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.school_rounded,
                             color: Colors.white,
-                            size: 26,
+                            size: isSmall ? 22 : 26,
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        SizedBox(width: isSmall ? 10 : 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1017,7 +1030,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 'Start Full Mock Test 🚀',
                                 style: GoogleFonts.inter(
-                                  fontSize: 16,
+                                  fontSize: isSmall ? 14.5 : 16,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
@@ -1025,7 +1038,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 'Real exam simulation with timer & negative marking',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                  fontSize: isSmall ? 11 : 12,
                                   color: Colors.white.withValues(alpha: 0.85),
                                 ),
                               ),
@@ -1736,13 +1749,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
   Widget _statBadge(String value, String label) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(16),
@@ -1750,24 +1764,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         child: Column(
           children: [
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.75),
-                letterSpacing: 0.5,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.75),
+                    letterSpacing: 0.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -1783,56 +1807,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color bgColor,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 155;
+        return InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF1F5F9)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+          child: Container(
+            padding: EdgeInsets.all(isNarrow ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: color, size: 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: isNarrow ? 38 : 44,
+                  height: isNarrow ? 38 : 44,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(isNarrow ? 11 : 14),
+                  ),
+                  child: Icon(icon, color: color, size: isNarrow ? 19 : 22),
+                ),
+                SizedBox(height: isNarrow ? 8 : 12),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: isNarrow ? 13 : 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: isNarrow ? 11 : 12,
+                    color: const Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: const Color(0xFF94A3B8),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1943,46 +1976,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0A2655).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.speed_rounded,
-                      color: Color(0xFF0A2655),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Target Exam Readiness',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
-                        ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A2655).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      Text(
-                        'Projected score vs cutoff analysis',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: const Color(0xFF64748B),
-                        ),
+                      child: const Icon(
+                        Icons.speed_rounded,
+                        color: Color(0xFF0A2655),
+                        size: 20,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Target Exam Readiness',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Projected score vs cutoff analysis',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: const Color(0xFF64748B),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               // Target Exam Dropdown
               Container(
+                constraints: const BoxConstraints(maxWidth: 150),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
@@ -1993,6 +2036,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: DropdownButton<String>(
                     value: _selectedExamId,
                     isDense: true,
+                    isExpanded: true,
                     icon: const Icon(Icons.arrow_drop_down, size: 18),
                     style: GoogleFonts.inter(
                       fontSize: 11,
@@ -2003,7 +2047,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     items: ExamDataCatalog.exams.map((t) {
                       return DropdownMenuItem<String>(
                         value: t.id,
-                        child: Text(t.badge.isNotEmpty ? '${t.name.split(' ').first} (${t.badge})' : t.name),
+                        child: Text(
+                          t.badge.isNotEmpty ? '${t.name.split(' ').first} (${t.badge})' : t.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                   ),
@@ -2018,14 +2065,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               // Radial Gauge
               SizedBox(
-                width: 90,
-                height: 90,
+                width: 84,
+                height: 84,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     SizedBox(
-                      width: 90,
-                      height: 90,
+                      width: 84,
+                      height: 84,
                       child: CircularProgressIndicator(
                         value: _readinessLoading ? null : (score / 100.0).clamp(0.0, 1.0),
                         strokeWidth: 8,
@@ -2039,7 +2086,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           '$score%',
                           style: GoogleFonts.inter(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0F172A),
                           ),
@@ -2057,7 +2104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 16),
 
               // Band status & Cutoff Info
               Expanded(
@@ -2091,34 +2138,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Text(
-                          'Projected: ${projected.toStringAsFixed(1)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          Text(
+                            'Projected: ${projected.toStringAsFixed(1)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
                           ),
-                        ),
-                        Text(
-                          ' / Cutoff: ${cutoff.toStringAsFixed(0)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: const Color(0xFF64748B),
+                          Text(
+                            ' / Cutoff: ${cutoff.toStringAsFixed(0)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      gap >= 0
-                          ? '+${gap.toStringAsFixed(1)} marks in Safe Zone 🔥'
-                          : '-${gap.abs().toStringAsFixed(1)} marks below Cutoff ⚠️',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: gap >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        gap >= 0
+                            ? '+${gap.toStringAsFixed(1)} marks in Safe Zone 🔥'
+                            : '-${gap.abs().toStringAsFixed(1)} marks below Cutoff ⚠️',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: gap >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                        ),
                       ),
                     ),
                   ],
@@ -2131,45 +2186,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
           const SizedBox(height: 14),
 
-          // 4 Sub-factor meters
-          Row(
-            children: [
-              Expanded(
-                child: _factorMeter(
-                  label: 'Full Mock',
-                  weight: '40%',
-                  percent: readiness?.mockAccuracy ?? 0,
-                  color: const Color(0xFF4F46E5),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _factorMeter(
-                  label: 'PYQ Drill',
-                  weight: '25%',
-                  percent: readiness?.topicDrillAccuracy ?? 0,
-                  color: const Color(0xFF06B6D4),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _factorMeter(
-                  label: 'Mistakes',
-                  weight: '20%',
-                  percent: readiness?.mistakeMasteryRate ?? 0,
-                  color: const Color(0xFFEC4899),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _factorMeter(
-                  label: 'Consistency',
-                  weight: '15%',
-                  percent: readiness?.consistencyScore ?? 0,
-                  color: const Color(0xFFF59E0B),
-                ),
-              ),
-            ],
+          // 4 Sub-factor meters (Adaptive 2x2 on narrow screens, 4-col on standard)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 340;
+              if (isCompact) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _factorMeter(
+                            label: 'Full Mock',
+                            weight: '40%',
+                            percent: readiness?.mockAccuracy ?? 0,
+                            color: const Color(0xFF4F46E5),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _factorMeter(
+                            label: 'PYQ Drill',
+                            weight: '25%',
+                            percent: readiness?.topicDrillAccuracy ?? 0,
+                            color: const Color(0xFF06B6D4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _factorMeter(
+                            label: 'Mistakes',
+                            weight: '20%',
+                            percent: readiness?.mistakeMasteryRate ?? 0,
+                            color: const Color(0xFFEC4899),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _factorMeter(
+                            label: 'Consistency',
+                            weight: '15%',
+                            percent: readiness?.consistencyScore ?? 0,
+                            color: const Color(0xFFF59E0B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: _factorMeter(
+                      label: 'Full Mock',
+                      weight: '40%',
+                      percent: readiness?.mockAccuracy ?? 0,
+                      color: const Color(0xFF4F46E5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _factorMeter(
+                      label: 'PYQ Drill',
+                      weight: '25%',
+                      percent: readiness?.topicDrillAccuracy ?? 0,
+                      color: const Color(0xFF06B6D4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _factorMeter(
+                      label: 'Mistakes',
+                      weight: '20%',
+                      percent: readiness?.mistakeMasteryRate ?? 0,
+                      color: const Color(0xFFEC4899),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _factorMeter(
+                      label: 'Consistency',
+                      weight: '15%',
+                      percent: readiness?.consistencyScore ?? 0,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
 
           const SizedBox(height: 18),
@@ -2180,12 +2289,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).pushNamed('/practice'),
-                  icon: const Icon(Icons.bolt_rounded, size: 18),
-                  label: const Text('PYQ Vault'),
+                  icon: const Icon(Icons.bolt_rounded, size: 16),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('PYQ Vault'),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0A2655),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -2197,13 +2309,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => Navigator.of(context).pushNamed('/mistakes'),
-                  icon: const Icon(Icons.menu_book_rounded, size: 18),
-                  label: const Text('Mistakes Notebook'),
+                  icon: const Icon(Icons.menu_book_rounded, size: 16),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Mistakes Notebook'),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
                     side: const BorderSide(color: Color(0xFFFCA5A5)),
                     backgroundColor: const Color(0xFFFEF2F2),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -2233,22 +2348,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF475569),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            weight,
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              color: const Color(0xFF94A3B8),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF475569),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                weight,
+                style: GoogleFonts.inter(
+                  fontSize: 9,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           ClipRRect(
@@ -2261,12 +2384,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            '$percent%',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '$percent%',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0F172A),
+              ),
             ),
           ),
         ],

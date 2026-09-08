@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 import 'dashboard_screen.dart';
 import 'exams_screen.dart';
 import 'results_screen.dart';
@@ -49,14 +50,23 @@ class _MainShellState extends State<MainShell> {
       const ProfileScreen(),
     ];
 
+    final isSmall = AppResponsive.isSmallPhone(context);
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: screens),
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-          child: Container(
-            height: 68,
+        child: ResponsiveCenter(
+          maxWidth: 520,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              isSmall ? 10 : 14,
+              0,
+              isSmall ? 10 : 14,
+              isSmall ? 6 : 10,
+            ),
+            child: Container(
+              height: isSmall ? 62 : 68,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -91,8 +101,8 @@ class _MainShellState extends State<MainShell> {
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOut,
-                          width: 40,
-                          height: 38,
+                          width: isSmall ? 36 : 40,
+                          height: isSmall ? 34 : 38,
                           transform: Matrix4.translationValues(
                             0,
                             selected ? -2 : 0,
@@ -121,21 +131,28 @@ class _MainShellState extends State<MainShell> {
                           child: Center(
                             child: Icon(
                               item.icon,
-                              size: 20,
+                              size: isSmall ? 18 : 20,
                               color: selected
                                   ? Colors.white
                                   : const Color(0xFF64748B),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.label,
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? colors[0] : const Color(0xFF94A3B8),
+                        SizedBox(height: isSmall ? 2 : 3),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmall ? 9.5 : 10,
+                                fontWeight:
+                                    selected ? FontWeight.w700 : FontWeight.w500,
+                                color: selected ? colors[0] : const Color(0xFF94A3B8),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -147,6 +164,7 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
       ),
+    ),
     );
   }
 }
