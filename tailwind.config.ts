@@ -18,6 +18,18 @@ export default {
         baloo: ['"Baloo Da 2"', 'cursive'],
       },
       colors: {
+        /* Official PracticeKoro brand palette */
+        pk: {
+          primary: "#026BFC",
+          secondary: "#028EFD",
+          navy: "#051A43",
+          background: "#F8FAFC",
+          card: "#FFFFFF",
+          "light-blue": "#D5E4F7",
+          border: "#E2E8F0",
+          "secondary-text": "#64748B",
+          white: "#FFFFFF",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -65,6 +77,8 @@ export default {
       backgroundImage: {
         // Minimal design - no heavy gradients
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'pk-gradient': 'linear-gradient(135deg, #026BFC 0%, #028EFD 100%)',
+        'pk-gradient-dark': 'linear-gradient(135deg, #051A43 0%, #026BFC 55%, #028EFD 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -79,6 +93,7 @@ export default {
         'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
         'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'pk-glow': '0 10px 30px rgba(2, 107, 252, 0.22)',
       },
       keyframes: {
         // Minimal animations - simple and functional

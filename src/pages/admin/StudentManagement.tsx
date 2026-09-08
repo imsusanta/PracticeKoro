@@ -113,7 +113,7 @@ const StudentManagement = () => {
       navigate("/admin/login");
       return;
     }
-    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
     if (!roleData) {
       setLoading(false);
       await supabase.auth.signOut();
@@ -176,7 +176,7 @@ const StudentManagement = () => {
       const students = (studentsData || [])
         .filter((s: any) => {
           const role = Array.isArray(s.user_roles) ? s.user_roles[0]?.role : s.user_roles?.role;
-          return role !== 'admin'; // Include everyone except admins
+          return role !== 'admin' && role !== 'super_admin'; // Include everyone except admins
         })
         .map((s: any) => ({
           id: s.id,

@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileQuestion, Search, Pencil, Trash2, Eye, ChevronLeft, ChevronRight, CheckSquare, Square, MoreVertical, Plus, Loader2, Calendar, Tag, Globe, Layers, Filter, BookOpen, Lock, Check } from "lucide-react";
+import { FileQuestion, Search, Pencil, Trash2, Eye, ChevronLeft, ChevronRight, CheckSquare, Square, MoreVertical, Plus, Loader2, Calendar, Tag, Globe, Layers, Filter, BookOpen, Lock, Check, Download } from "lucide-react";
+import { downloadCsv, stampFilename } from "@/lib/csv";
+import { logAdminAction } from "@/lib/adminAudit";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -131,7 +133,7 @@ const QuestionBank = () => {
       navigate("/admin/login");
       return;
     }
-    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
     if (!roleData) {
       setLoading(false);
       await supabase.auth.signOut();
@@ -314,7 +316,6 @@ const QuestionBank = () => {
         (q.source || "").toLowerCase().includes(query)
       );
     }
-
     // Scope filtering: when a category is chosen, only show questions belonging to that category
     if (filterCategory === "exam") {
       // Only show questions that are linked to an exam
@@ -587,6 +588,33 @@ const QuestionBank = () => {
     setRangeEnd("");
   };
 
+  const handleExportQuestions = () => {
+    const source = selectedQuestions.length > 0
+      ? filteredQuestions.filter((question) => selectedQuestions.includes(question.id))
+      : filteredQuestions;
+    const ok = downloadCsv(
+      stampFilename(selectedQuestions.length > 0 ? "questions-selected" : "questions"),
+      source.map((question) => ({
+        question: question.question_text,
+        option_a: question.option_a,
+        option_b: question.option_b,
+        option_c: question.option_c,
+        option_d: question.option_d,
+        correct_answer: question.correct_answer,
+        subject: question.subjects?.name || question.subject || "",
+        topic: question.topics?.name || question.topic || "",
+        exam: question.exams?.name || "",
+        explanation: question.explanation || "",
+      }))
+    );
+    toast({
+      title: ok ? "Exported" : "Nothing to export",
+      description: ok
+        ? `${source.length} question${source.length === 1 ? "" : "s"} saved as CSV`
+        : "No questions match the current filters",
+    });
+  };
+
   const handleBulkDelete = async () => {
     if (selectedQuestions.length === 0) return;
     setBulkDeleteOpen(true);
@@ -598,6 +626,11 @@ const QuestionBank = () => {
     try {
       const { error } = await supabase.from("questions").delete().in("id", selectedQuestions);
       if (error) throw error;
+      await logAdminAction({
+        action: "bulk_delete_questions",
+        tableName: "questions",
+        newData: { count: selectedQuestions.length },
+      });
       toast({ title: "Success", description: `Deleted ${selectedQuestions.length} questions` });
       setBulkDeleteOpen(false);
       setSelectedQuestions([]);
@@ -889,6 +922,15 @@ const QuestionBank = () => {
                 <SelectItem value="2019">2019 PYQ</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={handleExportQuestions}
+              disabled={filteredQuestions.length === 0}
+              className="h-12 rounded-xl gap-2 col-span-2 lg:col-span-1"
+            >
+              <Download className="w-4 h-4" />
+              {selectedQuestions.length > 0 ? `Export ${selectedQuestions.length}` : "Export CSV"}
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 pt-1">

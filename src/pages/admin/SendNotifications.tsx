@@ -13,18 +13,18 @@ import {
     TestTube2,
     FileText,
     MessageSquare,
-    CheckCircle,
     Clock,
     Megaphone,
     Trash2,
     RefreshCw,
     Users,
-    AlertCircle,
     Sparkles
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { getNotificationRecipients, AUDIENCE_LABELS, type NotificationAudience } from "@/lib/adminRecipients";
+import { logAdminAction } from "@/lib/adminAudit";
 
 type NotificationType = "new_test" | "reminder" | "announcement";
 
@@ -60,6 +60,9 @@ const SendNotifications = () => {
 
     // Diagnostic state
     const [studentCount, setStudentCount] = useState<number | null>(null);
+    const [audience, setAudience] = useState<NotificationAudience>("all");
+    const [audienceCount, setAudienceCount] = useState<number | null>(null);
+    const [showSendConfirm, setShowSendConfirm] = useState(false);
 
     // Delete dialog states
     const [notifToDelete, setNotifToDelete] = useState<any | null>(null);
@@ -70,6 +73,20 @@ const SendNotifications = () => {
         checkAuth();
         fetchStudentCount();
     }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        getNotificationRecipients(audience)
+            .then(({ userIds }) => {
+                if (!cancelled) setAudienceCount(userIds.length);
+            })
+            .catch(() => {
+                if (!cancelled) setAudienceCount(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [audience]);
 
     const fetchStudentCount = async () => {
         const { count, error } = await supabase
@@ -90,7 +107,7 @@ const SendNotifications = () => {
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
-            .eq("role", "admin")
+            .in("role", ["admin", "super_admin"])
             .maybeSingle();
 
         if (!roleData) {
@@ -172,8 +189,20 @@ const SendNotifications = () => {
                         seen.add(key);
                         uniqueBroadcasts.push({
                             ...notif,
-                            createdAt: notif.created_at || new Date().toISOString()
+                            createdAt: notif.created_at || new Date().toISOString(),
+                            recipientCount: 1,
+                            readCount: notif.is_read ? 1 : 0,
                         });
+                    } else {
+                        const existing = uniqueBroadcasts.find((item) => {
+                            const date = item.created_at ? new Date(item.created_at) : new Date(item.createdAt);
+                            const bucket = Math.floor(date.getTime() / (1000 * 60 * 30));
+                            return `${item.title?.trim()}|${item.message?.trim()}|${bucket}` === key;
+                        });
+                        if (existing) {
+                            existing.recipientCount = (existing.recipientCount || 1) + 1;
+                            existing.readCount = (existing.readCount || 0) + (notif.is_read ? 1 : 0);
+                        }
                     }
                 });
 
@@ -206,69 +235,69 @@ const SendNotifications = () => {
         }
     };
 
+    const buildNotificationContent = () => {
+        if (notificationType === "mock_test") {
+            const selectedTest = mockTests.find((t) => t.id === selectedTestId);
+            if (!selectedTest) return null;
+            return {
+                title: "New Mock Test Available! 📝",
+                message: `${selectedTest.title}${selectedTest.exam_name ? ` - ${selectedTest.exam_name}` : ""} is now live. Start practicing now!`,
+                notifType: "new_test" as NotificationType,
+                link: `/student/take-test/${selectedTest.id}`,
+            };
+        }
+        if (notificationType === "notes") {
+            const selectedNote = notes.find((n) => n.id === selectedNoteId);
+            if (!selectedNote) return null;
+            return {
+                title: "New Study Notes Uploaded! 📚",
+                message: `${selectedNote.title}${selectedNote.subject_name ? ` - ${selectedNote.subject_name}` : ""} is now available for you to read.`,
+                notifType: "announcement" as NotificationType,
+                link: "/student/notes",
+            };
+        }
+        if (!customTitle.trim() || !customMessage.trim()) return null;
+        return {
+            title: customTitle.trim(),
+            message: customMessage.trim(),
+            notifType: "announcement" as NotificationType,
+            link: "",
+        };
+    };
+
+    const requestSendNotification = () => {
+        const content = buildNotificationContent();
+        if (!content) {
+            toast({
+                title: "Missing details",
+                description: notificationType === "custom" ? "Enter a title and message" : "Select an item first",
+                variant: "destructive",
+            });
+            return;
+        }
+        setShowSendConfirm(true);
+    };
+
     const handleSendNotification = async () => {
         setSending(true);
 
         try {
-            let title = "";
-            let message = "";
-            let notifType: NotificationType = "announcement";
-            let link = "";
-
-            if (notificationType === "mock_test") {
-                const selectedTest = mockTests.find((t) => t.id === selectedTestId);
-                if (!selectedTest) {
-                    toast({ title: "Error", description: "Please select a mock test", variant: "destructive" });
-                    setSending(false);
-                    return;
-                }
-                title = "New Mock Test Available! 📝";
-                message = `${selectedTest.title}${selectedTest.exam_name ? ` - ${selectedTest.exam_name}` : ""} is now live. Start practicing now!`;
-                notifType = "new_test";
-                link = `/student/take-test/${selectedTest.id}`;
-            } else if (notificationType === "notes") {
-                const selectedNote = notes.find((n) => n.id === selectedNoteId);
-                if (!selectedNote) {
-                    toast({ title: "Error", description: "Please select a note", variant: "destructive" });
-                    setSending(false);
-                    return;
-                }
-                title = "New Study Notes Uploaded! 📚";
-                message = `${selectedNote.title}${selectedNote.subject_name ? ` - ${selectedNote.subject_name}` : ""} is now available for you to read.`;
-                notifType = "announcement";
-                link = "/student/notes";
-            } else {
-                if (!customTitle.trim() || !customMessage.trim()) {
-                    toast({ title: "Error", description: "Please enter title and message", variant: "destructive" });
-                    setSending(false);
-                    return;
-                }
-                title = customTitle.trim();
-                message = customMessage.trim();
-                notifType = "announcement";
+            const content = buildNotificationContent();
+            if (!content) {
+                setSending(false);
+                return;
             }
+            const { title, message, notifType, link } = content;
+            const { userIds, label } = await getNotificationRecipients(audience);
 
-            // Get all student user IDs
-            const { data: students, error: studentsError } = await supabase
-                .from("user_roles")
-                .select("user_id")
-                .eq("role", "student");
-
-            if (studentsError) {
-                throw studentsError;
-            }
-
-            console.log(`Notifying ${students?.length || 0} students...`);
-
-            if (!students || students.length === 0) {
-                toast({ title: "Warning", description: "No students found to send notifications", variant: "destructive" });
+            if (userIds.length === 0) {
+                toast({ title: "No recipients", description: `No students match “${label}”`, variant: "destructive" });
                 setSending(false);
                 return;
             }
 
-            // Create notifications for all students
-            const notifications = students.map((s) => ({
-                user_id: s.user_id,
+            const notifications = userIds.map((user_id) => ({
+                user_id,
                 title,
                 message,
                 type: notifType,
@@ -276,19 +305,21 @@ const SendNotifications = () => {
                 is_read: false,
             }));
 
-            console.log("Inserting notifications payload sample:", notifications[0]);
-
             const { error: insertError } = await supabase
                 .from("notifications")
                 .insert(notifications);
-
-            console.log("Insert result error:", insertError);
 
             if (insertError) {
                 throw insertError;
             }
 
-            toast({ title: "Success! ✅", description: `Notification sent to ${students.length} students!` });
+            await logAdminAction({
+                action: "send_notification",
+                tableName: "notifications",
+                newData: { title, audience, recipients: userIds.length, type: notifType },
+            });
+
+            toast({ title: "Sent", description: `Notification delivered to ${userIds.length} ${label.toLowerCase()}` });
 
             // Save to local history for immediate admin visibility (covers RLS delay)
             const newLocalNotif = {
@@ -306,6 +337,7 @@ const SendNotifications = () => {
             setSelectedNoteId("");
             setCustomTitle("");
             setCustomMessage("");
+            setShowSendConfirm(false);
 
             // Wait a moment for DB consistency before reload
             setTimeout(() => {
@@ -327,13 +359,20 @@ const SendNotifications = () => {
         if (!notifToDelete) return;
         setIsDeleting(true);
         try {
-            const { error } = await supabase
+            let deleteQuery = supabase
                 .from("notifications")
                 .delete()
                 .eq("title", notifToDelete.title)
                 .eq("message", notifToDelete.message)
-                .eq("type", notifToDelete.type)
-                .eq("link", notifToDelete.link);
+                .eq("type", notifToDelete.type);
+
+            if (notifToDelete.link) {
+                deleteQuery = deleteQuery.eq("link", notifToDelete.link);
+            } else {
+                deleteQuery = deleteQuery.or("link.is.null,link.eq.");
+            }
+
+            const { error } = await deleteQuery;
 
             if (error) throw error;
 
@@ -576,9 +615,37 @@ const SendNotifications = () => {
                             )}
                         </AnimatePresence>
 
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 mb-2 block">Recipients</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {(Object.keys(AUDIENCE_LABELS) as NotificationAudience[]).map((key) => {
+                                    const selected = audience === key;
+                                    return (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            onClick={() => setAudience(key)}
+                                            className={`p-2.5 rounded-xl border-2 text-left transition-all ${selected
+                                                ? "border-indigo-500 bg-indigo-50"
+                                                : "border-gray-200 hover:border-gray-300"
+                                                }`}
+                                        >
+                                            <p className={`text-xs font-semibold ${selected ? "text-indigo-700" : "text-gray-700"}`}>
+                                                {AUDIENCE_LABELS[key]}
+                                            </p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5" />
+                                {audienceCount == null ? "Counting recipients..." : `${audienceCount} student${audienceCount === 1 ? "" : "s"} will receive this`}
+                            </p>
+                        </div>
+
                         {/* Send Button */}
                         <Button
-                            onClick={handleSendNotification}
+                            onClick={requestSendNotification}
                             disabled={sending}
                             className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold"
                         >
@@ -587,7 +654,7 @@ const SendNotifications = () => {
                             ) : (
                                 <>
                                     <Send className="w-4 h-4 mr-2" />
-                                    Send Notification to All Students
+                                    Review & send
                                 </>
                             )}
                         </Button>
@@ -715,6 +782,11 @@ const SendNotifications = () => {
                                                     <span className="text-[10px] text-gray-400">
                                                         {formatTime(notif.createdAt)}
                                                     </span>
+                                                    {typeof notif.recipientCount === "number" && (
+                                                        <span className="text-[10px] text-gray-400">
+                                                            {notif.readCount || 0}/{notif.recipientCount} read
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -725,6 +797,22 @@ const SendNotifications = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            <DeleteAlertDialog
+                isOpen={showSendConfirm}
+                onClose={() => setShowSendConfirm(false)}
+                onConfirm={handleSendNotification}
+                title="Send notification"
+                description={
+                    <>
+                        Send this to <span className="font-bold text-slate-900">{audienceCount ?? "..."} {AUDIENCE_LABELS[audience].toLowerCase()}</span>?
+                        This creates one inbox row per student and cannot be undone in a single click.
+                    </>
+                }
+                confirmText={sending ? "Sending..." : `Send to ${audienceCount ?? 0}`}
+                isDeleting={sending}
+                variant="primary"
+            />
 
             <DeleteAlertDialog
                 isOpen={!!notifToDelete}

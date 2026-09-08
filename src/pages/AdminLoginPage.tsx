@@ -113,6 +113,7 @@ const AdminLoginPage = () => {
       if (authData.user) {
         const isAdmin = await checkIsAdmin(authData.user.id);
 
+
         if (!isAdmin) {
           console.error("Role check failed - user is not an admin:", authData.user.id);
           await supabase.auth.signOut();
@@ -146,7 +147,7 @@ const AdminLoginPage = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     // Store where we want to redirect after auth
-    sessionStorage.setItem("authRedirect", "/admin/login");
+    sessionStorage.setItem("authRedirect", "/admin/dashboard");
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

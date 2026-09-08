@@ -124,6 +124,11 @@ export const ReviewTest = () => {
         return;
       }
 
+      if (answersResult.error) {
+        toast({ title: "Error", description: "Failed to load your answers", variant: "destructive" });
+      }
+
+      // Handle both object and array for mock_tests join
       const rawAttempt = attemptResult.data as any;
       if (Array.isArray(rawAttempt.mock_tests)) {
         rawAttempt.mock_tests = rawAttempt.mock_tests[0];
@@ -134,6 +139,19 @@ export const ReviewTest = () => {
         ...a,
         questions: Array.isArray(a.questions) ? a.questions[0] : a.questions
       })).filter((a: any) => a.questions != null);
+
+      if (rawAttempt.test_id && rawAnswers.length > 0) {
+        const { data: testQuestions } = await supabase
+          .from("test_questions")
+          .select("question_id, question_order")
+          .eq("test_id", rawAttempt.test_id);
+        if (testQuestions?.length) {
+          const orderByQuestion = new Map(testQuestions.map((q: any) => [q.question_id, q.question_order ?? 999]));
+          rawAnswers.sort((a: any, b: any) =>
+            (orderByQuestion.get(a.question_id) ?? 999) - (orderByQuestion.get(b.question_id) ?? 999)
+          );
+        }
+      }
 
       setAnswers(rawAnswers);
 

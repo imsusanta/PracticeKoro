@@ -80,11 +80,11 @@ export default function CourseManagement() {
       .select("role")
       .eq("user_id", session.user.id);
 
-    const isAdmin = roles?.some(r => r.role === "admin");
+    const isAdmin = roles?.some(r => r.role === "admin" || r.role === "super_admin");
     const isInstructor = roles?.some(r => r.role === "instructor");
 
     if (!isAdmin && !isInstructor) {
-      navigate("/");
+      navigate("/admin/login");
       return;
     }
 

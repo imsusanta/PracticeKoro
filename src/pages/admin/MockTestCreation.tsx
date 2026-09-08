@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart, Plus, Pencil, Trash2, Power, PowerOff, MoreVertical, Clock, Target, Search, Eye, EyeOff, Bell, Send } from "lucide-react";
+import { BarChart, Plus, Pencil, Trash2, Power, PowerOff, MoreVertical, Clock, Target, Search, Eye, EyeOff, Bell, Send, CheckSquare, Square } from "lucide-react";
+import { logAdminAction } from "@/lib/adminAudit";
+import { getNotificationRecipients } from "@/lib/adminRecipients";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -75,6 +77,7 @@ interface MockTest {
   subjects?: { name: string };
   created_at: string;
   order_index?: number;
+  question_count?: number;
 }
 
 interface Exam {
@@ -144,6 +147,11 @@ const MockTestCreation = () => {
   // Delete dialog states
   const [testToDelete, setTestToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteAttemptCount, setDeleteAttemptCount] = useState(0);
+  const [testToNotify, setTestToNotify] = useState<MockTest | null>(null);
+  const [notifying, setNotifying] = useState(false);
+  const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // Refresh landing visibility state
   const refreshLandingVisibility = () => {
@@ -164,23 +172,16 @@ const MockTestCreation = () => {
   };
 
   const handleSendNotification = async (test: MockTest) => {
+    setNotifying(true);
     try {
       const title = "🆕 New Mock Test Available!";
       const message = `${test.title} is now available. Duration: ${test.duration_minutes} mins, Total Marks: ${test.total_marks}. Start practicing now!`;
       const link = `/student/take-test/${test.id}`;
+      const { userIds } = await getNotificationRecipients("all");
 
-      // Get all student user IDs
-      const { data: students, error: studentsError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
-
-      if (studentsError) throw studentsError;
-
-      if (students && students.length > 0) {
-        // Create notifications for all students in Supabase
-        const notifications = students.map((s) => ({
-          user_id: s.user_id,
+      if (userIds.length > 0) {
+        const notifications = userIds.map((user_id) => ({
+          user_id,
           title,
           message,
           type: "new_test",
@@ -195,15 +196,21 @@ const MockTestCreation = () => {
         if (insertError) throw insertError;
       }
 
-      // Fallback for browser notification
       await sendBrowserNotification(
         "New Mock Test Available!",
         `${test.title} - ${test.duration_minutes} mins, ${test.total_marks} marks`
       );
 
+      await logAdminAction({
+        action: "notify_new_test",
+        tableName: "notifications",
+        recordId: test.id,
+        newData: { title: test.title, recipients: userIds.length },
+      });
+
       toast({
-        title: "✅ Notification Sent!",
-        description: `Notification for "${test.title}" has been sent to all students.`,
+        title: "Notification sent",
+        description: `"${test.title}" was sent to ${userIds.length} students.`,
       });
     } catch (error: any) {
       console.error("Error sending notification:", error);
@@ -212,6 +219,9 @@ const MockTestCreation = () => {
         description: "Failed to send notifications to students.",
         variant: "destructive",
       });
+    } finally {
+      setNotifying(false);
+      setTestToNotify(null);
     }
   };
 
@@ -226,7 +236,7 @@ const MockTestCreation = () => {
       navigate("/admin/login");
       return;
     }
-    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
+    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
     if (!roleData) {
       setLoading(false);
       await supabase.auth.signOut();
@@ -335,7 +345,16 @@ const MockTestCreation = () => {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-    setTests(sortedData as MockTest[]);
+    const testsWithMeta = sortedData as MockTest[];
+    const { data: questionRows } = await supabase.from("test_questions").select("test_id");
+    const countMap = new Map<string, number>();
+    (questionRows || []).forEach((row) => {
+      countMap.set(row.test_id, (countMap.get(row.test_id) || 0) + 1);
+    });
+    setTests(testsWithMeta.map((test) => ({
+      ...test,
+      question_count: countMap.get(test.id) ?? (test as MockTest & { total_questions?: number }).total_questions ?? 0,
+    })));
   };
 
   const sensors = useSensors(
@@ -675,12 +694,15 @@ const MockTestCreation = () => {
       return;
     }
 
-    // Update total_marks in mock_tests
     const totalMarks = selectedQuestions.length * formData.marks_per_question;
-    await supabase.from("mock_tests").update({
-      total_marks: totalMarks,
-      total_questions: selectedQuestions.length
+    const { error: marksError } = await supabase.from("mock_tests").update({
+      total_marks: totalMarks
     }).eq("id", editingTest.id);
+    if (marksError) {
+      console.error("Error updating total marks:", marksError);
+      toast({ title: "Error", description: "Questions saved but total marks failed to update", variant: "destructive" });
+      return;
+    }
 
     toast({ title: "Success", description: `Updated ${selectedQuestions.length} questions` });
     setQuestionDialogOpen(false);
@@ -691,6 +713,11 @@ const MockTestCreation = () => {
   };
 
   const handleDeleteTest = async (id: string) => {
+    const { count } = await supabase
+      .from("test_attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("test_id", id);
+    setDeleteAttemptCount(count || 0);
     setTestToDelete(id);
   };
 
@@ -700,7 +727,15 @@ const MockTestCreation = () => {
     try {
       const { error } = await supabase.from("mock_tests").delete().eq("id", testToDelete);
       if (error) throw error;
+      const deleted = tests.find((test) => test.id === testToDelete);
+      await logAdminAction({
+        action: "delete_mock_test",
+        tableName: "mock_tests",
+        recordId: testToDelete,
+        oldData: { title: deleted?.title, attempts: deleteAttemptCount },
+      });
       toast({ title: "Success", description: "Test deleted successfully" });
+      setSelectedTestIds((prev) => prev.filter((id) => id !== testToDelete));
       await loadTests();
     } catch (error) {
       console.error(error);
@@ -708,17 +743,110 @@ const MockTestCreation = () => {
     } finally {
       setIsDeleting(false);
       setTestToDelete(null);
+      setDeleteAttemptCount(0);
     }
   };
 
   const handleTogglePublish = async (test: MockTest) => {
+    if (!test.is_published && (test.question_count ?? 0) === 0) {
+      toast({
+        title: "Cannot publish",
+        description: "Add at least one question before publishing this test.",
+        variant: "destructive",
+      });
+      return;
+    }
     const { error } = await supabase.from("mock_tests").update({ is_published: !test.is_published }).eq("id", test.id);
     if (error) {
       toast({ title: "Error", description: "Failed to update test", variant: "destructive" });
       return;
     }
+    await logAdminAction({
+      action: test.is_published ? "unpublish_mock_test" : "publish_mock_test",
+      tableName: "mock_tests",
+      recordId: test.id,
+      newData: { title: test.title, is_published: !test.is_published },
+    });
     toast({ title: "Success", description: test.is_published ? "Test unpublished" : "Test published" });
     await loadTests();
+  };
+
+  const toggleTestSelection = (id: string) => {
+    setSelectedTestIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
+  };
+
+  const handleSelectAllTests = () => {
+    if (selectedTestIds.length === filteredTests.length) {
+      setSelectedTestIds([]);
+    } else {
+      setSelectedTestIds(filteredTests.map((test) => test.id));
+    }
+  };
+
+  const handleBulkPublish = async (publish: boolean) => {
+    const targets = tests.filter((test) => selectedTestIds.includes(test.id));
+    const eligible = publish
+      ? targets.filter((test) => !test.is_published && (test.question_count ?? 0) > 0)
+      : targets.filter((test) => test.is_published);
+    const skippedEmpty = publish
+      ? targets.filter((test) => !test.is_published && (test.question_count ?? 0) === 0).length
+      : 0;
+
+    if (eligible.length === 0) {
+      toast({
+        title: publish ? "Nothing to publish" : "Nothing to unpublish",
+        description: skippedEmpty > 0 ? `${skippedEmpty} selected draft${skippedEmpty === 1 ? "" : "s"} have no questions.` : "Adjust your selection and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("mock_tests")
+      .update({ is_published: publish })
+      .in("id", eligible.map((test) => test.id));
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    await logAdminAction({
+      action: publish ? "bulk_publish_mock_tests" : "bulk_unpublish_mock_tests",
+      tableName: "mock_tests",
+      newData: { count: eligible.length },
+    });
+    toast({
+      title: publish ? "Published" : "Unpublished",
+      description: skippedEmpty > 0
+        ? `${eligible.length} updated, ${skippedEmpty} skipped (no questions)`
+        : `${eligible.length} test${eligible.length === 1 ? "" : "s"} updated`,
+    });
+    setSelectedTestIds([]);
+    await loadTests();
+  };
+
+  const confirmBulkDeleteTests = async () => {
+    if (selectedTestIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from("mock_tests").delete().in("id", selectedTestIds);
+      if (error) throw error;
+      await logAdminAction({
+        action: "bulk_delete_mock_tests",
+        tableName: "mock_tests",
+        newData: { count: selectedTestIds.length },
+      });
+      toast({ title: "Deleted", description: `${selectedTestIds.length} tests removed` });
+      setSelectedTestIds([]);
+      setBulkDeleteOpen(false);
+      await loadTests();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to delete selected tests", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const openCreateDialog = () => {
@@ -1167,6 +1295,30 @@ const MockTestCreation = () => {
           )}
         </div>
 
+        {filteredTests.length > 0 && (
+          <div className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleSelectAllTests} className="rounded-xl gap-2">
+              {selectedTestIds.length === filteredTests.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+              Select all ({filteredTests.length})
+            </Button>
+            {selectedTestIds.length > 0 && (
+              <>
+                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">{selectedTestIds.length} selected</Badge>
+                <Button variant="outline" size="sm" onClick={() => handleBulkPublish(true)} className="rounded-lg text-emerald-700 border-emerald-200">
+                  <Power className="w-3.5 h-3.5 mr-1" /> Publish
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkPublish(false)} className="rounded-lg">
+                  <PowerOff className="w-3.5 h-3.5 mr-1" /> Unpublish
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setBulkDeleteOpen(true)} className="rounded-lg text-red-600 border-red-200">
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedTestIds([])} className="text-gray-500">Clear</Button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Tests List - Row Based */}
         {tests.length === 0 ? (
           <Card className="border-0 bg-white rounded-2xl">
@@ -1198,11 +1350,12 @@ const MockTestCreation = () => {
         ) : (
           <Card className="border-0 bg-white rounded-2xl overflow-hidden shadow-sm">
             {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[2fr_1fr_1fr_1fr_1.2fr_80px] gap-4 px-4 py-3 bg-slate-50 border-b border-gray-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <div className="hidden md:grid md:grid-cols-[36px_2fr_1fr_1fr_1.2fr_1fr_80px] gap-4 px-4 py-3 bg-slate-50 border-b border-gray-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <span></span>
               <span>Test Name</span>
               <span>Category / Type</span>
               <span>Duration</span>
-              <span>Marks & Marking</span>
+              <span>Questions & Marks</span>
               <span>Status</span>
               <span className="text-center">Actions</span>
             </div>
@@ -1221,7 +1374,13 @@ const MockTestCreation = () => {
                     <SortableTestItem key={test.id} test={test}>
                       <div className="hover:bg-blue-50/20 transition-colors w-full">
                         {/* Desktop Row */}
-                        <div className="hidden md:grid md:grid-cols-[2fr_1fr_1fr_1fr_1.2fr_80px] gap-4 px-4 py-3.5 items-center">
+                        <div className="hidden md:grid md:grid-cols-[36px_2fr_1fr_1fr_1.2fr_1fr_80px] gap-4 px-4 py-3.5 items-center">
+                          <div>
+                            <Checkbox
+                              checked={selectedTestIds.includes(test.id)}
+                              onCheckedChange={() => toggleTestSelection(test.id)}
+                            />
+                          </div>
                           {/* Test Name */}
                           <div className="flex items-center gap-3 min-w-0">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${test.is_published
@@ -1266,17 +1425,20 @@ const MockTestCreation = () => {
                           <div className="flex flex-col items-start gap-1">
                             <div className="flex items-center gap-1 text-sm font-medium text-gray-800">
                               <Target className="w-3.5 h-3.5 text-blue-600" />
-                              <span>{test.total_marks} Marks</span>
+                              <span>{test.question_count ?? 0} Q · {test.total_marks} Marks</span>
                             </div>
-                            {test.negative_marking ? (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-rose-50 text-rose-700 border-rose-200">
-                                -{test.negative_marks_per_question ?? 0.25} Neg
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
-                                No Neg
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[11px] text-gray-400">{test.passing_marks} pass</span>
+                              {test.negative_marking ? (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-rose-50 text-rose-700 border-rose-200">
+                                  -{test.negative_marks_per_question ?? 0.25} Neg
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
+                                  No Neg
+                                </Badge>
+                              )}
+                            </div>
                           </div>
 
                           {/* Status */}
@@ -1344,7 +1506,7 @@ const MockTestCreation = () => {
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleSendNotification(test)}
+                                  onClick={() => setTestToNotify(test)}
                                   className="gap-2 text-blue-600"
                                 >
                                   <Bell className="w-4 h-4" />
@@ -1362,8 +1524,12 @@ const MockTestCreation = () => {
 
                         {/* Mobile Row */}
                         <div className="md:hidden p-3.5">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${test.is_published
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedTestIds.includes(test.id)}
+                              onCheckedChange={() => toggleTestSelection(test.id)}
+                            />
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${test.is_published
                               ? "bg-blue-50 text-blue-600"
                               : "bg-gray-100 text-gray-400"
                               }`}>
@@ -1393,7 +1559,7 @@ const MockTestCreation = () => {
                                 <span>•</span>
                                 <span>{test.duration_minutes}m</span>
                                 <span>•</span>
-                                <span>{test.total_marks} marks</span>
+                                <span>{test.question_count ?? 0}Q · {test.total_marks} marks</span>
                                 {test.negative_marking && (
                                   <span className="text-rose-600 font-medium">• -{test.negative_marks_per_question ?? 0.25} neg</span>
                                 )}
@@ -1441,7 +1607,7 @@ const MockTestCreation = () => {
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleSendNotification(test)}
+                                  onClick={() => setTestToNotify(test)}
                                   className="gap-2 text-blue-600"
                                 >
                                   <Bell className="w-4 h-4" />
@@ -1670,10 +1836,43 @@ const MockTestCreation = () => {
       </Dialog>
       <DeleteAlertDialog
         isOpen={!!testToDelete}
-        onClose={() => setTestToDelete(null)}
+        onClose={() => { setTestToDelete(null); setDeleteAttemptCount(0); }}
         onConfirm={confirmDelete}
-        itemName={tests.find(t => t.id === testToDelete)?.title}
+        title="Delete mock test"
+        description={
+          <>
+            Delete <span className="font-bold text-slate-900">{tests.find(t => t.id === testToDelete)?.title}</span>?
+            This test has{" "}
+            <span className="font-bold text-slate-900">{tests.find(t => t.id === testToDelete)?.question_count ?? 0} questions</span>
+            {" "}and{" "}
+            <span className="font-bold text-slate-900">{deleteAttemptCount} student attempt{deleteAttemptCount === 1 ? "" : "s"}</span>.
+            {deleteAttemptCount > 0 ? " Attempts may be removed or fail to delete if the database blocks it." : " This cannot be undone."}
+          </>
+        }
         isDeleting={isDeleting}
+      />
+      <DeleteAlertDialog
+        isOpen={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={confirmBulkDeleteTests}
+        title="Delete selected tests"
+        description={`Delete ${selectedTestIds.length} mock test${selectedTestIds.length === 1 ? "" : "s"}? Linked questions and attempts may be affected.`}
+        isDeleting={isDeleting}
+      />
+      <DeleteAlertDialog
+        isOpen={!!testToNotify}
+        onClose={() => setTestToNotify(null)}
+        onConfirm={() => testToNotify && handleSendNotification(testToNotify)}
+        title="Notify all students"
+        description={
+          <>
+            Send a “new mock test” notification for{" "}
+            <span className="font-bold text-slate-900">{testToNotify?.title}</span> to every student?
+          </>
+        }
+        confirmText={notifying ? "Sending..." : "Send notification"}
+        isDeleting={notifying}
+        variant="primary"
       />
     </AdminLayout>
   );

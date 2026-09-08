@@ -262,7 +262,7 @@ const SubjectManagement = () => {
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
-            .eq("role", "admin")
+            .in("role", ["admin", "super_admin"])
             .maybeSingle();
 
         if (!roleData) {

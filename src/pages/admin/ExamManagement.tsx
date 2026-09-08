@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff, ChevronRight, GripVertical, Clock, Target, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff, ChevronRight, GripVertical, Clock, Target, FileText, Search } from "lucide-react";
+import { logAdminAction } from "@/lib/adminAudit";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,8 @@ interface Exam {
     created_at: string;
     created_by: string;
     order_index?: number;
+    test_count?: number;
+    question_count?: number;
 }
 
 interface MockTest {
@@ -317,7 +320,31 @@ const ExamManagement = () => {
                 } else throw error;
             }
 
-            const examsList = (data as any) || [];
+            const loaded = (data as Exam[]) || [];
+            const ids = loaded.map((exam) => exam.id);
+            let testCounts = new Map<string, number>();
+            let questionCounts = new Map<string, number>();
+
+            if (ids.length > 0) {
+                const [testsResult, questionsResult] = await Promise.all([
+                    supabase.from("mock_tests").select("exam_id"),
+                    supabase.from("questions").select("exam_id"),
+                ]);
+                (testsResult.data || []).forEach((row) => {
+                    if (!row.exam_id) return;
+                    testCounts.set(row.exam_id, (testCounts.get(row.exam_id) || 0) + 1);
+                });
+                (questionsResult.data || []).forEach((row) => {
+                    if (!row.exam_id) return;
+                    questionCounts.set(row.exam_id, (questionCounts.get(row.exam_id) || 0) + 1);
+                });
+            }
+
+            const examsList = loaded.map((exam) => ({
+                ...exam,
+                test_count: testCounts.get(exam.id) || 0,
+                question_count: questionCounts.get(exam.id) || 0,
+            }));
             setExams(examsList);
 
             // Update landing visibility
@@ -376,13 +403,16 @@ const ExamManagement = () => {
             created_by: session.user.id
         };
 
-        let error;
+        let savedData: any = null;
+        let error: any = null;
         if (editingExam) {
-            const { error: updateError } = await supabase.from("exams").update(payload).eq("id", editingExam.id);
-            error = updateError;
+            const res = await supabase.from("exams").update(payload).eq("id", editingExam.id).select().maybeSingle();
+            savedData = res.data;
+            error = res.error;
         } else {
-            const { error: insertError } = await supabase.from("exams").insert([payload]);
-            error = insertError;
+            const res = await supabase.from("exams").insert([payload]).select().maybeSingle();
+            savedData = res.data;
+            error = res.error;
         }
 
         if (error && error.message?.includes("category")) {
@@ -390,8 +420,9 @@ const ExamManagement = () => {
             const fallbackPayload = { ...payload };
             delete (fallbackPayload as any).category;
             const res = editingExam
-                ? await supabase.from("exams").update(fallbackPayload).eq("id", editingExam.id)
-                : await supabase.from("exams").insert([fallbackPayload]);
+                ? await supabase.from("exams").update(fallbackPayload).eq("id", editingExam.id).select().maybeSingle()
+                : await supabase.from("exams").insert([fallbackPayload]).select().maybeSingle();
+            savedData = res.data;
             error = res.error;
         }
 
@@ -399,6 +430,14 @@ const ExamManagement = () => {
             toast({ title: "Error", description: "Failed to save exam", variant: "destructive" });
             return;
         }
+
+        await logAdminAction({
+            action: editingExam ? "update_exam" : "create_exam",
+            tableName: "exams",
+            recordId: editingExam?.id || savedData?.id,
+            oldData: editingExam || undefined,
+            newData: payload,
+        });
 
         toast({ title: "Success", description: `Exam ${editingExam ? "updated" : "created"} successfully` });
         setExamDialogOpen(false);
@@ -408,10 +447,17 @@ const ExamManagement = () => {
     const handleDeleteExam = async () => {
         if (!examToDelete) return;
         setIsDeleting(true);
+        const deleted = exams.find((exam) => exam.id === examToDelete);
         const { error } = await supabase.from("exams").delete().eq("id", examToDelete);
         if (error) {
             toast({ title: "Error", description: "Failed to delete exam", variant: "destructive" });
         } else {
+            await logAdminAction({
+                action: "delete_exam",
+                tableName: "exams",
+                recordId: examToDelete,
+                oldData: deleted,
+            });
             toast({ title: "Success", description: "Exam deleted successfully" });
             if (selectedExamId === examToDelete) setSelectedExamId(null);
             await loadExams();
@@ -425,6 +471,13 @@ const ExamManagement = () => {
         if (error) {
             toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
         } else {
+            await logAdminAction({
+                action: exam.is_active ? "deactivate_exam" : "activate_exam",
+                tableName: "exams",
+                recordId: exam.id,
+                oldData: { is_active: exam.is_active },
+                newData: { is_active: !exam.is_active },
+            });
             toast({ title: "Success", description: `Exam ${exam.is_active ? "deactivated" : "activated"}` });
             await loadExams();
         }
@@ -889,7 +942,22 @@ const ExamManagement = () => {
                 isOpen={!!examToDelete}
                 onClose={() => setExamToDelete(null)}
                 onConfirm={handleDeleteExam}
-                itemName={exams.find(e => e.id === examToDelete)?.name}
+                title="Delete exam"
+                description={(() => {
+                    const exam = exams.find(e => e.id === examToDelete);
+                    const tests = exam?.test_count ?? 0;
+                    const questions = exam?.question_count ?? 0;
+                    return (
+                        <>
+                            Delete <span className="font-bold text-slate-900">{exam?.name}</span>? This exam is linked to{" "}
+                            <span className="font-bold text-slate-900">{tests} mock test{tests === 1 ? "" : "s"}</span> and{" "}
+                            <span className="font-bold text-slate-900">{questions} question{questions === 1 ? "" : "s"}</span>.
+                            {(tests > 0 || questions > 0)
+                                ? " Linked records may fail to delete or become orphaned."
+                                : " This cannot be undone."}
+                        </>
+                    );
+                })()}
                 isDeleting={isDeleting}
             />
 

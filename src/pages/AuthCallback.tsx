@@ -8,13 +8,26 @@ const AuthCallback = () => {
 
     useEffect(() => {
         const handleCallback = async () => {
-            // Get the hash fragment from the URL
+            const searchParams = new URLSearchParams(window.location.search);
+            const code = searchParams.get("code");
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
             const accessToken = hashParams.get("access_token");
             const refreshToken = hashParams.get("refresh_token");
 
-            if (accessToken && refreshToken) {
-                // Set the session manually
+            // Client may already have exchanged the PKCE code via detectSessionInUrl
+            let { data: { session } } = await supabase.auth.getSession();
+
+            if (!session && code) {
+                const { error } = await supabase.auth.exchangeCodeForSession(code);
+                if (error) {
+                    console.error("Error exchanging auth code:", error);
+                    ({ data: { session } } = await supabase.auth.getSession());
+                    if (!session) {
+                        navigate("/login?error=auth_failed", { replace: true });
+                        return;
+                    }
+                }
+            } else if (!session && accessToken && refreshToken) {
                 const { error } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken,
@@ -22,16 +35,14 @@ const AuthCallback = () => {
 
                 if (error) {
                     console.error("Error setting session:", error);
-                    navigate("/login?error=auth_failed");
+                    navigate("/login?error=auth_failed", { replace: true });
                     return;
                 }
             }
 
-            // Check where to redirect based on the original page
-            const { data: { session } } = await supabase.auth.getSession();
+            ({ data: { session } } = await supabase.auth.getSession());
 
             if (session) {
-                // Check referrer or default redirect
                 const intendedPath = sessionStorage.getItem("authRedirect") || "/student/dashboard";
                 sessionStorage.removeItem("authRedirect");
                 navigate(intendedPath, { replace: true });
