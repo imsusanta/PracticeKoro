@@ -11,10 +11,22 @@ import { supabase } from "@/integrations/supabase/client";
 export async function checkIsAdmin(userId?: string): Promise<boolean> {
   try {
     let uid = userId;
+    const { data: { session } } = await supabase.auth.getSession();
     if (!uid) {
-      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return false;
       uid = session.user.id;
+    }
+
+    // Fast check: auth session metadata
+    if (session?.user && session.user.id === uid) {
+      if (
+        session.user.app_metadata?.role === "admin" ||
+        session.user.user_metadata?.role === "admin" ||
+        session.user.app_metadata?.role === "super_admin" ||
+        session.user.user_metadata?.role === "super_admin"
+      ) {
+        return true;
+      }
     }
 
     // Strategy 1: Check via RPC has_role for 'admin'

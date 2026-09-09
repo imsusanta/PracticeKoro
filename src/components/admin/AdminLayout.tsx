@@ -39,7 +39,7 @@ const SidebarToggleButton = () => {
     return (
         <button
             onClick={toggleSidebar}
-            className={`hidden md:flex fixed z-[100] rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-md shadow-blue-600/30 items-center justify-center hover:from-blue-700 hover:to-indigo-800 hover:scale-105 transition-all duration-150 border-2 border-white w-8 h-8 ${isCollapsed
+            className={`hidden md:flex fixed z-[100] rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-md shadow-blue-600/30 items-center justify-center hover:from-blue-700 hover:to-indigo-800 hover:scale-105 transition-all duration-150 border-2 border-[#0B1739] w-8 h-8 ${isCollapsed
                 ? "left-[4.2rem] top-5"
                 : "left-[16.2rem] top-5"
                 }`}
@@ -145,20 +145,27 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                     side="left"
                     variant="sidebar"
                     collapsible="icon"
-                    className="bg-white border-r border-slate-200/90 shadow-xs transition-all duration-200"
+                    className="bg-[#0B1739] text-white border-r border-blue-900/30 shadow-xl transition-all duration-200 [&_[data-sidebar=sidebar]]:bg-[#0B1739]"
+                    style={{
+                        '--sidebar-background': '221 68% 14%',
+                        '--sidebar-foreground': '210 40% 98%',
+                        '--sidebar-border': '221 50% 20%',
+                        '--sidebar-accent': '221 83% 53%',
+                        '--sidebar-accent-foreground': '0 0% 100%',
+                    } as React.CSSProperties}
                 >
-                    <SidebarHeader className="border-b border-slate-100 bg-white">
+                    <SidebarHeader className="border-b border-white/10 bg-[#08122D]">
                         <div className="flex items-center gap-3 px-3 py-3.5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:justify-center">
                             <motion.div
                                 whileHover={{ scale: 1.05 }}
-                                className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center shadow-2xs shrink-0 border border-slate-200/80 p-1"
+                                className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center shadow-inner shrink-0 border border-white/15 p-1 backdrop-blur-xs"
                             >
                                 <img src="/logo-circle.png" alt="Practice Koro" className="w-full h-full object-contain rounded-xl" />
                             </motion.div>
                             <div className="group-data-[collapsible=icon]:hidden overflow-hidden min-w-0">
-                                <h1 className="text-sm font-black text-slate-900 tracking-tight whitespace-nowrap">Practice Koro</h1>
+                                <h1 className="text-sm font-black text-white tracking-tight whitespace-nowrap">Practice Koro</h1>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200/60">
+                                    <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-400/30">
                                         ADMIN PANEL
                                     </span>
                                 </div>
@@ -166,12 +173,12 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                         </div>
                     </SidebarHeader>
 
-                    <SidebarContent ref={sidebarContentRef} className="py-3 px-2 flex flex-col h-full group-data-[collapsible=icon]:px-2 overflow-y-auto scroll-smooth space-y-4">
+                    <SidebarContent ref={sidebarContentRef} className="py-3 px-2 flex flex-col h-full bg-[#0B1739] group-data-[collapsible=icon]:px-2 overflow-y-auto scroll-smooth space-y-4">
                         {/* Grouped Navigation Sections */}
                         <div className="flex-1 space-y-4">
                             {navSections.map((section) => (
                                 <div key={section.title} className="space-y-1">
-                                    <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider px-3 mb-1 group-data-[collapsible=icon]:hidden">
+                                    <p className="text-[10px] font-extrabold text-blue-200/50 uppercase tracking-wider px-3 mb-1.5 group-data-[collapsible=icon]:hidden">
                                         {section.title}
                                     </p>
                                     <SidebarMenu className="space-y-1">
@@ -184,19 +191,20 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                                     <SidebarMenuButton
                                                         asChild
                                                         isActive={isActive}
-                                                        className={`rounded-xl transition-all duration-150 h-auto ${isActive
-                                                            ? "bg-blue-600 text-white shadow-sm shadow-blue-500/25 font-bold"
-                                                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium"
+                                                        tooltip={tool.name}
+                                                        className={`rounded-xl transition-all duration-150 h-auto group/item ${isActive
+                                                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 !text-white data-[active=true]:!text-white shadow-md shadow-blue-600/30 font-bold border border-blue-400/30"
+                                                            : "text-slate-300 hover:!text-white hover:bg-white/10 font-medium"
                                                             } group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2`}
                                                     >
                                                         <Link
                                                             to={tool.path}
                                                             title={tool.name}
                                                             onClick={saveScrollPosition}
-                                                            className="flex items-center gap-2.5 px-3 py-2.5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
+                                                            className={`flex items-center gap-2.5 px-3 py-2.5 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center ${isActive ? "!text-white" : ""}`}
                                                         >
-                                                            <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-white" : "text-slate-500"}`} />
-                                                            <span className="text-xs group-data-[collapsible=icon]:hidden whitespace-nowrap">
+                                                            <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "!text-white text-white" : "text-blue-300/70 group-hover/item:text-white"}`} />
+                                                            <span className={`text-xs group-data-[collapsible=icon]:hidden whitespace-nowrap transition-colors ${isActive ? "!text-white text-white font-bold" : "text-slate-200 group-hover/item:text-white"}`}>
                                                                 {tool.name}
                                                             </span>
                                                         </Link>
@@ -210,18 +218,18 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                         </div>
 
                         {/* Bottom Actions */}
-                        <div className="mt-auto pt-3 border-t border-slate-100 space-y-1">
+                        <div className="mt-auto pt-3 border-t border-white/10 space-y-1">
                             {/* Preview Student Portal */}
                             <SidebarMenuButton
                                 asChild
-                                className="w-full rounded-xl text-blue-700 bg-blue-50/70 hover:bg-blue-100/80 hover:text-blue-800 transition-all font-bold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
+                                className="w-full rounded-xl text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 hover:text-white border border-blue-400/20 transition-all font-bold group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
                             >
                                 <button
                                     onClick={() => navigate("/student/dashboard")}
                                     title="View Student Portal"
                                     className="flex items-center gap-2.5 px-3 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
                                 >
-                                    <ExternalLink className="w-4 h-4 text-blue-600 shrink-0" />
+                                    <ExternalLink className="w-4 h-4 text-blue-400 shrink-0" />
                                     <span className="text-xs group-data-[collapsible=icon]:hidden">Student Portal</span>
                                 </button>
                             </SidebarMenuButton>
@@ -229,7 +237,7 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                             {/* Home Button */}
                             <SidebarMenuButton
                                 asChild
-                                className="w-full rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
+                                className="w-full rounded-xl text-slate-300 hover:bg-white/8 hover:text-white transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
                             >
                                 <button
                                     onClick={() => navigate("/")}
@@ -244,14 +252,14 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                             {/* Logout Button */}
                             <SidebarMenuButton
                                 asChild
-                                className="w-full rounded-xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
+                                className="w-full rounded-xl text-rose-400 hover:bg-rose-500/15 hover:text-rose-300 border border-rose-500/10 transition-all group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 h-auto"
                             >
                                 <button
                                     onClick={handleLogout}
                                     title="Logout"
                                     className="flex items-center gap-2.5 px-3 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
                                 >
-                                    <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
+                                    <LogOut className="w-4 h-4 text-rose-400 shrink-0" />
                                     <span className="text-xs font-semibold group-data-[collapsible=icon]:hidden">Logout</span>
                                 </button>
                             </SidebarMenuButton>
@@ -341,7 +349,7 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
 
                     {/* Mobile Bottom Bar */}
                     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-safe-area-bottom pointer-events-none">
-                        <div className="mx-auto mb-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl pointer-events-auto max-w-md">
+                        <div className="mx-auto mb-3 rounded-2xl bg-[#0B1739]/95 backdrop-blur-md border border-blue-900/40 shadow-2xl pointer-events-auto max-w-md">
                             <div className="flex items-center justify-around h-14 p-1.5">
                                 {managementTools.slice(0, 4).map((tool) => {
                                     const Icon = tool.icon;
@@ -351,12 +359,12 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                             key={tool.path}
                                             to={tool.path}
                                             className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all ${isActive
-                                                ? "text-blue-600 bg-blue-50 font-bold"
-                                                : "text-slate-500 hover:text-slate-900"
+                                                ? "!text-white bg-blue-600 shadow-sm font-bold"
+                                                : "text-slate-400 hover:!text-white"
                                                 }`}
                                         >
-                                            <Icon className="w-4 h-4" />
-                                            <span className="text-[8px] font-bold mt-1 truncate max-w-full px-0.5">
+                                            <Icon className={`w-4 h-4 ${isActive ? "!text-white" : ""}`} />
+                                            <span className={`text-[8px] font-bold mt-1 truncate max-w-full px-0.5 ${isActive ? "!text-white" : ""}`}>
                                                 {tool.name.split(" ")[0]}
                                             </span>
                                         </Link>
@@ -368,15 +376,15 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                         <DropdownMenuTrigger asChild>
                                             <button
                                                 className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all ${managementTools.slice(4).some(t => location.pathname === t.path)
-                                                    ? "text-blue-600 bg-blue-50 font-bold"
-                                                    : "text-slate-500 hover:text-slate-900"
+                                                    ? "!text-white bg-blue-600 shadow-sm font-bold"
+                                                    : "text-slate-400 hover:!text-white"
                                                     }`}
                                             >
                                                 <Menu className="w-4 h-4" />
                                                 <span className="text-[8px] font-bold mt-1">More</span>
                                             </button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="mb-3 w-56 p-2 rounded-2xl bg-white border border-slate-200 shadow-2xl z-[100] max-h-80 overflow-y-auto">
+                                        <DropdownMenuContent align="end" className="mb-3 w-56 p-2 rounded-2xl bg-[#0B1739] border border-blue-900/40 shadow-2xl z-[100] max-h-80 overflow-y-auto">
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 {managementTools.slice(4).map((tool) => {
                                                     const Icon = tool.icon;
@@ -390,12 +398,12 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                                             <Link
                                                                 to={tool.path}
                                                                 className={`flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl transition-all border ${isActive
-                                                                    ? "text-blue-700 bg-blue-50 border-blue-200 font-bold"
-                                                                    : "text-slate-600 hover:bg-slate-50 border-transparent font-medium"
+                                                                    ? "!text-white bg-blue-600 border-blue-400 font-bold"
+                                                                    : "text-slate-300 hover:bg-white/10 hover:!text-white border-transparent font-medium"
                                                                     }`}
                                                             >
-                                                                <Icon className="w-4 h-4 mb-1" />
-                                                                <span className="text-[9px] text-center leading-tight">{tool.name}</span>
+                                                                <Icon className={`w-4 h-4 mb-1 ${isActive ? "!text-white" : ""}`} />
+                                                                <span className={`text-[9px] text-center leading-tight ${isActive ? "!text-white font-bold" : ""}`}>{tool.name}</span>
                                                             </Link>
                                                         </DropdownMenuItem>
                                                     );
