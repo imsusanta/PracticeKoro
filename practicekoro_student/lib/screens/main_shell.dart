@@ -4,8 +4,8 @@ import '../theme/app_theme.dart';
 import '../theme/responsive.dart';
 import 'dashboard_screen.dart';
 import 'exams_screen.dart';
+import 'practice_drills_screen.dart';
 import 'results_screen.dart';
-import 'notes_screen.dart';
 import 'profile_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -20,11 +20,12 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int _selectedIndex;
 
+  // Exact 5 pillars matching Web mobile navigation (studentNav)
   final List<_NavItem> _navItems = const [
-    _NavItem(icon: Icons.dashboard_rounded, label: 'Home'),
-    _NavItem(icon: Icons.school_rounded, label: 'Tests'),
+    _NavItem(icon: Icons.home_rounded, label: 'Home'),
+    _NavItem(icon: Icons.assignment_outlined, label: 'Exams'),
+    _NavItem(icon: Icons.track_changes_rounded, label: 'Practice'),
     _NavItem(icon: Icons.bar_chart_rounded, label: 'Results'),
-    _NavItem(icon: Icons.description_outlined, label: 'Notes'),
     _NavItem(icon: Icons.person_rounded, label: 'Profile'),
   ];
 
@@ -45,8 +46,8 @@ class _MainShellState extends State<MainShell> {
     final screens = [
       DashboardScreen(onNavigateTab: _onNavigateTab),
       const ExamsScreen(),
+      const PracticeDrillsScreen(),
       const ResultsScreen(),
-      const NotesScreen(),
       const ProfileScreen(),
     ];
 

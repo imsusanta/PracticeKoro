@@ -71,11 +71,11 @@ class _ExamsScreenState extends State<ExamsScreen> {
       body: SafeArea(
         child: _loading
             ? const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
               )
             : RefreshIndicator(
                 onRefresh: _loadExams,
-                color: AppTheme.primaryEmerald,
+                color: AppTheme.primaryBlue,
                 child: ResponsiveCenter(
                   maxWidth: 640,
                   child: CustomScrollView(
@@ -91,18 +91,18 @@ class _ExamsScreenState extends State<ExamsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tests',
+                              'Exams & Tests',
                               style: GoogleFonts.inter(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
                                 color: const Color(0xFF0F172A),
                               ),
                             ),
                             Text(
-                              'Choose your exam and start practicing',
+                              'Choose your exam and start simulated practice',
                               style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: const Color(0xFF94A3B8),
+                                fontSize: 13,
+                                color: const Color(0xFF64748B),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -142,17 +142,17 @@ class _ExamsScreenState extends State<ExamsScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   gradient: selected
-                                      ? AppTheme.indigoGradient
+                                      ? AppTheme.blueGradient
                                       : null,
                                   color: selected ? null : Colors.white,
                                   borderRadius: BorderRadius.circular(14),
                                   border: selected
                                       ? null
-                                      : Border.all(color: Colors.grey.shade200),
+                                      : Border.all(color: const Color(0xFFE2E8F0)),
                                   boxShadow: selected
                                       ? [
                                           BoxShadow(
-                                            color: AppTheme.primaryIndigo
+                                            color: AppTheme.primaryBlue
                                                 .withValues(alpha: 0.3),
                                             blurRadius: 12,
                                             offset: const Offset(0, 4),
@@ -209,7 +209,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
                         hasScrollBody: false,
                         child: Center(
                           child: CircularProgressIndicator(
-                            color: AppTheme.primaryIndigo,
+                            color: AppTheme.primaryBlue,
                           ),
                         ),
                       )
@@ -241,7 +241,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.grey.shade100),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
                                 child: Row(
                                   children: [
@@ -249,12 +249,12 @@ class _ExamsScreenState extends State<ExamsScreen> {
                                       width: 48,
                                       height: 48,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFEEF2FF),
+                                        color: const Color(0xFFEFF6FF),
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: const Icon(
-                                        Icons.quiz_outlined,
-                                        color: AppTheme.primaryIndigo,
+                                        Icons.school_rounded,
+                                        color: AppTheme.primaryBlue,
                                         size: 24,
                                       ),
                                     ),
@@ -313,7 +313,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
                                         vertical: 10,
                                       ),
                                       decoration: BoxDecoration(
-                                        gradient: AppTheme.emeraldGradient,
+                                        gradient: AppTheme.blueGradient,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(

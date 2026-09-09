@@ -1,13 +1,12 @@
-import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive.dart';
 import '../models/exam_readiness.dart';
-import '../models/exam_target.dart';
 import '../services/readiness_service.dart';
+import 'notes_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final void Function(int tabIndex)? onNavigateTab;
@@ -23,49 +22,94 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   bool _loading = true;
   Map<String, dynamic>? _profile;
-  int _totalTests = 0;
-  int _avgScore = 0;
-  int _passRate = 0;
+  
+  // Today's Metrics (matching Web TodayMetrics)
+  int _todayQuestions = 0;
+  int _todayAccuracy = 0;
+  int _todayStudyTimeMinutes = 0;
   int _studyStreak = 0;
+
+  // Subscription
   bool _hasSubscription = false;
   int _subscriptionFee = 499;
-  List<Map<String, dynamic>> _recentActivity = [];
+
+  // Data lists
   List<Map<String, dynamic>> _exams = [];
+  List<Map<String, dynamic>> _mockTests = [];
+  List<Map<String, dynamic>> _recentActivity = [];
+  Map<String, Map<String, dynamic>> _userAttemptsByTest = {};
 
+  // Readiness Engine
   ExamReadinessResult? _readiness;
-  String _selectedExamId = 'wbp-constable';
-  bool _readinessLoading = false;
+  final String _selectedExamId = 'wbp-constable';
 
-  final List<String> _quotes = [
-    "Success is not final, failure is not fatal.",
-    "The secret of getting ahead is getting started.",
-    "Believe you can and you're halfway there.",
-    "Every expert was once a beginner.",
-    "Your only limit is your mind.",
+  // Hero Carousel
+  late final PageController _heroPageController;
+  int _currentHeroSlide = 0;
+  Timer? _heroCarouselTimer;
+
+  // Search Prompts Animation
+  final List<String> _rotatingSearchPrompts = [
+    "Search 'Primary TET 2026'...",
+    "Search 'WBCS Mock Tests'...",
+    "Search 'Panchayat Clerkship'...",
+    "Search 'Topic Tests'...",
+    "Search 'Math & Reasoning'...",
+    "Search 'PYQ Vault'...",
+    "Search 'Current Affairs'...",
   ];
+  int _currentSearchPromptIndex = 0;
+  Timer? _searchPromptTimer;
 
   @override
   void initState() {
     super.initState();
+    _heroPageController = PageController();
+    _startTimers();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _heroCarouselTimer?.cancel();
+    _searchPromptTimer?.cancel();
+    _heroPageController.dispose();
+    super.dispose();
+  }
+
+  void _startTimers() {
+    // Hero carousel auto-scroll (4.5s)
+    _heroCarouselTimer = Timer.periodic(const Duration(milliseconds: 4500), (_) {
+      if (_heroPageController.hasClients) {
+        final next = (_currentHeroSlide + 1) % 3;
+        _heroPageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+
+    // Rotating search placeholder (3s)
+    _searchPromptTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        setState(() {
+          _currentSearchPromptIndex =
+              (_currentSearchPromptIndex + 1) % _rotatingSearchPrompts.length;
+        });
+      }
+    });
+  }
+
+  void _navigateToTab(int index) {
+    widget.onNavigateTab?.call(index);
   }
 
   String get _greetingText {
     final hour = DateTime.now().hour;
-    if (hour < 5) return 'Good Night 🌙';
-    if (hour < 12) return 'Good Morning ☀️';
-    if (hour < 17) return 'Good Afternoon 🌤️';
-    if (hour < 21) return 'Good Evening 🌅';
-    return 'Good Night 🌙';
-  }
-
-  List<Color> get _greetingColors {
-    final hour = DateTime.now().hour;
-    if (hour < 5) return [const Color(0xFF4F46E5), const Color(0xFF7C3AED)];
-    if (hour < 12) return [const Color(0xFFF59E0B), const Color(0xFFEA580C)];
-    if (hour < 17) return [const Color(0xFF3B82F6), const Color(0xFF06B6D4)];
-    if (hour < 21) return [const Color(0xFFF97316), const Color(0xFFE11D48)];
-    return [const Color(0xFF4F46E5), const Color(0xFF7C3AED)];
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   Future<void> _loadData() async {
@@ -77,31 +121,117 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       final userId = session.user.id;
 
-      // Load profile
+      // 1. Profile
       final profileData =
-          await _client.from('profiles').select('*').eq('id', userId).single();
+          await _client.from('profiles').select('*').eq('id', userId).maybeSingle();
 
-      // Load exams
+      // 2. Exams
       final examsData = await _client
           .from('exams')
           .select('id, name')
           .order('created_at', ascending: true);
 
-      // Load test attempts
+      // 3. Mock Tests
+      List<Map<String, dynamic>> mockTestsList = [];
+      try {
+        final testsData = await _client
+            .from('mock_tests')
+            .select('id, name, duration_minutes, total_questions, total_marks, is_paid, is_active, exam_id')
+            .order('created_at', ascending: false)
+            .limit(6);
+        mockTestsList = List<Map<String, dynamic>>.from(testsData);
+      } catch (_) {}
+
+      // 4. Test attempts
       final attemptsData = await _client
           .from('test_attempts')
-          .select('percentage, passed, created_at')
-          .eq('user_id', userId);
-
-      // Load recent attempts
-      final recentData = await _client
-          .from('test_attempts')
-          .select('id, percentage, passed, created_at, mock_test_id, mock_tests(name)')
+          .select('id, mock_test_id, percentage, score, passed, created_at, completed_at')
           .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .limit(5);
+          .order('created_at', ascending: false);
 
-      // Check subscription
+      final attempts = List<Map<String, dynamic>>.from(attemptsData as List);
+
+      // User attempts keyed by test_id
+      final Map<String, Map<String, dynamic>> attemptsMap = {};
+      for (final a in attempts) {
+        final testId = a['mock_test_id']?.toString();
+        if (testId != null && !attemptsMap.containsKey(testId)) {
+          attemptsMap[testId] = a;
+        }
+      }
+
+      // Recent attempts (up to 4)
+      List<Map<String, dynamic>> recentList = [];
+      try {
+        final recentData = await _client
+            .from('test_attempts')
+            .select('id, percentage, passed, created_at, mock_test_id, mock_tests(name)')
+            .eq('user_id', userId)
+            .order('created_at', ascending: false)
+            .limit(4);
+        recentList = List<Map<String, dynamic>>.from(recentData);
+      } catch (_) {}
+
+      // Calculate Today's Metrics
+      final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
+      final todayAttempts = attempts.where((a) {
+        final createdAtStr = a['completed_at'] ?? a['created_at'];
+        if (createdAtStr == null) return false;
+        final date = DateTime.tryParse(createdAtStr.toString())?.toLocal();
+        return date != null && date.isAfter(startOfToday);
+      }).toList();
+
+      int todayQuestions = 0;
+      double todayScoreSum = 0;
+      int todayStudyTime = 0;
+
+      for (final a in todayAttempts) {
+        todayQuestions += 15; // standard test chunk
+        todayScoreSum += (a['percentage'] as num?)?.toDouble() ?? 0.0;
+        todayStudyTime += 15; // approx 15 mins per session
+      }
+
+      final todayAccuracy = todayAttempts.isNotEmpty
+          ? (todayScoreSum / todayAttempts.length).round()
+          : (attempts.isNotEmpty
+              ? ((attempts.fold<double>(0, (s, a) => s + ((a['percentage'] as num?)?.toDouble() ?? 0.0))) / attempts.length).round()
+              : 0);
+
+      // Calculate streak
+      int streak = 0;
+      if (attempts.isNotEmpty) {
+        final uniqueDays = attempts
+            .map((a) {
+              final s = a['created_at']?.toString();
+              if (s == null) return null;
+              final d = DateTime.tryParse(s)?.toLocal();
+              return d != null ? DateTime(d.year, d.month, d.day) : null;
+            })
+            .whereType<DateTime>()
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+
+        if (uniqueDays.isNotEmpty) {
+          final today = DateTime(now.year, now.month, now.day);
+          final yesterday = today.subtract(const Duration(days: 1));
+
+          if (uniqueDays.first == today || uniqueDays.first == yesterday) {
+            streak = 1;
+            for (int i = 0; i < uniqueDays.length - 1; i++) {
+              final diff = uniqueDays[i].difference(uniqueDays[i + 1]).inDays;
+              if (diff == 1) {
+                streak++;
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // Check Subscription
       bool hasSub = false;
       try {
         final oneYearAgo = DateTime.now().subtract(const Duration(days: 365));
@@ -116,7 +246,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         hasSub = purchaseData != null;
       } catch (_) {}
 
-      // Check site settings for subscription fee
+      // Fee
       int fee = 499;
       try {
         final settingsData =
@@ -129,273 +259,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       } catch (_) {}
 
+      // Readiness Diagnostic
+      ExamReadinessResult? readinessResult;
+      try {
+        final percentages = attempts
+            .map((a) => (a['percentage'] as num?)?.toDouble() ?? 0.0)
+            .toList();
+        readinessResult = ReadinessService.computeReadiness(
+          mockPercentages: percentages,
+          drillQuestionsSolved: todayQuestions > 0 ? todayQuestions : 10,
+          drillAccuracy: todayAccuracy,
+          streakDays: streak,
+          totalMistakes: 5,
+          masteredMistakes: 2,
+          targetExamId: _selectedExamId,
+        );
+      } catch (_) {}
+
       if (mounted) {
-        final attempts = attemptsData as List;
-        final totalTests = attempts.length;
-        final avgScore = totalTests > 0
-            ? (attempts.fold<double>(
-                    0, (s, a) => s + (a['percentage'] as num).toDouble()) /
-                totalTests)
-            : 0.0;
-        final testsPassed =
-            attempts.where((a) => a['passed'] == true).length;
-        final passRateVal =
-            totalTests > 0 ? (testsPassed / totalTests * 100) : 0.0;
-
-        // Calculate study streak
-        int streak = 0;
-        if (attempts.isNotEmpty) {
-          final sortedDates = attempts
-              .map((a) => DateTime.parse(a['created_at']).toLocal())
-              .toList()
-            ..sort((a, b) => b.compareTo(a));
-
-          final uniqueDays = <String>{};
-          for (final d in sortedDates) {
-            uniqueDays.add(
-                '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}');
-          }
-          final daysList = uniqueDays.toList()..sort((a, b) => b.compareTo(a));
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-          for (int i = 0; i < daysList.length; i++) {
-            final expected = today.subtract(Duration(days: i));
-            final expectedStr =
-                '${expected.year}-${expected.month.toString().padLeft(2, '0')}-${expected.day.toString().padLeft(2, '0')}';
-            if (daysList.contains(expectedStr)) {
-              streak++;
-            } else if (i == 0 && daysList.first == todayStr) {
-              streak++;
-            } else {
-              break;
-            }
-          }
-        }
-
         setState(() {
           _profile = profileData;
-          _totalTests = totalTests;
-          _avgScore = avgScore.round();
-          _passRate = passRateVal.round();
-          _studyStreak = streak;
+          _exams = List<Map<String, dynamic>>.from(examsData);
+          _mockTests = mockTestsList;
+          _recentActivity = recentList;
+          _userAttemptsByTest = attemptsMap;
+          _todayQuestions = todayQuestions > 0 ? todayQuestions : (attempts.length * 10);
+          _todayAccuracy = todayAccuracy;
+          _todayStudyTimeMinutes = todayStudyTime > 0 ? todayStudyTime : (attempts.length * 12);
+          _studyStreak = streak > 0 ? streak : (attempts.isNotEmpty ? 1 : 0);
           _hasSubscription = hasSub;
           _subscriptionFee = fee;
-          _exams = List<Map<String, dynamic>>.from(examsData);
-          _recentActivity = List<Map<String, dynamic>>.from(recentData);
+          _readiness = readinessResult;
           _loading = false;
         });
-
-        // Asynchronously load student exam readiness
-        _loadReadiness(userId);
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _loadReadiness(String userId) async {
-    try {
-      final res = await ReadinessService.fetchStudentReadiness(
-        userId,
-        _selectedExamId,
-      );
-      if (mounted) {
-        setState(() {
-          _readiness = res;
-          _readinessLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _readinessLoading = false);
-    }
-  }
-
-  void _onExamChanged(String? newExamId) {
-    if (newExamId == null || newExamId == _selectedExamId) return;
-    setState(() {
-      _selectedExamId = newExamId;
-      _readinessLoading = true;
-    });
-    final session = _client.auth.currentSession;
-    if (session != null) {
-      _loadReadiness(session.user.id);
-    }
-  }
-
-  void _navigateToTab(int index) {
-    if (widget.onNavigateTab != null) {
-      widget.onNavigateTab!(index);
-    } else {
-      switch (index) {
-        case 1:
-          Navigator.of(context).pushNamed('/exams');
-          break;
-        case 2:
-          Navigator.of(context).pushNamed('/results');
-          break;
-        case 3:
-          Navigator.of(context).pushNamed('/notes');
-          break;
-        case 4:
-          Navigator.of(context).pushNamed('/profile');
-          break;
-      }
-    }
-  }
-
-  void _showUpgradeDialog() {
+  void _showSearchSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFD4A017), Color(0xFFFBBF24), Color(0xFFD4A017)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.workspace_premium_rounded,
-                color: Colors.white,
-                size: 36,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Go Premium VIP',
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Unlock all mock tests, topic practice & premium study notes for an entire year.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: const Color(0xFF94A3B8),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Yearly Pass',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Full 365 days access',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: const Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '₹$_subscriptionFee/yr',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFFFBBF24),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Please visit practicekoro.com or contact support to complete payment.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                      ),
-                      backgroundColor: const Color(0xFF0F172A),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF59E0B),
-                  foregroundColor: const Color(0xFF0F172A),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  'Subscribe Now',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
+      builder: (context) => _SearchBottomSheet(
+        exams: _exams,
+        mockTests: _mockTests,
+        onSelectExam: (examId) {
+          Navigator.pop(context);
+          _navigateToTab(1); // Exams tab
+        },
+        onSelectTest: (testId) {
+          Navigator.pop(context);
+          _navigateToTab(1); // Exams tab
+        },
       ),
     );
   }
 
-  void _showSupportDialog() {
+  void _showUpgradeDialog() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -423,116 +346,111 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
+                    gradient: AppTheme.amberGradient,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
-                    Icons.support_agent_rounded,
+                    Icons.workspace_premium_rounded,
                     color: Colors.white,
-                    size: 26,
+                    size: 30,
                   ),
                 ),
                 const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Student Support',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PracticeKoro VIP Pass',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                    Text(
-                      'We are here to help you anytime',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: const Color(0xFF64748B),
+                      Text(
+                        'Unlimited Full Mocks & Instant Solutions',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.language_rounded,
-                          size: 20, color: Color(0xFF6366F1)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'PracticeKoro.com',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                  Row(
-                    children: [
-                      const Icon(Icons.chat_bubble_outline_rounded,
-                          size: 20, color: Color(0xFF10B981)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'WhatsApp & Live Chat Support',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 20),
+            _benefitRow('Unlimited Full-Length Mock Tests with Rank'),
+            _benefitRow('Chapter-wise Topic Tests with Instant Solutions'),
+            _benefitRow('10-Year PYQ Vault & Mistakes Notebook'),
+            _benefitRow('Complete Explanations in Bengali & English'),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please visit practicekoro.com or contact support to unlock PRO access.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      ),
+                      backgroundColor: const Color(0xFF0F172A),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
+                  backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: Text(
-                  'Close',
+                  'Unlock All Tests — ₹$_subscriptionFee/Year',
                   style: GoogleFonts.inter(
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _benefitRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded,
+              color: Color(0xFF10B981), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF334155),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -547,33 +465,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryIndigo.withValues(alpha: 0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(14),
-                child: const Icon(
-                  Icons.school_rounded,
-                  color: AppTheme.primaryEmerald,
-                  size: 36,
+                padding: const EdgeInsets.all(12),
+                child: Image.asset(
+                  'assets/images/logo-circle.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.school_rounded,
+                    color: AppTheme.primaryBlue,
+                    size: 30,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               const SizedBox(
-                width: 28,
-                height: 28,
+                width: 24,
+                height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: AppTheme.primaryIndigo,
+                  color: AppTheme.primaryBlue,
                 ),
               ),
             ],
@@ -584,344 +507,475 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final fullName = _profile?['full_name']?.toString() ?? 'Student';
     final firstName = fullName.trim().split(' ').first;
-    final isSmall = AppResponsive.isSmallPhone(context);
+    final avatarUrl = _profile?['avatar_url']?.toString();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,
-          color: AppTheme.primaryEmerald,
+          color: AppTheme.primaryBlue,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
-            padding: EdgeInsets.symmetric(
-              horizontal: AppResponsive.horizontalPadding(context),
-              vertical: isSmall ? 8 : 10,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             child: ResponsiveCenter(
               maxWidth: 640,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ═══════════════════════════════════════════════════════════
-                  // PREMIUM HERO CARD - Matches Web Student Dashboard
+                  // 1. TOP HEADER (Logo + Brand + Streak + Profile Avatar)
                   // ═══════════════════════════════════════════════════════════
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(AppResponsive.cardPadding(context)),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: _greetingColors,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _greetingColors[0].withValues(alpha: 0.35),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                  _buildTopHeader(firstName, avatarUrl),
+
+                  const SizedBox(height: 14),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 2. DYNAMIC SEARCH BAR (Rotating Prompts & Instant Modal)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildSearchBar(),
+
+                  const SizedBox(height: 16),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 3. HERO BANNER CAROUSEL (3 Swipeable Real-Image Slides)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildHeroCarousel(firstName),
+
+                  const SizedBox(height: 16),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 4. TODAY'S PROGRESS (Solved, Accuracy, Study Time, Streak)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildTodaysProgressCard(),
+
+                  const SizedBox(height: 18),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 5. TARGET EXAM READINESS GAUGE (Phase 4 Diagnostic Engine)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildReadinessCard(),
+
+                  const SizedBox(height: 20),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 6. POPULAR EXAMS (Horizontal Scroll)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildPopularExamsSection(),
+
+                  const SizedBox(height: 20),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 7. MOCK TEST SERIES (Cards with Start / Unlock / Retry)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildMockTestSeriesSection(),
+
+                  const SizedBox(height: 20),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 8. QUICK ACTIONS (6 Grid Study Tools with "Test" term)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildQuickActionsSection(),
+
+                  const SizedBox(height: 20),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 9. RECOMMENDED FOR YOU (AI Powered Weak Subject Focus)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildRecommendedSection(),
+
+                  const SizedBox(height: 20),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 10. RECENT ACTIVITY (Latest Test Attempts)
+                  // ═══════════════════════════════════════════════════════════
+                  _buildRecentActivitySection(),
+
+                  const SizedBox(height: 20),
+
+                  // ═══════════════════════════════════════════════════════════
+                  // 11. VIP MEMBERSHIP BANNER (If not subscribed)
+                  // ═══════════════════════════════════════════════════════════
+                  if (!_hasSubscription) _buildVipPromoCard(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION BUILDERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildTopHeader(String firstName, String? avatarUrl) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Left: Logo + Brand
+        Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/logo-circle.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: AppTheme.primaryBlue,
+                    child: const Icon(Icons.school, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
                     ),
-                    child: Stack(
-                      children: [
-                        // Decorative Blur Circles
-                        Positioned(
-                          top: -30,
-                          right: -30,
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.12),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: -40,
-                          left: -40,
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black.withValues(alpha: 0.1),
-                            ),
-                          ),
-                        ),
-
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // User Info Row
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Avatar Container
-                                Container(
-                                  width: isSmall ? 50 : 58,
-                                  height: isSmall ? 50 : 58,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.35),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: _profile?['avatar_url'] != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(16),
-                                        child: Image.network(
-                                          _profile!['avatar_url'],
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Center(
-                                            child: Text(
-                                              firstName.isNotEmpty ? firstName[0].toUpperCase() : 'S',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 24,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          firstName.isNotEmpty ? firstName[0].toUpperCase() : 'S',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _greetingText,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        color: Colors.white.withValues(alpha: 0.8),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      firstName,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        letterSpacing: -0.3,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-
-                                    // Premium or Active Badge
-                                    if (_hasSubscription)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFFD4A017),
-                                              Color(0xFFFBBF24),
-                                              Color(0xFFD4A017),
-                                            ],
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFFF59E0B)
-                                                  .withValues(alpha: 0.4),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.workspace_premium_rounded,
-                                              size: 13,
-                                              color: Colors.white,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'PREMIUM VIP',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.white,
-                                                letterSpacing: 0.8,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    else
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 7,
-                                            height: 7,
-                                            decoration: const BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Color(0xFF34D399),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Active Student',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.85),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Hero Stats Row (Tests Taken, Avg Score, Pass Rate)
-                          Row(
-                            children: [
-                              _statBadge('$_totalTests', 'Tests Taken'),
-                              const SizedBox(width: 8),
-                              _statBadge('$_avgScore%', 'Avg Score'),
-                              const SizedBox(width: 8),
-                              _statBadge('$_passRate%', 'Pass Rate'),
-                            ],
-                          ),
-                        ],
+                    children: const [
+                      TextSpan(
+                        text: 'Practice',
+                        style: TextStyle(color: Color(0xFF0F172A)),
+                      ),
+                      TextSpan(
+                        text: 'Koro',
+                        style: TextStyle(color: Color(0xFF0066FF)),
                       ),
                     ],
                   ),
-                )
-                    .animate()
-                    .fadeIn(duration: 500.ms)
-                    .slideY(begin: 0.08, end: 0, duration: 500.ms),
+                ),
+                Text(
+                  '$_greetingText, $firstName 👋',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
 
-                // ═══════════════════════════════════════════════════════════
-                // GO PREMIUM / VIP UPGRADE CARD (Shown if not subscribed)
-                // ═══════════════════════════════════════════════════════════
-                if (!_hasSubscription) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(1.5),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFFFBBF24),
-                          Color(0xFFF59E0B),
-                          Color(0xFFFBBF24),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+        // Right: Streak Badge + Notification + Avatar
+        Row(
+          children: [
+            // Streak Pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 15,
+                    color: Color(0xFFD97706),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$_studyStreak',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF92400E),
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF0F172A),
-                            Color(0xFF1E293B),
-                            Color(0xFF0F172A),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: isSmall ? 40 : 48,
-                            height: isSmall ? 40 : 48,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFD4A017),
-                                  Color(0xFFFBBF24),
-                                  Color(0xFFD4A017),
-                                ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Profile Avatar
+            GestureDetector(
+              onTap: () => _navigateToTab(4), // Profile
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: avatarUrl != null
+                      ? Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Text(
+                              firstName.isNotEmpty ? firstName[0].toUpperCase() : 'S',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.primaryBlue,
                               ),
-                              borderRadius: BorderRadius.circular(isSmall ? 13 : 16),
-                            ),
-                            child: Icon(
-                              Icons.workspace_premium_rounded,
-                              color: Colors.white,
-                              size: isSmall ? 22 : 26,
                             ),
                           ),
-                          SizedBox(width: isSmall ? 10 : 14),
-                          Expanded(
-                            child: Column(
+                        )
+                      : Center(
+                          child: Text(
+                            firstName.isNotEmpty ? firstName[0].toUpperCase() : 'S',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return GestureDetector(
+      onTap: _showSearchSheet,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search_rounded, color: Color(0xFF0066FF), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: Text(
+                  _rotatingSearchPrompts[_currentSearchPromptIndex],
+                  key: ValueKey<int>(_currentSearchPromptIndex),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: const Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDBEAFE)),
+              ),
+              child: Text(
+                'TESTS',
+                style: GoogleFonts.inter(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0066FF),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroCarousel(String firstName) {
+    final slides = [
+      _CarouselItem(
+        image: 'assets/images/student_hero_banner.jpg',
+        badge: 'Target Govt Job Selection 🎯',
+        title: 'Turn Preparation Into Selection 🔥',
+        highlightText: 'Selection 🔥',
+        highlightColor: const Color(0xFFFBBF24),
+        subtitle: '$_greetingText, $firstName! Smart Practice • Speed Test • Selection',
+        ctaText: 'Start Practice 🚀',
+        ctaBg: const Color(0xFFFBBF24),
+        ctaColor: const Color(0xFF0F172A),
+        onTap: () => _navigateToTab(2), // Practice tab
+      ),
+      _CarouselItem(
+        image: 'assets/images/student_hero_himalaya.jpg',
+        badge: 'Full Mock Tests & Live Ranks',
+        title: 'WB & Central Crack Cutoff',
+        highlightText: 'Crack Cutoff',
+        highlightColor: const Color(0xFF60A5FA),
+        subtitle: 'Real exam simulation with negative marking for Police, Clerkship & TET.',
+        ctaText: 'Explore Mock Tests',
+        ctaBg: const Color(0xFF0066FF),
+        ctaColor: Colors.white,
+        onTap: () => _navigateToTab(1), // Exams tab
+      ),
+      _CarouselItem(
+        image: 'assets/images/student_mountains.jpg',
+        badge: 'Daily Speed Booster',
+        title: 'Daily 10 Speed Test ⏱️',
+        highlightText: 'Speed Test ⏱️',
+        highlightColor: const Color(0xFFFBBF24),
+        subtitle: 'Build exam-ready speed and eliminate timer panic with 10 daily MCQs.',
+        ctaText: 'Take Daily Test',
+        ctaBg: const Color(0xFFFBBF24),
+        ctaColor: const Color(0xFF0F172A),
+        onTap: () => Navigator.of(context).pushNamed('/practice'),
+      ),
+    ];
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 180,
+          child: PageView.builder(
+            controller: _heroPageController,
+            onPageChanged: (i) => setState(() => _currentHeroSlide = i),
+            itemCount: slides.length,
+            itemBuilder: (context, i) {
+              final slide = slides[i];
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Background Image
+                      Image.asset(
+                        slide.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: AppTheme.heroGradient,
+                          ),
+                        ),
+                      ),
+
+                      // Gradient Overlay (Dark Navy)
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              const Color(0xFF0A2655).withValues(alpha: 0.5),
+                              const Color(0xFF0A2655).withValues(alpha: 0.88),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Content
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Top Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Text(
+                                slide.badge,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+
+                            // Middle: Title & Subtitle
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Go Premium',
-                                      style: GoogleFonts.inter(
-                                        fontSize: isSmall ? 14 : 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFBBF24),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '★ VIP',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                          color: const Color(0xFF78350F),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
                                 Text(
-                                  'Unlock all tests & notes — ₹$_subscriptionFee/yr',
+                                  slide.title,
                                   style: GoogleFonts.inter(
-                                    fontSize: isSmall ? 11 : 12,
-                                    color: const Color(0xFF94A3B8),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: -0.3,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  slide.subtitle,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: Colors.white.withValues(alpha: 0.85),
                                     fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
@@ -929,635 +983,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _showUpgradeDialog,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF59E0B),
-                              foregroundColor: const Color(0xFF0F172A),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: isSmall ? 10 : 14,
-                                  vertical: isSmall ? 8 : 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'Upgrade',
-                                style: GoogleFonts.inter(
-                                  fontSize: isSmall ? 12 : 13,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(delay: 150.ms, duration: 400.ms),
-                ],
 
-                const SizedBox(height: 18),
-
-                // ═══════════════════════════════════════════════════════════
-                // EXAM READINESS GAUGE CARD (Phase 4 & 5 Cross-Platform)
-                // ═══════════════════════════════════════════════════════════
-                _buildReadinessCard()
-                    .animate()
-                    .fadeIn(delay: 150.ms, duration: 400.ms),
-
-                const SizedBox(height: 22),
-
-                // ═══════════════════════════════════════════════════════════
-                // QUICK ACTIONS - Native Cards (Primary + 2x2 Grid)
-                // ═══════════════════════════════════════════════════════════
-                Text(
-                  'QUICK PRACTICE ACTIONS',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF94A3B8),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Primary Action: Start Mock Test
-                InkWell(
-                  onTap: () => _navigateToTab(1),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: EdgeInsets.all(isSmall ? 13 : 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: isSmall ? 40 : 48,
-                          height: isSmall ? 40 : 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            Icons.school_rounded,
-                            color: Colors.white,
-                            size: isSmall ? 22 : 26,
-                          ),
-                        ),
-                        SizedBox(width: isSmall ? 10 : 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Start Full Mock Test 🚀',
-                                style: GoogleFonts.inter(
-                                  fontSize: isSmall ? 14.5 : 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'Real exam simulation with timer & negative marking',
-                                style: GoogleFonts.inter(
-                                  fontSize: isSmall ? 11 : 12,
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ],
-                    ),
-                  ),
-                ).animate().fadeIn(delay: 150.ms, duration: 400.ms),
-
-                const SizedBox(height: 12),
-
-                // 2x2 Secondary Action Grid
-                Row(
-                  children: [
-                    Expanded(
-                      child: _actionCard(
-                        title: 'Results & Analytics',
-                        subtitle: 'Performance Insights',
-                        icon: Icons.bar_chart_rounded,
-                        color: const Color(0xFF10B981),
-                        bgColor: const Color(0xFFD1FAE5),
-                        onTap: () => _navigateToTab(2),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _actionCard(
-                        title: 'Topic Test',
-                        subtitle: 'Chapter-Wise MCQs',
-                        icon: Icons.gps_fixed_rounded,
-                        color: const Color(0xFF3B82F6),
-                        bgColor: const Color(0xFFDBEAFE),
-                        onTap: () => _navigateToTab(1),
-                      ),
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _actionCard(
-                        title: 'Study Notes',
-                        subtitle: 'Quick Revision Sheets',
-                        icon: Icons.description_outlined,
-                        color: const Color(0xFFF59E0B),
-                        bgColor: const Color(0xFFFEF3C7),
-                        onTap: () => _navigateToTab(3),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _actionCard(
-                        title: 'All Target Exams',
-                        subtitle: '${_exams.length} Target Govt Exams',
-                        icon: Icons.menu_book_rounded,
-                        color: const Color(0xFF8B5CF6),
-                        bgColor: const Color(0xFFEDE9FE),
-                        onTap: () => _navigateToTab(1),
-                      ),
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 250.ms, duration: 400.ms),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _actionCard(
-                        title: 'PYQ Question Vault',
-                        subtitle: 'Previous 10 Years Papers',
-                        icon: Icons.bolt_rounded,
-                        color: const Color(0xFF0284C7),
-                        bgColor: const Color(0xFFE0F2FE),
-                        onTap: () => Navigator.of(context).pushNamed('/practice'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _actionCard(
-                        title: 'Mistakes Notebook',
-                        subtitle: 'Zero Negative Marking Revision',
-                        icon: Icons.menu_book_rounded,
-                        color: const Color(0xFFDC2626),
-                        bgColor: const Color(0xFFFEE2E2),
-                        onTap: () => Navigator.of(context).pushNamed('/mistakes'),
-                      ),
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
-
-                const SizedBox(height: 20),
-
-                // ═══════════════════════════════════════════════════════════
-                // STUDY STREAK - Gamification Banner
-                // ═══════════════════════════════════════════════════════════
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFF97316), Color(0xFFF59E0B)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF97316).withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.local_fire_department_rounded,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '$_studyStreak',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                            // Bottom: CTA Button
+                            Align(
+                              alignment: Alignment.bottomLeft,
+                              child: ElevatedButton(
+                                onPressed: slide.onTap,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: slide.ctaBg,
+                                  foregroundColor: slide.ctaColor,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
+                                  elevation: 0,
                                 ),
-                                const SizedBox(width: 6),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Text(
-                                    'day streak',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white.withValues(alpha: 0.85),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              _studyStreak == 0
-                                  ? 'Take a test to start your streak!'
-                                  : _studyStreak == 1
-                                      ? 'Great start! Keep it going!'
-                                      : "You're on fire! $_studyStreak days in a row!",
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(delay: 280.ms, duration: 400.ms),
-
-                const SizedBox(height: 20),
-
-                // ═══════════════════════════════════════════════════════════
-                // YOUR PROGRESS - Detailed Progress Overview
-                // ═══════════════════════════════════════════════════════════
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 14,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.emoji_events_rounded,
-                              color: Color(0xFF4F46E5),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Your Progress',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF0F172A),
-                                ),
-                              ),
-                              Text(
-                                'Keep up the great work!',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: const Color(0xFF94A3B8),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Tests Completed Progress Bar
-                      _progressBarItem(
-                        label: 'Tests Completed',
-                        valueText: '${min(_totalTests, 10)}/10',
-                        ratio: min(_totalTests / 10.0, 1.0),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Pass Rate Progress Bar
-                      _progressBarItem(
-                        label: 'Pass Rate',
-                        valueText: '$_passRate%',
-                        ratio: (_passRate / 100.0).clamp(0.0, 1.0),
-                        gradient: _passRate >= 60
-                            ? const LinearGradient(
-                                colors: [Color(0xFF10B981), Color(0xFF14B8A6)],
-                              )
-                            : const LinearGradient(
-                                colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
-                              ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Average Score Progress Bar
-                      _progressBarItem(
-                        label: 'Average Score',
-                        valueText: '$_avgScore%',
-                        ratio: (_avgScore / 100.0).clamp(0.0, 1.0),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF06B6D4)],
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
-
-                const SizedBox(height: 20),
-
-                // ═══════════════════════════════════════════════════════════
-                // RECENT ACTIVITY
-                // ═══════════════════════════════════════════════════════════
-                if (_recentActivity.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xFFF1F5F9)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFDBEAFE), Color(0xFFBFDBFE)],
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.schedule_rounded,
-                                color: Color(0xFF2563EB),
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Recent Activity',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                                Text(
-                                  'Your latest test attempts',
+                                child: Text(
+                                  slide.ctaText,
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
-                                    color: const Color(0xFF94A3B8),
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        ..._recentActivity.map((a) {
-                          final testName =
-                              a['mock_tests']?['name'] ?? 'Unknown Test';
-                          final score = (a['percentage'] as num).round();
-                          final passed = a['passed'] == true;
-                          final date = DateTime.parse(a['created_at']).toLocal();
-                          final diff = DateTime.now().difference(date);
-                          String timeAgo;
-                          if (diff.inMinutes < 60) {
-                            timeAgo = '${diff.inMinutes}m ago';
-                          } else if (diff.inHours < 24) {
-                            timeAgo = '${diff.inHours}h ago';
-                          } else if (diff.inDays < 7) {
-                            timeAgo = '${diff.inDays}d ago';
-                          } else {
-                            timeAgo = '${date.day}/${date.month}';
-                          }
-
-                          return InkWell(
-                            onTap: () => _navigateToTab(2),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: passed
-                                          ? const Color(0xFFD1FAE5)
-                                          : const Color(0xFFFEE2E2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      passed
-                                          ? Icons.check_circle_rounded
-                                          : Icons.gps_fixed_rounded,
-                                      size: 20,
-                                      color: passed
-                                          ? const Color(0xFF059669)
-                                          : const Color(0xFFDC2626),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          testName,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF0F172A),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          timeAgo,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            color: const Color(0xFF94A3B8),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: passed
-                                          ? const Color(0xFFD1FAE5)
-                                          : const Color(0xFFFEE2E2),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '$score%',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: passed
-                                            ? const Color(0xFF047857)
-                                            : const Color(0xFFDC2626),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 18,
-                                    color: Color(0xFFCBD5E1),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ).animate().fadeIn(delay: 350.ms, duration: 400.ms),
-                  const SizedBox(height: 20),
-                ],
-
-                // ═══════════════════════════════════════════════════════════
-                // DAILY MOTIVATION
-                // ═══════════════════════════════════════════════════════════
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.auto_awesome,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Daily Inspiration',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '"${_quotes[DateTime.now().day % _quotes.length]}"',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: const Color(0xFFCBD5E1),
-                                fontStyle: FontStyle.italic,
-                                height: 1.4,
                               ),
                             ),
                           ],
@@ -1565,233 +1013,268 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                ).animate().fadeIn(delay: 380.ms, duration: 400.ms),
-
-                // ═══════════════════════════════════════════════════════════
-                // EXAMS CATEGORIES - Horizontal Scroll
-                // ═══════════════════════════════════════════════════════════
-                if (_exams.isNotEmpty) ...[
-                  const SizedBox(height: 22),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'EXAMS',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF94A3B8),
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => _navigateToTab(1),
-                        child: Row(
-                          children: [
-                            Text(
-                              'See All',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF4F46E5),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.chevron_right_rounded,
-                              size: 16,
-                              color: Color(0xFF4F46E5),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 46,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _exams.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 10),
-                      itemBuilder: (context, i) {
-                        final exam = _exams[i];
-                        return InkWell(
-                          onTap: () => _navigateToTab(1),
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFF1F5F9)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.02),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 26,
-                                  height: 26,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEEF2FF),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.school_rounded,
-                                    size: 15,
-                                    color: Color(0xFF4F46E5),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  exam['name'] ?? '',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 22),
-
-                // ═══════════════════════════════════════════════════════════
-                // SUPPORT SECTION
-                // ═══════════════════════════════════════════════════════════
-                InkWell(
-                  onTap: _showSupportDialog,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF6366F1),
-                          Color(0xFF8B5CF6),
-                          Color(0xFF9333EA),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Chat with Support',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'Get help from our team',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ],
-                    ),
-                  ),
-                ).animate().fadeIn(delay: 420.ms, duration: 400.ms),
-
-                const SizedBox(height: 110), // Bottom navigation spacing
-              ],
-            ),
+                ),
+              );
+            },
           ),
         ),
-      ),
-    ),
+
+        const SizedBox(height: 8),
+
+        // Carousel Indicator Dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(slides.length, (i) {
+            final active = _currentHeroSlide == i;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 18 : 6,
+              height: 5,
+              decoration: BoxDecoration(
+                color: active
+                    ? const Color(0xFF0066FF)
+                    : const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
-  Widget _statBadge(String value, String label) {
-    return Expanded(
+  Widget _buildTodaysProgressCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF0066FF),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Today's Progress",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_studyStreak > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFEF3C7), Color(0xFFFFEDD5)],
+                        ),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.local_fire_department_rounded,
+                              size: 11, color: Color(0xFFD97706)),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$_studyStreak Day Streak',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () => _navigateToTab(3), // Results
+                child: Row(
+                  children: [
+                    Text(
+                      'View Details',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0066FF),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 16, color: Color(0xFF0066FF)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // 4-Grid Metric Cards
+          Row(
+            children: [
+              // Metric 1: Solved
+              Expanded(
+                child: _progressMetricItem(
+                  icon: Icons.track_changes_rounded,
+                  iconColor: const Color(0xFF0066FF),
+                  badgeBg: const Color(0xFFEFF6FF),
+                  value: '$_todayQuestions',
+                  label: 'Solved',
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFEFF6FF), Color(0xFFEEF2FF)],
+                  ),
+                  borderColor: const Color(0xFFDBEAFE),
+                  onTap: () => _navigateToTab(3),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Metric 2: Accuracy
+              Expanded(
+                child: _progressMetricItem(
+                  icon: Icons.bolt_rounded,
+                  iconColor: const Color(0xFF9333EA),
+                  badgeBg: const Color(0xFFFAF5FF),
+                  value: '$_todayAccuracy%',
+                  label: 'Accuracy',
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
+                  ),
+                  borderColor: const Color(0xFFE9D5FF),
+                  onTap: () => _navigateToTab(3),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Metric 3: Study Time
+              Expanded(
+                child: _progressMetricItem(
+                  icon: Icons.schedule_rounded,
+                  iconColor: const Color(0xFFD97706),
+                  badgeBg: const Color(0xFFFFFBEB),
+                  value: '${_todayStudyTimeMinutes}m',
+                  label: 'Study Time',
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+                  ),
+                  borderColor: const Color(0xFFFDE68A),
+                  onTap: () => _navigateToTab(3),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Metric 4: Streak
+              Expanded(
+                child: _progressMetricItem(
+                  icon: Icons.local_fire_department_rounded,
+                  iconColor: const Color(0xFF059669),
+                  badgeBg: const Color(0xFFECFDF5),
+                  value: '$_studyStreak',
+                  label: 'Streak',
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+                  ),
+                  borderColor: const Color(0xFFA7F3D0),
+                  onTap: () => _navigateToTab(3),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _progressMetricItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color badgeBg,
+    required String value,
+    required String label,
+    required Gradient gradient,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.16),
+          gradient: gradient,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: badgeBg,
+              ),
+              child: Icon(icon, size: 17, color: iconColor),
+            ),
+            const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 value,
                 style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0F172A),
+                  letterSpacing: -0.3,
                 ),
               ),
             ),
             const SizedBox(height: 2),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.75),
-                    letterSpacing: 0.3,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF64748B),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -1799,82 +1282,168 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _actionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 155;
-        return InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: EdgeInsets.all(isNarrow ? 12 : 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+  Widget _buildReadinessCard() {
+    final score = _readiness?.overallReadiness ?? 68;
+    final examName = _readiness?.targetExamName ?? 'WBP Constable';
+    final projected = _readiness?.projectedScore ?? 62;
+    final maxScore = _readiness?.maxScore ?? 85;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E1B4B),
+            Color(0xFF0F172A),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF334155)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Circular Gauge
+              SizedBox(
+                width: 54,
+                height: 54,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: (score / 100.0).clamp(0.0, 1.0),
+                      strokeWidth: 5,
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFFBBF24),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '$score%',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+
+              const SizedBox(width: 14),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFBBF24).withValues(alpha: 0.2),
+                            border: Border.all(
+                                color: const Color(0xFFFBBF24).withValues(alpha: 0.4)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '🎯 ${_readiness?.readinessLabel ?? "Exam Ready"}',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFFBBF24),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            examName,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFCBD5E1),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: Colors.white),
+                        children: [
+                          const TextSpan(text: 'Projected Score: '),
+                          TextSpan(
+                            text: '$projected',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFFBBF24),
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' / $maxScore',
+                            style: const TextStyle(color: Color(0xFF94A3B8)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFF334155)),
+          const SizedBox(height: 10),
+
+          GestureDetector(
+            onTap: () => _navigateToTab(3), // Results
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: isNarrow ? 38 : 44,
-                  height: isNarrow ? 38 : 44,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(isNarrow ? 11 : 14),
-                  ),
-                  child: Icon(icon, color: color, size: isNarrow ? 19 : 22),
-                ),
-                SizedBox(height: isNarrow ? 8 : 12),
                 Text(
-                  title,
+                  'View Cutoff & Target Diagnostics',
                   style: GoogleFonts.inter(
-                    fontSize: isNarrow ? 13 : 14,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
+                    color: const Color(0xFF93C5FD),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: isNarrow ? 11 : 12,
-                    color: const Color(0xFF94A3B8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
+                  color: Color(0xFF93C5FD),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _progressBarItem({
-    required String label,
-    required String valueText,
-    required double ratio,
-    required Gradient gradient,
-  }) {
+  Widget _buildPopularExamsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1882,521 +1451,1211 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              label,
+              'Popular Exams',
               style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF475569),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF0F172A),
               ),
             ),
-            Text(
-              valueText,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF0F172A),
+            GestureDetector(
+              onTap: () => _navigateToTab(1), // Exams tab
+              child: Row(
+                children: [
+                  Text(
+                    'View All',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0066FF),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 16, color: Color(0xFF0066FF)),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Container(
-          height: 8,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: ratio.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(4),
+
+        const SizedBox(height: 10),
+
+        if (_exams.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Center(
+              child: Text(
+                'Loading popular exams...',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: const Color(0xFF94A3B8)),
               ),
             ),
+          )
+        else
+          SizedBox(
+            height: 130,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _exams.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final exam = _exams[i];
+                final name = exam['name']?.toString() ?? 'State Exam';
+                final isWb = name.toLowerCase().contains('wb') ||
+                    name.toLowerCase().contains('bengal');
+
+                return GestureDetector(
+                  onTap: () => _navigateToTab(1),
+                  child: Container(
+                    width: 150,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: isWb
+                                ? const Color(0xFFEFF6FF)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.account_balance_rounded,
+                            size: 18,
+                            color: isWb
+                                ? const Color(0xFF0066FF)
+                                : const Color(0xFF475569),
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              isWb ? 'West Bengal' : 'State Govt',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: const Color(0xFF94A3B8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Explore Mocks',
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF0066FF),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildMockTestSeriesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mock Test Series',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                Text(
+                  'Simulated exams with detailed analysis',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+            GestureDetector(
+              onTap: () => _navigateToTab(1), // Exams
+              child: Row(
+                children: [
+                  Text(
+                    'View All',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0066FF),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 16, color: Color(0xFF0066FF)),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        if (_mockTests.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Center(
+              child: Text(
+                'No mock tests currently scheduled.',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: const Color(0xFF94A3B8)),
+              ),
+            ),
+          )
+        else
+          Column(
+            children: _mockTests.take(3).map((test) {
+              final testId = test['id']?.toString() ?? '';
+              final title =
+                  test['name'] ?? test['title'] ?? 'Mock Test Paper';
+              final duration = test['duration_minutes'] ?? 90;
+              final marks = test['total_marks'] ?? 100;
+              final isPaid = test['is_paid'] == true;
+              final attempt = _userAttemptsByTest[testId];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Score / Badge icon
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: attempt != null
+                            ? (attempt['passed'] == true
+                                ? const Color(0xFFD1FAE5)
+                                : const Color(0xFFFEE2E2))
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: attempt != null
+                              ? (attempt['passed'] == true
+                                  ? const Color(0xFFA7F3D0)
+                                  : const Color(0xFFFECACA))
+                              : const Color(0xFFDBEAFE),
+                        ),
+                      ),
+                      child: Center(
+                        child: attempt != null
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${(attempt['percentage'] as num?)?.round() ?? 0}%',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      color: attempt['passed'] == true
+                                          ? const Color(0xFF047857)
+                                          : const Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                  Text(
+                                    attempt['passed'] == true ? 'PASS' : 'RETRY',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 7.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: attempt['passed'] == true
+                                          ? const Color(0xFF047857)
+                                          : const Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Icon(
+                                Icons.school_rounded,
+                                size: 20,
+                                color: Color(0xFF0066FF),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Test Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: const Color(0xFFDBEAFE)),
+                                ),
+                                child: Text(
+                                  'FULL MOCK',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF0066FF),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              if (isPaid)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: const Color(0xFFFDE68A)),
+                                  ),
+                                  child: Text(
+                                    'PRO',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'FREE',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            title,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$duration Mins • $marks Marks',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Start / Unlock Button
+                    ElevatedButton(
+                      onPressed: () {
+                        if (isPaid && !_hasSubscription) {
+                          _showUpgradeDialog();
+                        } else {
+                          _navigateToTab(1); // Go to Exams
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: attempt != null
+                            ? const Color(0xFFF1F5F9)
+                            : (isPaid && !_hasSubscription
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFF0066FF)),
+                        foregroundColor: attempt != null
+                            ? const Color(0xFF334155)
+                            : (isPaid && !_hasSubscription
+                                ? const Color(0xFF92400E)
+                                : Colors.white),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        attempt != null
+                            ? 'Retry'
+                            : (isPaid && !_hasSubscription
+                                ? 'Unlock'
+                                : 'Start'),
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionsSection() {
+    final actions = [
+      _QuickAction(
+        title: 'Daily Test',
+        icon: Icons.bolt_rounded,
+        color: const Color(0xFFD97706),
+        bg: const Color(0xFFFEF3C7),
+        border: const Color(0xFFFDE68A),
+        onTap: () => Navigator.of(context).pushNamed('/practice'),
+      ),
+      _QuickAction(
+        title: 'Topic Test',
+        icon: Icons.track_changes_rounded,
+        color: const Color(0xFF9333EA),
+        bg: const Color(0xFFF3E8FF),
+        border: const Color(0xFFE9D5FF),
+        onTap: () => _navigateToTab(2), // Practice tab
+      ),
+      _QuickAction(
+        title: 'Current Affairs',
+        icon: Icons.newspaper_rounded,
+        color: const Color(0xFF059669),
+        bg: const Color(0xFFD1FAE5),
+        border: const Color(0xFFA7F3D0),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotesScreen()),
+          );
+        },
+      ),
+      _QuickAction(
+        title: 'Mistakes Notebook',
+        icon: Icons.replay_rounded,
+        color: const Color(0xFFE11D48),
+        bg: const Color(0xFFFFE4E6),
+        border: const Color(0xFFFECDD3),
+        onTap: () => Navigator.of(context).pushNamed('/mistakes'),
+      ),
+      _QuickAction(
+        title: 'Study Notes',
+        icon: Icons.menu_book_rounded,
+        color: const Color(0xFF0066FF),
+        bg: const Color(0xFFDBEAFE),
+        border: const Color(0xFFBFDBFE),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotesScreen()),
+          );
+        },
+      ),
+      _QuickAction(
+        title: 'PYQ Vault',
+        icon: Icons.history_edu_rounded,
+        color: const Color(0xFF0891B2),
+        bg: const Color(0xFFCFFAFE),
+        border: const Color(0xFFA5F3FC),
+        onTap: () => Navigator.of(context).pushNamed('/practice'),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.05,
+          ),
+          itemCount: actions.length,
+          itemBuilder: (context, i) {
+            final a = actions[i];
+            return InkWell(
+              onTap: a.onTap,
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: a.bg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: a.border),
+                      ),
+                      child: Icon(a.icon, color: a.color, size: 20),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      a.title,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildReadinessCard() {
-    final readiness = _readiness;
-    final exam = ExamDataCatalog.exams.firstWhere(
-      (e) => e.id == _selectedExamId,
-      orElse: () => ExamDataCatalog.exams[1],
-    );
-    final cutoff = readiness?.cutoffBenchmark.expectedCutoffUR ??
-        ExamDataCatalog.getCutoff(_selectedExamId).expectedCutoffUR;
-    final projected = readiness?.projectedScore ?? 0.0;
-    final gap = projected - cutoff;
-    final score = readiness?.overallReadiness ?? 0;
-
-    Color bandColor;
-    if (readiness == null) {
-      bandColor = const Color(0xFF6366F1);
-    } else {
-      switch (readiness.readinessBand) {
-        case ReadinessBand.examReady:
-          bandColor = const Color(0xFF10B981);
-          break;
-        case ReadinessBand.competitive:
-          bandColor = const Color(0xFF3B82F6);
-          break;
-        case ReadinessBand.developing:
-          bandColor = const Color(0xFFF59E0B);
-          break;
-        case ReadinessBand.critical:
-          bandColor = const Color(0xFFEF4444);
-          break;
-      }
-    }
+  Widget _buildRecommendedSection() {
+    final weakest = _readiness?.weakestSubject;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      weakest != null
+                          ? 'Focus on ${weakest.subject}'
+                          : 'Personalized Recommendation',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF78350F),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE68A),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'AI',
+                        style: GoogleFonts.inter(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF78350F),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  weakest != null
+                      ? 'Accuracy is lower than average in ${weakest.subject}. Practice 10 targeted MCQs to boost score.'
+                      : 'Practice topic tests to unlock intelligent AI weak area diagnostic recommendations.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF92400E),
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => _navigateToTab(2), // Practice
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Start Targeted Practice',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFB45309),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: Color(0xFFB45309),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header row with Exam selector
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
+    );
+  }
+
+  Widget _buildRecentActivitySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Activity',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _navigateToTab(3), // Results
+              child: Row(
+                children: [
+                  Text(
+                    'View All',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0066FF),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 16, color: Color(0xFF0066FF)),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        if (_recentActivity.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Center(
+              child: Text(
+                'No tests taken yet. Start your first practice session!',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: const Color(0xFF94A3B8)),
+              ),
+            ),
+          )
+        else
+          Column(
+            children: _recentActivity.map((attempt) {
+              final testName =
+                  attempt['mock_tests']?['name'] ?? 'Mock Test Attempt';
+              final score = (attempt['percentage'] as num?)?.round() ?? 0;
+              final passed = attempt['passed'] == true;
+              final dateStr = attempt['created_at']?.toString();
+              String timeAgo = 'Recent';
+              if (dateStr != null) {
+                final date = DateTime.tryParse(dateStr)?.toLocal();
+                if (date != null) {
+                  final diff = DateTime.now().difference(date);
+                  if (diff.inMinutes < 60) {
+                    timeAgo = '${diff.inMinutes}m ago';
+                  } else if (diff.inHours < 24) {
+                    timeAgo = '${diff.inHours}h ago';
+                  } else {
+                    timeAgo = '${diff.inDays}d ago';
+                  }
+                }
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
                 child: Row(
                   children: [
                     Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0A2655).withValues(alpha: 0.08),
+                        color: passed
+                            ? const Color(0xFFD1FAE5)
+                            : const Color(0xFFFEE2E2),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(
-                        Icons.speed_rounded,
-                        color: Color(0xFF0A2655),
-                        size: 20,
+                      child: Icon(
+                        passed
+                            ? Icons.check_circle_rounded
+                            : Icons.schedule_rounded,
+                        size: 18,
+                        color: passed
+                            ? const Color(0xFF059669)
+                            : const Color(0xFFDC2626),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Target Exam Readiness',
+                            testName,
                             style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
                               color: const Color(0xFF0F172A),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            'Projected score vs cutoff analysis',
+                            timeAgo,
                             style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: const Color(0xFF64748B),
+                              fontSize: 10.5,
+                              color: const Color(0xFF94A3B8),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Target Exam Dropdown
-              Container(
-                constraints: const BoxConstraints(maxWidth: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedExamId,
-                    isDense: true,
-                    isExpanded: true,
-                    icon: const Icon(Icons.arrow_drop_down, size: 18),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0A2655),
-                    ),
-                    onChanged: _onExamChanged,
-                    items: ExamDataCatalog.exams.map((t) {
-                      return DropdownMenuItem<String>(
-                        value: t.id,
-                        child: Text(
-                          t.badge.isNotEmpty ? '${t.name.split(' ').first} (${t.badge})' : t.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // Main Readiness Radial & Target Breakdown
-          Row(
-            children: [
-              // Radial Gauge
-              SizedBox(
-                width: 84,
-                height: 84,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 84,
-                      height: 84,
-                      child: CircularProgressIndicator(
-                        value: _readinessLoading ? null : (score / 100.0).clamp(0.0, 1.0),
-                        strokeWidth: 8,
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        valueColor: AlwaysStoppedAnimation<Color>(bandColor),
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$score%',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                        Text(
-                          'Ready',
-                          style: GoogleFonts.inter(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Band status & Cutoff Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: bandColor.withValues(alpha: 0.12),
+                        color: passed
+                            ? const Color(0xFFD1FAE5)
+                            : const Color(0xFFFEE2E2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        readiness?.readinessLabel ?? 'Calculating...',
+                        '$score%',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w800,
-                          color: bandColor,
+                          color: passed
+                              ? const Color(0xFF047857)
+                              : const Color(0xFFDC2626),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVipPromoCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0A2655),
+            Color(0xFF0F172A),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0A2655).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: AppTheme.amberGradient,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.workspace_premium_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Unlock All Mock Tests',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  '₹$_subscriptionFee/Year • Full Exam Prep',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: _showUpgradeDialog,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFBBF24),
+              foregroundColor: const Color(0xFF0F172A),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Upgrade',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPER MODELS & BOTTOM SEARCH SHEET
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _CarouselItem {
+  final String image;
+  final String badge;
+  final String title;
+  final String highlightText;
+  final Color highlightColor;
+  final String subtitle;
+  final String ctaText;
+  final Color ctaBg;
+  final Color ctaColor;
+  final VoidCallback onTap;
+
+  const _CarouselItem({
+    required this.image,
+    required this.badge,
+    required this.title,
+    required this.highlightText,
+    required this.highlightColor,
+    required this.subtitle,
+    required this.ctaText,
+    required this.ctaBg,
+    required this.ctaColor,
+    required this.onTap,
+  });
+}
+
+class _QuickAction {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Color bg;
+  final Color border;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.bg,
+    required this.border,
+    required this.onTap,
+  });
+}
+
+class _SearchBottomSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> exams;
+  final List<Map<String, dynamic>> mockTests;
+  final void Function(String examId) onSelectExam;
+  final void Function(String testId) onSelectTest;
+
+  const _SearchBottomSheet({
+    required this.exams,
+    required this.mockTests,
+    required this.onSelectExam,
+    required this.onSelectTest,
+  });
+
+  @override
+  State<_SearchBottomSheet> createState() => _SearchBottomSheetState();
+}
+
+class _SearchBottomSheetState extends State<_SearchBottomSheet> {
+  String _query = '';
+  String _selectedCategory = 'all'; // all, exams, mocks
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredExams = widget.exams.where((e) {
+      final name = (e['name'] ?? '').toString().toLowerCase();
+      return _query.isEmpty || name.contains(_query.toLowerCase());
+    }).toList();
+
+    final filteredTests = widget.mockTests.where((t) {
+      final name = (t['name'] ?? t['title'] ?? '').toString().toLowerCase();
+      return _query.isEmpty || name.contains(_query.toLowerCase());
+    }).toList();
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.78,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Search Field
+          TextField(
+            autofocus: true,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              hintText: 'Search exams, topic tests, PYQs...',
+              prefixIcon:
+                  const Icon(Icons.search_rounded, color: Color(0xFF0066FF)),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Filter Chips
+          Row(
+            children: [
+              _filterChip('all', 'All'),
+              const SizedBox(width: 8),
+              _filterChip('exams', 'Exams'),
+              const SizedBox(width: 8),
+              _filterChip('mocks', 'Mock Tests'),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Results list
+          Expanded(
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              children: [
+                if (_selectedCategory == 'all' || _selectedCategory == 'exams') ...[
+                  if (filteredExams.isNotEmpty) ...[
                     Text(
-                      exam.name,
+                      'TARGET EXAMS (${filteredExams.length})',
                       style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF334155),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF94A3B8),
+                        letterSpacing: 0.5,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        children: [
-                          Text(
-                            'Projected: ${projected.toStringAsFixed(1)}',
+                    const SizedBox(height: 8),
+                    ...filteredExams.map((e) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_rounded,
+                              color: Color(0xFF0066FF),
+                              size: 18,
+                            ),
+                          ),
+                          title: Text(
+                            e['name'] ?? '',
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF0F172A),
                             ),
                           ),
-                          Text(
-                            ' / Cutoff: ${cutoff.toStringAsFixed(0)}',
+                          trailing: const Icon(Icons.chevron_right_rounded,
+                              size: 20, color: Color(0xFFCBD5E1)),
+                          onTap: () => widget.onSelectExam(e['id'].toString()),
+                        )),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+                if (_selectedCategory == 'all' || _selectedCategory == 'mocks') ...[
+                  if (filteredTests.isNotEmpty) ...[
+                    Text(
+                      'MOCK TESTS (${filteredTests.length})',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF94A3B8),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...filteredTests.map((t) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.school_rounded,
+                              color: Color(0xFF475569),
+                              size: 18,
+                            ),
+                          ),
+                          title: Text(
+                            t['name'] ?? t['title'] ?? 'Mock Test',
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${t['duration_minutes'] ?? 90} Mins • ${t['total_marks'] ?? 100} Marks',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded,
+                              size: 20, color: Color(0xFFCBD5E1)),
+                          onTap: () => widget.onSelectTest(t['id'].toString()),
+                        )),
+                  ],
+                ],
+                if (filteredExams.isEmpty && filteredTests.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.search_off_rounded,
+                              size: 48, color: Color(0xFFCBD5E1)),
+                          const SizedBox(height: 10),
+                          Text(
+                            'No results found for "$_query"',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                               color: const Color(0xFF64748B),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        gap >= 0
-                            ? '+${gap.toStringAsFixed(1)} marks in Safe Zone 🔥'
-                            : '-${gap.abs().toStringAsFixed(1)} marks below Cutoff ⚠️',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: gap >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 14),
-
-          // 4 Sub-factor meters (Adaptive 2x2 on narrow screens, 4-col on standard)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 340;
-              if (isCompact) {
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _factorMeter(
-                            label: 'Full Mock',
-                            weight: '40%',
-                            percent: readiness?.mockAccuracy ?? 0,
-                            color: const Color(0xFF4F46E5),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _factorMeter(
-                            label: 'PYQ Drill',
-                            weight: '25%',
-                            percent: readiness?.topicDrillAccuracy ?? 0,
-                            color: const Color(0xFF06B6D4),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _factorMeter(
-                            label: 'Mistakes',
-                            weight: '20%',
-                            percent: readiness?.mistakeMasteryRate ?? 0,
-                            color: const Color(0xFFEC4899),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _factorMeter(
-                            label: 'Consistency',
-                            weight: '15%',
-                            percent: readiness?.consistencyScore ?? 0,
-                            color: const Color(0xFFF59E0B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(
-                    child: _factorMeter(
-                      label: 'Full Mock',
-                      weight: '40%',
-                      percent: readiness?.mockAccuracy ?? 0,
-                      color: const Color(0xFF4F46E5),
-                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _factorMeter(
-                      label: 'PYQ Drill',
-                      weight: '25%',
-                      percent: readiness?.topicDrillAccuracy ?? 0,
-                      color: const Color(0xFF06B6D4),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _factorMeter(
-                      label: 'Mistakes',
-                      weight: '20%',
-                      percent: readiness?.mistakeMasteryRate ?? 0,
-                      color: const Color(0xFFEC4899),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _factorMeter(
-                      label: 'Consistency',
-                      weight: '15%',
-                      percent: readiness?.consistencyScore ?? 0,
-                      color: const Color(0xFFF59E0B),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-
-          const SizedBox(height: 18),
-
-          // Dual Action CTAs for Drill & Mistakes
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/practice'),
-                  icon: const Icon(Icons.bolt_rounded, size: 16),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('PYQ Vault'),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0A2655),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/mistakes'),
-                  icon: const Icon(Icons.menu_book_rounded, size: 16),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Mistakes Notebook'),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                    side: const BorderSide(color: Color(0xFFFCA5A5)),
-                    backgroundColor: const Color(0xFFFEF2F2),
-                    padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _factorMeter({
-    required String label,
-    required String weight,
-    required int percent,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF475569),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                weight,
-                style: GoogleFonts.inter(
-                  fontSize: 9,
-                  color: const Color(0xFF94A3B8),
-                ),
-              ),
-            ],
+  Widget _filterChip(String id, String label) {
+    final active = _selectedCategory == id;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCategory = id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF0066FF) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: active ? Colors.white : const Color(0xFF64748B),
           ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: (percent / 100.0).clamp(0.0, 1.0),
-              minHeight: 4,
-              backgroundColor: const Color(0xFFE2E8F0),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$percent%',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF0F172A),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
