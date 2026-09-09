@@ -4,188 +4,42 @@ import { supabase } from "@/integrations/supabase/client";
 import StudentLayout from "@/components/student/StudentLayout";
 import {
   Search,
-  Calendar,
   Sparkles,
   Bookmark,
   Share2,
   Clock,
   ArrowRight,
-  Filter,
   CheckCircle2,
-  TrendingUp,
   Globe,
-  Landmark,
-  Cpu,
-  Trophy,
-  MapPin,
+  BookOpen,
+  Play,
+  RotateCcw,
+  Zap,
+  Target,
+  Flame,
+  Award,
+  Layers,
+  FileCheck2,
   ChevronRight,
-  BookOpen
+  CheckCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { BengaliText } from "@/components/ui/PracticeKoroDesignSystem";
+import InteractiveDrillRunner from "@/components/student/InteractiveDrillRunner";
+import {
+  CURRENT_AFFAIRS_MOCK_TESTS,
+  CurrentAffairsMockTest,
+  ALL_CURRENT_AFFAIRS_QUESTIONS,
+} from "@/data/currentAffairsTests";
+import { DrillConfig, DrillQuestion } from "@/types/drills";
+import {
+  CurrentAffairsArticle,
+  INITIAL_CURRENT_AFFAIRS,
+  fetchCurrentAffairs
+} from "@/services/currentAffairsService";
 
-interface CurrentAffairsArticle {
-  id: string;
-  category: "West Bengal" | "National" | "International" | "Economy" | "Science & Tech" | "Sports";
-  date: string;
-  readTime: string;
-  titleBn: string;
-  titleEn: string;
-  summaryBn: string;
-  bulletPoints: string[];
-  examRelevance: string;
-  isImportant?: boolean;
-}
-
-const SAMPLE_ARTICLES: CurrentAffairsArticle[] = [
-  {
-    id: "ca-blueprint-1",
-    category: "National",
-    date: "16 September 2025",
-    readTime: "5 min read",
-    titleBn: "ভারতের নতুন শিক্ষা নীতি ২০২৫",
-    titleEn: "National Education Policy 2025 Updates",
-    summaryBn: "জাতীয় শিক্ষানীতির অধীনে রাজ্য ও কেন্দ্রীয় স্তরে নতুন পাঠ্যক্রম এবং মূল্যায়ন পদ্ধতির সংস্কার ঘোষণা করা হয়েছে।",
-    bulletPoints: [
-      "স্কুল এবং কলেজ স্তরে ব্যবহারিক ও পেশাগত দক্ষতার উপর বিশেষ গুরুত্ব আরোপ।",
-      "মাতৃভাষায় প্রাথমিক শিক্ষা এবং প্রযুক্তি নির্ভর শিক্ষার প্রসার।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: জাতীয় শিক্ষা নীতির মূল স্তম্ভ ও লক্ষ্য।"
-    ],
-    examRelevance: "WBCS, Primary TET, SSC, State Govt",
-    isImportant: true
-  },
-  {
-    id: "ca-blueprint-2",
-    category: "West Bengal",
-    date: "16 September 2025",
-    readTime: "4 min read",
-    titleBn: "পশ্চিমবঙ্গে নতুন প্রকল্প ঘোষণা",
-    titleEn: "New Welfare Schemes Announced in West Bengal",
-    summaryBn: "পশ্চিমবঙ্গ সরকারের সাম্প্রতিক মন্ত্রিসভার বৈঠকে গ্রামীণ যুবকদের কর্মসংস্থান ও স্বনির্ভরতার জন্য নতুন আর্থিক উদ্যোগ গৃহীত হয়েছে।",
-    bulletPoints: [
-      "গ্রামীণ অর্থনৈতিক ক্ষমতায়ন ও স্থানীয় কর্মসংস্থান বৃদ্ধি।",
-      "স্বনির্ভর গোষ্ঠীর জন্য বিশেষ আর্থিক ঋণ সুবিধা।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: পশ্চিমবঙ্গ সরকারের প্রধান জনকল্যাণমূলক প্রকল্প।"
-    ],
-    examRelevance: "Panchayat Exam, WBP, Group C & D, WBCS",
-    isImportant: true
-  },
-  {
-    id: "ca-blueprint-3",
-    category: "International",
-    date: "16 September 2025",
-    readTime: "6 min read",
-    titleBn: "G20 সম্মেলনে ভারতের অবস্থান",
-    titleEn: "India's Strategic Stance at G20 Summit",
-    summaryBn: "আন্তর্জাতিক মঞ্চে ভারতের নেতৃত্বাধীন গ্লোবাল সাউথ উদ্যোগ এবং অর্থনৈতিক সংহতি নিয়ে আলোচনা প্রশংসিত হয়েছে।",
-    bulletPoints: [
-      "সবুজ শক্তি রূপান্তর এবং বৈশ্বিক জলবায়ু অর্থায়ন নিয়ে জোরদার দাবি।",
-      "ডিজিটাল পাবলিক ইনফ্রাস্ট্রাকচার (DPI) মডেলের বিশ্বব্যাপী স্বীকৃতি।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: G20 সদস্য দেশ ও শীর্ষ সম্মেলনের ঘোষণাপত্র।"
-    ],
-    examRelevance: "WBCS Mains & Prelims, UPSC, Banking",
-    isImportant: true
-  },
-  {
-    id: "ca-blueprint-4",
-    category: "Science & Tech",
-    date: "16 September 2025",
-    readTime: "4 min read",
-    titleBn: "চন্দ্রযান-৪ এর নতুন সাফল্য",
-    titleEn: "ISRO Chandrayaan-4 Lunar Mission Milestones",
-    summaryBn: "চাঁদের মাটি ও পাথরের নমুনা পৃথিবীতে ফিরিয়ে আনার জন্য ইসরোর চন্দ্রযান-৪ অভিযানের প্রাথমিক নকশা ও পরীক্ষা সফলভাবে সম্পন্ন হয়েছে।",
-    bulletPoints: [
-      "লুনার স্যাম্পল রিটার্ন মিশনের জন্য স্বয়ংক্রিয় ডকিং প্রযুক্তির সফল পরীক্ষণ।",
-      "ভারতের স্পেস ভিশন ২০৪৭-এর অংশ হিসেবে চাঁদে মানব অবতরণের প্রস্তুতি।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: ইসরোর সাম্প্রতিক মহাকাশ অভিযান ও রকেট মডেল।"
-    ],
-    examRelevance: "WBCS, Railway NTPC, SSC CGL",
-    isImportant: true
-  },
-  {
-    id: "ca-2",
-    category: "Science & Tech",
-    date: "Yesterday",
-    readTime: "4 min read",
-    titleBn: "ISRO সফলভাবে মহাকাশে উৎক্ষেপণ করল উন্নত নেভিগেশন স্যাটেলাইট NVS-02",
-    titleEn: "ISRO Successfully Launches Next-Gen Navigation Satellite NVS-02 into Orbit",
-    summaryBn: "শ্রীহরিকোটার সতীশ ধাওয়ান মহাকাশ কেন্দ্র থেকে GSLV-F12 রকেটের সাহায্যে সফলভাবে উপগ্রহটি প্রতিস্থাপিত হয়েছে।",
-    bulletPoints: [
-      "NavIC (Navigation with Indian Constellation) সিস্টেমকে আরও নির্ভুল ও সুরক্ষিত করতে এই উৎক্ষেপণ।",
-      "এতে ব্যবহৃত হয়েছে স্বদেশীয় রুবিডিয়াম পারমাণবিক ঘড়ি (Rubidium Atomic Clock)।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: NavIC-এর পুরো নাম, উৎক্ষেপণকারী যান ও স্যাটেলাইটের শ্রেণি।"
-    ],
-    examRelevance: "WBCS Prelims & Mains, Railway NTPC, SSC CGL",
-    isImportant: true
-  },
-  {
-    id: "ca-3",
-    category: "Economy",
-    date: "2 days ago",
-    readTime: "3 min read",
-    titleBn: "RBI মুদ্রা নীতি কমিটির সিদ্ধান্ত: রেপো রেট অপরিবর্তিত রাখা হল ৬.৫% হারে",
-    titleEn: "RBI Monetary Policy Committee Keeps Repo Rate Unchanged at 6.5%",
-    summaryBn: "মূল্যস্ফীতি নিয়ন্ত্রণ এবং অর্থনৈতিক প্রবৃদ্ধির মধ্যে ভারসাম্য রক্ষায় কেন্দ্রীয় ব্যাঙ্ক সুদের হার স্থির রাখার সিদ্ধান্ত নিয়েছে।",
-    bulletPoints: [
-      "রিজার্ভ ব্যাঙ্কের MPC-এর ৬ জন সদস্যের সংখ্যাগরিষ্ঠের মতামতে রেপো রেট অপরিবর্তিত রইল।",
-      "স্ট্যান্ডিং ডিপোজিট ফ্যাসিলিটি (SDF) রেট ৬.২৫% এবং মার্জিনাল স্ট্যান্ডিং ফ্যাসিলিটি (MSF) রেট ৬.৭৫% বহাল।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: MPC-এর গঠন, মুদ্রানীতির হাতিয়ার ও রেপো রেটের সংজ্ঞা।"
-    ],
-    examRelevance: "PSC Clerkship, WBCS, Banking & Insurance",
-    isImportant: false
-  },
-  {
-    id: "ca-4",
-    category: "Sports",
-    date: "3 days ago",
-    readTime: "2 min read",
-    titleBn: "দাবা অলিম্পিয়াডে ঐতিহাসিক সোনা জয় ভারতীয় পুরুষ ও মহিলা দলের",
-    titleEn: "India Wins Historic Double Gold in 45th Chess Olympiad",
-    summaryBn: "বুদাপেস্টে আয়োজিত ৪৫তম দাবা অলিম্পিয়াডে ভারতীয় দল অসাধারণ পারফর্ম করে উন্মুক্ত ও মহিলা দুটি বিভাগেই স্বর্ণপদক অর্জন করে।",
-    bulletPoints: [
-      "ডি. গুকেশ এবং রমেশবাবু প্রজ্ঞানন্দ আন্তর্জাতিক গ্র্যান্ডমাস্টারদের বিরুদ্ধে অপরাজিত রইলেন।",
-      "মহিলা বিভাগে তানিয়া সচদেব ও দিব্যা দেশমুখ দুর্দান্ত নেতৃত্ব দেন।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: আয়োজনস্থল, ভারতের স্বর্ণপদক জয়ী খেলোয়াড়দের নাম।"
-    ],
-    examRelevance: "WBP Constable, KP, Rail Group D, WBCS",
-    isImportant: true
-  },
-  {
-    id: "ca-5",
-    category: "National",
-    date: "4 days ago",
-    readTime: "3 min read",
-    titleBn: "দেশের নতুন মুখ্য নির্বাচন কমিশনার (CEC) হিসেবে দায়িত্ব গ্রহণ",
-    titleEn: "Appointment of New Chief Election Commissioner of India Under Article 324",
-    summaryBn: "রাষ্ট্রপতি দ্রৌপদী মুর্মু সংবিধানের ৩২৪ ধারা অনুযায়ী নতুন নির্বাচন কমিশনার নিয়োগ সংক্রান্ত বিজ্ঞপ্তি জারি করেছেন।",
-    bulletPoints: [
-      "সংবিধানের ৩২৪ ধারা অনুযায়ী প্রধান নির্বাচন কমিশনার ও অন্যান্য নির্বাচন কমিশনাররা নিযুক্ত হন।",
-      "কার্যকাল: ৬ বছর অথবা ৬৫ বছর বয়স পর্যন্ত (যেটি আগে হবে)।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: ভারতীয় সংবিধানের ভাগ ১৫ (Part XV), নির্বাচন কমিশনের ক্ষমতা ও কার্যকারিতা।"
-    ],
-    examRelevance: "WBCS Polity, PSC Miscellaneous, KP SI",
-    isImportant: true
-  },
-  {
-    id: "ca-6",
-    category: "International",
-    date: "5 days ago",
-    readTime: "3 min read",
-    titleBn: "জাতিসংঘের পরিবেশ সম্মেলন (COP) ২০২৪-এ জলবায়ু অর্থায়ন লক্ষ্যমাত্রা নির্ধারণ",
-    titleEn: "UN Climate Change Conference Sets New Global Climate Finance Goals",
-    summaryBn: "উন্নয়নশীল দেশগুলির পরিবেশ সুরক্ষা ও কার্বন নিঃসরণ হ্রাসের জন্য আন্তর্জাতিক তহবিল সহায়তার চুক্তি স্বাক্ষরিত হয়েছে।",
-    bulletPoints: [
-      "প্যারিস চুক্তির প্রতিশ্রুতি বাস্তবায়নের অংশ হিসেবে এই সম্মেলন অনুষ্ঠিত হয়।",
-      "লস অ্যান্ড ড্যামেজ ফান্ড (Loss and Damage Fund)-এর কার্যক্রমকে কার্যকর রূপ দেওয়া হয়।",
-      "পরীক্ষার জন্য গুরুত্বপূর্ণ: COP সম্মেলনের সংস্করণ ও পরিবেশ বিষয়ক আন্তর্জাতিক চুক্তি।"
-    ],
-    examRelevance: "WBCS Mains, SSC, Central Govt Exams",
-    isImportant: false
-  }
-];
-
-const categoryList = [
+const articleCategoryList = [
   "All",
   "West Bengal",
   "National",
@@ -195,11 +49,42 @@ const categoryList = [
   "Sports"
 ] as const;
 
+const testCategoryFilters = [
+  { id: "all", label: "All Tests (সমস্ত টেস্ট)", icon: Layers },
+  { id: "daily", label: "Daily Speed Tests (দৈনিক)", icon: Zap },
+  { id: "wb_special", label: "West Bengal Special (পশ্চিমবঙ্গ)", icon: Target },
+  { id: "monthly", label: "Monthly Mega (মেগা মক)", icon: Award },
+  { id: "science_tech", label: "Science & Space (বিজ্ঞান)", icon: Sparkles },
+  { id: "sports", label: "Sports & Awards (খেলাধুলা)", icon: Flame },
+  { id: "economy", label: "Economy & Summits (অর্থনীতি)", icon: Globe },
+] as const;
+
 export default function CurrentAffairs() {
   const navigate = useNavigate();
+
+  // Primary Tab: "tests" (Mock Tests) or "digest" (Articles)
+  const [activeTab, setActiveTab] = useState<"tests" | "digest">("tests");
+
+  // Test Runner State
+  const [activeDrillConfig, setActiveDrillConfig] = useState<DrillConfig | null>(null);
+  const [activeDrillQuestions, setActiveDrillQuestions] = useState<DrillQuestion[]>([]);
+  const [selectedTestFilter, setSelectedTestFilter] = useState<string>("all");
+
+  // Saved Attempts state (stores completed scores for tests)
+  const [completedScores, setCompletedScores] = useState<Record<string, { score: number; total: number; date: string }>>(() => {
+    try {
+      const saved = localStorage.getItem("ca_completed_tests");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Articles state
   const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly">("daily");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [articles, setArticles] = useState<CurrentAffairsArticle[]>(INITIAL_CURRENT_AFFAIRS);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem("ca_bookmarks");
@@ -208,6 +93,82 @@ export default function CurrentAffairs() {
       return new Set();
     }
   });
+
+  useEffect(() => {
+    fetchCurrentAffairs().then(data => {
+      if (data && data.length > 0) {
+        setArticles(data);
+      }
+    });
+
+    const handleUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<CurrentAffairsArticle[]>;
+      if (customEvent.detail) {
+        setArticles(customEvent.detail);
+      }
+    };
+    window.addEventListener("current_affairs_updated", handleUpdate);
+    return () => {
+      window.removeEventListener("current_affairs_updated", handleUpdate);
+    };
+  }, []);
+
+  // Filtered Mock Tests
+  const filteredMockTests = useMemo(() => {
+    if (selectedTestFilter === "all") return CURRENT_AFFAIRS_MOCK_TESTS;
+    return CURRENT_AFFAIRS_MOCK_TESTS.filter(t => t.category === selectedTestFilter);
+  }, [selectedTestFilter]);
+
+  // Filtered Articles
+  const filteredArticles = useMemo(() => {
+    return articles.filter(item => {
+      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        !query ||
+        item.titleBn.toLowerCase().includes(query) ||
+        item.titleEn.toLowerCase().includes(query) ||
+        item.summaryBn.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [articles, selectedCategory, searchQuery]);
+
+  // Start a specific Current Affairs Mock Test
+  const handleStartTest = (test: CurrentAffairsMockTest) => {
+    const config: DrillConfig = {
+      title: test.titleBn,
+      subtitle: `${test.questionCount}টি প্রশ্ন • ${test.durationMinutes} মিনিট • নেগেটিভ মার্কিং ০.২৫`,
+      examName: test.targetExams,
+      subject: "Current Affairs",
+      questionCount: test.questions.length,
+      timeLimitMinutes: test.durationMinutes,
+      negativeMarks: test.negativeMarks,
+      marksPerQuestion: 1,
+      mode: "timed_quiz",
+    };
+    setActiveDrillQuestions(test.questions);
+    setActiveDrillConfig(config);
+  };
+
+  // Launch a 5-MCQ Quick Booster Drill
+  const handleStartQuickBooster = () => {
+    const shuffled = [...ALL_CURRENT_AFFAIRS_QUESTIONS].sort(() => 0.5 - Math.random()).slice(0, 5);
+    const config: DrillConfig = {
+      title: "কারেন্ট অ্যাফেয়ার্স কুইক বুস্টার টেস্ট",
+      subtitle: "৫টি দ্রুত প্রশ্ন • ৫ মিনিট • তাৎক্ষণিক সমাধান",
+      examName: "WBCS • WBP • Clerkship",
+      subject: "Current Affairs",
+      questionCount: 5,
+      timeLimitMinutes: 5,
+      negativeMarks: 0.25,
+      marksPerQuestion: 1,
+      mode: "timed_quiz",
+    };
+    setActiveDrillQuestions(shuffled);
+    setActiveDrillConfig(config);
+  };
 
   const toggleBookmark = (id: string) => {
     setBookmarkedIds(prev => {
@@ -241,21 +202,6 @@ export default function CurrentAffairs() {
     }
   };
 
-  const filteredArticles = useMemo(() => {
-    return SAMPLE_ARTICLES.filter(item => {
-      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        !query ||
-        item.titleBn.toLowerCase().includes(query) ||
-        item.titleEn.toLowerCase().includes(query) ||
-        item.summaryBn.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query);
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [selectedCategory, searchQuery]);
-
   const getCategoryBadgeColor = (cat: string) => {
     switch (cat) {
       case "West Bengal":
@@ -278,237 +224,440 @@ export default function CurrentAffairs() {
   return (
     <StudentLayout>
       <div className="space-y-5 sm:space-y-6 pb-20 max-w-4xl mx-auto px-1 sm:px-2">
-        {/* Header Bar */}
+        {/* Top Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="p-2 rounded-xl bg-blue-50 text-[#2563EB]">
-                <Globe className="w-5 h-5" />
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <span className="p-2.5 rounded-2xl bg-blue-500/10 text-[#0066FF] border border-blue-100 shadow-2xs">
+                <Globe className="w-5 h-5 text-[#0066FF]" />
               </span>
               <div>
-                <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight font-display">
-                  Current Affairs Hub
+                <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight font-display flex items-center gap-2">
+                  <span>Current Affairs</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-[#0066FF] border border-blue-200/80 font-bold uppercase tracking-wider">
+                    Mock Tests
+                  </span>
                 </h1>
                 <BengaliText className="text-xs text-slate-500 font-medium">
-                  দৈনিক ও মাসিক গুরুত্বপূর্ণ কারেন্ট অ্যাফেয়ার্স
+                  পশ্চিমবঙ্গ ও সর্বভারতীয় চাকরির পরীক্ষার জন্য দৈনিক ও বিষয়ভিত্তিক স্পিড টেস্ট
                 </BengaliText>
               </div>
             </div>
 
             {/* Study Navigation Switcher: Study Notes | Current Affairs */}
-            <div className="flex items-center gap-2 p-1 bg-slate-100/90 rounded-2xl w-fit border border-slate-200/60 shadow-2xs">
+            <div className="flex items-center gap-2 p-1 bg-slate-100/90 rounded-2xl w-fit border border-slate-200/60 shadow-2xs mt-2">
               <button
                 onClick={() => navigate("/student/notes")}
-                className="px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                className="px-3.5 py-1 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Study Notes
               </button>
               <button
-                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-white text-blue-700 shadow-2xs"
+                className="px-3.5 py-1 rounded-xl text-xs font-bold bg-white text-[#0066FF] shadow-2xs"
               >
                 Current Affairs & GK
               </button>
             </div>
           </div>
 
-          {/* Time Selector Pills: Daily | Weekly | Monthly */}
-          <div className="inline-flex bg-slate-100 p-1 rounded-2xl border border-slate-200/70 self-start sm:self-auto">
-            {(["daily", "weekly", "monthly"] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setTimeFilter(tab)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
-                  timeFilter === tab
-                    ? "bg-white text-[#2563EB] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Daily MCQ Challenge CTA Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white px-4 py-3 sm:p-5 md:p-6 shadow-md border border-slate-800">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
-            <div className="space-y-1 sm:space-y-1.5 max-w-lg">
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-[8px] sm:text-[10px] font-black uppercase tracking-wider">
-                <Sparkles className="w-3 h-3" />
-                Live 10-Question Test
-              </div>
-              <h2 className="text-base sm:text-lg md:text-xl font-black font-display tracking-tight text-white">
-                Daily Current Affairs MCQ Practice
-              </h2>
-              <BengaliText className="text-xs text-slate-300 block">
-                আজকের আলোচিত ঘটনাবলীর উপর ১০টি MCQ অনুশীলন করে নিজের স্কোর যাচাই করুন।
-              </BengaliText>
-            </div>
+          {/* Tab Switcher: Mock Tests vs Study Digest */}
+          <div className="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200/80 self-start sm:self-auto shadow-2xs">
             <button
-              onClick={() => navigate("/student/daily")}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#2563EB] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all shrink-0 active:scale-95"
+              onClick={() => setActiveTab("tests")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                activeTab === "tests"
+                  ? "bg-[#0066FF] text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
             >
-              Start Test
-              <ArrowRight className="w-4 h-4" />
+              <FileCheck2 className="w-3.5 h-3.5" />
+              <span>মক টেস্ট ({CURRENT_AFFAIRS_MOCK_TESTS.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("digest")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                activeTab === "digest"
+                  ? "bg-[#0066FF] text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>স্টাডি ডাইজেস্ট ({articles.length})</span>
             </button>
           </div>
         </div>
 
-        {/* Search & Category Filter Section */}
-        <div className="space-y-3">
-          {/* Search Box */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by topic, state, exam or keyword (e.g. ISRO, WBCS, WB Govt)..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
-            />
-          </div>
+        {/* ---------------------------------------------------- */}
+        {/* TAB 1: MOCK TESTS (DEFAULT & USER REQUESTED FOCUS) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "tests" && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Featured Live Daily CA Speed Test Card */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0A0F1D] text-white p-5 sm:p-6 shadow-xl border border-slate-800">
+              <div className="absolute -top-12 -right-12 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Category Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {categoryList.map(cat => {
-              const active = selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                    active
-                      ? "bg-[#2563EB] text-white border-[#2563EB] shadow-xs"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-900"
-                  }`}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div className="space-y-2 max-w-xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                      Live Today
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-[10px] font-bold">
+                      ১০টি প্রশ্ন • ১০ মিনিট
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                      নেগেটিভ মার্কিং -০.২৫
+                    </span>
+                  </div>
 
-        {/* Current Affairs Articles Feed */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
-            <span>Showing {filteredArticles.length} updates</span>
-            <span>WB & National Exam Focused</span>
-          </div>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-black font-display text-white tracking-tight leading-snug">
+                    Daily Current Affairs Speed Test
+                  </h2>
 
-          {filteredArticles.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded-3xl border border-slate-200/80 shadow-2xs">
-              <BookOpen className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-bold text-slate-700">No articles found</p>
-              <p className="text-xs text-slate-400 mt-1">Try changing your category or search keyword</p>
+                  <BengaliText className="text-xs sm:text-sm text-slate-300 leading-relaxed block">
+                    পশ্চিমবঙ্গ সরকারের নতুন প্রকল্প, জাতীয় নিয়োগ, মহাকাশ অভিযান ও সাম্প্রতিক আলোচিত বিষয় থেকে বাছাই করা ১০টি এমসিকিউ দিয়ে নিজের স্কোর যাচাই করুন।
+                  </BengaliText>
+
+                  <div className="text-[11px] text-slate-400 flex items-center gap-2 pt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>বাংলা ও ইংরেজি দ্বিভাষিক প্রশ্ন • বিস্তারিত সমাধান ও শর্টকাট নোট</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 shrink-0">
+                  <button
+                    onClick={() => handleStartTest(CURRENT_AFFAIRS_MOCK_TESTS[0])}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#0066FF] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+                  >
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>লাইভ টেস্ট শুরু করুন</span>
+                  </button>
+
+                  <button
+                    onClick={handleStartQuickBooster}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 active:scale-95 transition-all"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>কুইক ৫-MCQ বুস্টার</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : (
-            filteredArticles.map(article => {
-              const isSaved = bookmarkedIds.has(article.id);
-              return (
-                <motion.article
-                  key={article.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4"
-                >
-                  {/* Card Meta Top */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border ${getCategoryBadgeColor(
-                          article.category
-                        )}`}
-                      >
-                        {article.category}
-                      </span>
-                      {article.isImportant && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/70 flex items-center gap-1">
-                          <Sparkles className="w-2.5 h-2.5" />
-                          High Yield
+
+            {/* Test Category Filter Pills */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
+                <span>ফিল্টার অনুযায়ী মক টেস্ট বেছে নিন:</span>
+                <span>{filteredMockTests.length}টি টেস্ট উপলব্ধ</span>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {testCategoryFilters.map(filter => {
+                  const active = selectedTestFilter === filter.id;
+                  const Icon = filter.icon;
+                  return (
+                    <button
+                      key={filter.id}
+                      onClick={() => setSelectedTestFilter(filter.id)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                        active
+                          ? "bg-[#0066FF] text-white border-[#0066FF] shadow-xs"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-900"
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{filter.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mock Tests Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredMockTests.map((test, index) => {
+                const pastScore = completedScores[test.id];
+
+                return (
+                  <motion.div
+                    key={test.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between space-y-4 group"
+                  >
+                    <div className="space-y-3">
+                      {/* Top Badge & Duration */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg ${test.badgeColor} shadow-2xs`}>
+                          {test.badge}
                         </span>
-                      )}
+
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-bold">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {test.durationMinutes} মিনিট
+                          </span>
+                          <span>•</span>
+                          <span className="text-slate-600">
+                            {test.questionCount}টি প্রশ্ন
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Titles */}
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 font-display group-hover:text-[#0066FF] transition-colors">
+                          {test.titleBn}
+                        </h3>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          {test.title}
+                        </p>
+                      </div>
+
+                      {/* Subtitle / Key topics */}
+                      <p className="text-xs text-slate-600 font-bengali leading-relaxed bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+                        {test.subtitleBn}
+                      </p>
+
+                      {/* Stats Pills */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                          মোট নম্বর: {test.totalMarks}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100">
+                          নেগেটিভ: ০.২৫
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          {test.categoryLabelBn}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{article.date}</span>
-                      <span>•</span>
-                      <span>{article.readTime}</span>
-                    </div>
-                  </div>
-
-                  {/* Headlines */}
-                  <div className="space-y-1.5">
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug font-display">
-                      {article.titleBn}
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                      {article.titleEn}
-                    </p>
-                  </div>
-
-                  {/* Bullet Points / Exam Takeaways */}
-                  <div className="bg-slate-50/80 rounded-2xl p-3.5 sm:p-4 border border-slate-100 space-y-2">
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                      পরীক্ষার জন্য মূল তথ্য (Exam Key Points)
-                    </div>
-                    <ul className="space-y-1.5 text-xs text-slate-700">
-                      {article.bulletPoints.map((pt, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                          <span>{pt}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Card Bottom: Exam Relevance & Actions */}
-                  <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-                      <span className="font-bold text-slate-700">Target Exams:</span>
-                      <span className="text-blue-600 font-semibold">{article.examRelevance}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
-                      <button
-                        onClick={() => toggleBookmark(article.id)}
-                        className={`p-2 rounded-xl border transition-all text-xs font-semibold flex items-center gap-1.5 ${
-                          isSaved
-                            ? "bg-amber-50 text-amber-600 border-amber-200"
-                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                        }`}
-                        title="Save to reading list"
-                      >
-                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-amber-500 text-amber-500" : ""}`} />
-                        <span className="text-[11px]">{isSaved ? "Saved" : "Save"}</span>
-                      </button>
+                    {/* Footer: Target Exams & Action Button */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[170px] sm:max-w-[200px]" title={test.targetExams}>
+                        🎯 {test.targetExams}
+                      </div>
 
                       <button
-                        onClick={() => handleShare(article)}
-                        className="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-all text-xs font-semibold flex items-center gap-1.5"
-                        title="Share article"
+                        onClick={() => handleStartTest(test)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0066FF] hover:bg-blue-600 text-white font-bold text-xs shadow-xs active:scale-95 transition-all shrink-0"
                       >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="text-[11px]">Share</span>
-                      </button>
-
-                      <button
-                        onClick={() => navigate("/student/daily")}
-                        className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#2563EB] border border-blue-200/80 hover:bg-blue-100/70 transition-all text-[11px] font-bold flex items-center gap-1"
-                      >
-                        Practice MCQs
-                        <ChevronRight className="w-3.5 h-3.5" />
+                        <Play className="w-3.5 h-3.5 fill-white" />
+                        <span>Start Test</span>
                       </button>
                     </div>
-                  </div>
-                </motion.article>
-              );
-            })
-          )}
-        </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Quick Practice Bottom Banner */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-blue-50/80 border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-2xl bg-white text-[#0066FF] shadow-2xs shrink-0">
+                  <RotateCcw className="w-5 h-5" />
+                </span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                    ভুল উত্তরগুলো পুনরায় রিভিশন দিন
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    টেস্টে ভুল হওয়া সমস্ত প্রশ্ন স্বয়ংক্রিয়ভাবে আপনার ভুল খাতায় (Mistakes Notebook) সংরক্ষিত হয়।
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/student/mistakes")}
+                className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs shadow-2xs whitespace-nowrap active:scale-95 transition-all"
+              >
+                ভুল খাতা খুলুন
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB 2: STUDY DIGEST / ARTICLES (PRESERVED READING)  */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "digest" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Search & Category Filter Section */}
+            <div className="space-y-3">
+              {/* Search Box */}
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by topic, state, exam or keyword (e.g. ISRO, WBCS, WB Govt)..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full h-11 pl-10 pr-4 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {articleCategoryList.map(cat => {
+                  const active = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                        active
+                          ? "bg-[#0066FF] text-white border-[#0066FF] shadow-xs"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-900"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Current Affairs Articles Feed */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
+                <span>Showing {filteredArticles.length} updates</span>
+                <span>WB & National Exam Focused</span>
+              </div>
+
+              {filteredArticles.length === 0 ? (
+                <div className="p-8 text-center bg-white rounded-3xl border border-slate-200/80 shadow-2xs">
+                  <BookOpen className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-slate-700">No articles found</p>
+                  <p className="text-xs text-slate-400 mt-1">Try changing your category or search keyword</p>
+                </div>
+              ) : (
+                filteredArticles.map(article => {
+                  const isSaved = bookmarkedIds.has(article.id);
+                  return (
+                    <motion.article
+                      key={article.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4"
+                    >
+                      {/* Card Meta Top */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border ${getCategoryBadgeColor(
+                              article.category
+                            )}`}
+                          >
+                            {article.category}
+                          </span>
+                          {article.isImportant && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/70 flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              High Yield
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{article.date}</span>
+                          <span>•</span>
+                          <span>{article.readTime}</span>
+                        </div>
+                      </div>
+
+                      {/* Headlines */}
+                      <div className="space-y-1.5">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug font-display">
+                          {article.titleBn}
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                          {article.titleEn}
+                        </p>
+                      </div>
+
+                      {/* Bullet Points / Exam Takeaways */}
+                      <div className="bg-slate-50/80 rounded-2xl p-3.5 sm:p-4 border border-slate-100 space-y-2">
+                        <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF]" />
+                          পরীক্ষার জন্য মূল তথ্য (Exam Key Points)
+                        </div>
+                        <ul className="space-y-1.5 text-xs text-slate-700">
+                          {article.bulletPoints.map((pt, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                              <span>{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Card Bottom: Exam Relevance & Actions */}
+                      <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
+                          <span className="font-bold text-slate-700">Target Exams:</span>
+                          <span className="text-[#0066FF] font-semibold">{article.examRelevance}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <button
+                            onClick={() => toggleBookmark(article.id)}
+                            className={`p-2 rounded-xl border transition-all text-xs font-semibold flex items-center gap-1.5 ${
+                              isSaved
+                                ? "bg-amber-50 text-amber-600 border-amber-200"
+                                : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                            }`}
+                            title="Save to reading list"
+                          >
+                            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-amber-500 text-amber-500" : ""}`} />
+                            <span className="text-[11px]">{isSaved ? "Saved" : "Save"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleShare(article)}
+                            className="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-all text-xs font-semibold flex items-center gap-1.5"
+                            title="Share article"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            <span className="text-[11px]">Share</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setActiveTab("tests");
+                              handleStartTest(CURRENT_AFFAIRS_MOCK_TESTS[0]);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#0066FF] border border-blue-200/80 hover:bg-blue-100/70 transition-all text-[11px] font-bold flex items-center gap-1"
+                          >
+                            Practice Mock Test
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.article>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* INTERACTIVE DRILL RUNNER MODAL                       */}
+        {/* ---------------------------------------------------- */}
+        {activeDrillConfig && (
+          <InteractiveDrillRunner
+            config={activeDrillConfig}
+            questions={activeDrillQuestions}
+            onClose={() => {
+              setActiveDrillConfig(null);
+              setActiveDrillQuestions([]);
+            }}
+          />
+        )}
       </div>
     </StudentLayout>
   );
