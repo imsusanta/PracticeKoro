@@ -270,8 +270,8 @@ const AdminSettings = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold shrink-0">
                                     {adminProfile.full_name?.charAt(0)?.toUpperCase() || adminProfile.email.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1">

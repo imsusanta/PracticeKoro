@@ -152,5 +152,25 @@ export async function fetchUserAttempts(userId: string): Promise<Record<string, 
       }
     });
   }
+
+  // Merge any locally cached attempts (for topic-wise chapter tests)
+  try {
+    const localRaw = localStorage.getItem(`pk_user_attempts_${userId}`);
+    if (localRaw) {
+      const localAtt = JSON.parse(localRaw);
+      Object.entries(localAtt).forEach(([testId, info]: [string, any]) => {
+        if (!attemptsByTest[testId]) {
+          attemptsByTest[testId] = info;
+        } else if (info.best_percentage > attemptsByTest[testId].best_percentage) {
+          attemptsByTest[testId].best_percentage = info.best_percentage;
+          attemptsByTest[testId].attempt_id = info.attempt_id;
+          if (info.passed) attemptsByTest[testId].passed = true;
+        }
+      });
+    }
+  } catch (e) {
+    // ignore
+  }
+
   return attemptsByTest;
 }

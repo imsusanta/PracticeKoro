@@ -12,6 +12,7 @@ import {
   Settings,
   LayoutDashboard,
   Newspaper,
+  Globe,
   LucideIcon
 } from "lucide-react";
 
@@ -60,6 +61,7 @@ export const navSections: NavSection[] = [
   {
     title: "CONTENT & CMS",
     items: [
+      { name: "Current Affairs", path: "/admin/current-affairs", icon: Globe },
       { name: "Study Notes", path: "/admin/notes", icon: NotebookPen },
       { name: "Blog Management", path: "/admin/blogs", icon: Newspaper },
     ]

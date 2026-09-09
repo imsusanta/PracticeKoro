@@ -397,7 +397,7 @@ export const DailyPractice = () => {
   };
 
   return (
-    <StudentLayout title="Daily Challenge" subtitle="Daily Practice Drill">
+    <StudentLayout title="Daily Challenge" subtitle="Daily Practice Test">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
         {/* Top Brand Header */}
         <div className="flex items-center justify-between gap-2 pb-1">
@@ -435,7 +435,7 @@ export const DailyPractice = () => {
                     {streak} Days Active Streak
                   </div>
                   <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display text-white">
-                    Daily 10 <span className="text-[#FBBF24]">Speed Drill</span>
+                    Daily 10 <span className="text-[#FBBF24]">Speed Test</span>
                   </h1>
                   <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
                     10 hand-curated questions covering West Bengal competitive exams. Boost quick problem solving and keep your learning streak burning!
@@ -501,7 +501,7 @@ export const DailyPractice = () => {
               <Button
                 onClick={startDailyChallenge}
                 disabled={loading || questions.length === 0}
-                className="w-full h-13 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
               >
                 <span>Start Daily 10 Challenge</span>
                 <ArrowRight className="w-5 h-5" />

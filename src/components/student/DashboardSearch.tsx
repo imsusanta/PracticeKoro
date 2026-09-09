@@ -107,7 +107,7 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-bookmarks",
     category: "practice",
-    title: "Saved Bookmarks",
+    title: "Bookmarks",
     subtitle: "Questions you bookmarked for later review",
     badge: "Saved",
     badgeColor: "bg-purple-50 text-purple-700 border-purple-200",

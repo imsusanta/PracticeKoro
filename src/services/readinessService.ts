@@ -255,8 +255,8 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
   } else {
     recommendedActions.push({
       id: "act-pyq-drill",
-      title: `${targetExamName} PYQ Drill`,
-      bengaliTitle: `${targetExamName} বিগত বছরের PYQ ড্রিল`,
+      title: `${targetExamName} PYQ Practice`,
+      bengaliTitle: `${targetExamName} বিগত বছরের PYQ প্র্যাকটিস`,
       subtitle: `Practice 10 authentic previous year questions with explanations and shortcuts.`,
       actionUrl: `/student/pyq`,
       impactLabel: "+3% Readiness",

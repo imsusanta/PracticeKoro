@@ -773,7 +773,7 @@ const StudentExams = () => {
                     className="bg-white rounded-2xl p-4 sm:p-4.5 border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all flex items-center justify-between gap-3 sm:gap-4 group"
                   >
                     {/* Left: Year Badge */}
-                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-blue-100 bg-blue-50 text-blue-700 shadow-2xs">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-blue-100 bg-blue-50 text-blue-700 shadow-2xs">
                       <Calendar className="w-5 h-5 stroke-[2.2]" />
                       <span className="text-[10px] font-black uppercase tracking-wider mt-0.5">{pyq.year}</span>
                     </div>
@@ -934,7 +934,7 @@ const StudentExams = () => {
                   >
                     {/* Left: Score Badge or Type Icon */}
                     <div
-                      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-all ${
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-all ${
                         attempt
                           ? attempt.passed
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs"

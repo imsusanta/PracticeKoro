@@ -303,11 +303,15 @@ const AdminLayout = ({ title, subtitle, children, headerActions }: AdminLayoutPr
                                         <span>Student View</span>
                                     </Button>
 
-                                    <div className="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200">
-                                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                                    <div
+                                        onClick={() => navigate("/admin/profile")}
+                                        className="flex items-center gap-2 pl-2 border-l border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
+                                        title="Admin Profile"
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
                                             A
                                         </div>
-                                        <div className="text-left">
+                                        <div className="text-left hidden md:block">
                                             <p className="text-xs font-bold text-slate-900 leading-tight">Admin</p>
                                             <p className="text-[10px] text-slate-400 font-semibold">Master Admin</p>
                                         </div>

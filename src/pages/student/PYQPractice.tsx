@@ -162,7 +162,7 @@ export const PYQPractice = () => {
     const deck = filteredQuestions.length > 0 ? filteredQuestions : questions;
     const drillQuestions = deck.slice(0, count);
 
-    const examTitle = selectedExam ? selectedExam.name : "West Bengal PYQ Drill";
+    const examTitle = selectedExam ? selectedExam.name : "West Bengal PYQ Practice";
     const yearSub = selectedYear !== "all" ? `(${selectedYear})` : "Archive";
 
     setActiveDrillConfig({
@@ -181,7 +181,7 @@ export const PYQPractice = () => {
   };
 
   return (
-    <StudentLayout title="PYQ Vault" subtitle="Previous Year Questions & Speed Drills">
+    <StudentLayout title="PYQ Vault" subtitle="Previous Year Questions & Speed Practice">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
         
         {/* Top Brand Header */}
@@ -230,7 +230,7 @@ export const PYQPractice = () => {
                   className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 h-9"
                 >
                   <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>10 MCQ Speed Drill</span>
+                  <span>10 MCQ Speed Test</span>
                 </Button>
                 <Button
                   onClick={() => launchDrill("timed_quiz", 20)}
@@ -328,7 +328,7 @@ export const PYQPractice = () => {
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold gap-1.5 h-9 shrink-0 shadow-sm"
             >
               <Zap className="w-3.5 h-3.5" />
-              <span>⚡ Start {selectedExam.name} Drill</span>
+              <span>⚡ Start {selectedExam.name} Practice</span>
             </Button>
           </div>
         )}
@@ -439,7 +439,7 @@ export const PYQPractice = () => {
               className="h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold gap-1 shadow-2xs"
             >
               <Play className="w-3 h-3" />
-              <span>Start Speed Drill ⏱️</span>
+              <span>Start Speed Test ⏱️</span>
             </Button>
           </div>
         </div>

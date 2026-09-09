@@ -5,6 +5,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { calculateAttemptScore, QuestionScoringRule } from "./attemptScoring";
+import { fetchTopicQuestions } from "./drillService";
+import { FALLBACK_DRILL_QUESTIONS } from "@/data/examCatalog";
+import { getFullMockQuestions, getMockTestPreset } from "@/data/fullMockQuestionBank";
 import type {
   StartAttemptRequest,
   StartAttemptResponse,
@@ -68,36 +71,71 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
 
   if (!error && data) {
     const res = data as StartAttemptResponse;
-    const local = getLocalDraft(res.attemptId);
-    if (local && local.answers) {
-      res.savedResponses = {
-        ...res.savedResponses,
-        ...local.answers,
-      };
+    if (res.questions && res.questions.length > 0) {
+      const local = getLocalDraft(res.attemptId);
+      if (local && local.answers) {
+        res.savedResponses = {
+          ...res.savedResponses,
+          ...local.answers,
+        };
+      }
+      return res;
     }
-    return res;
   }
 
-  // Graceful fallback if RPC is pending deployment on remote database
-  console.warn("[AttemptEngine] Primary start_exam_attempt RPC not ready, using secure sanitized fallback", error?.message);
+  // Graceful fallback if RPC is pending deployment on remote database or questions empty
+  console.warn("[AttemptEngine] Primary start_exam_attempt RPC unavailable or returned 0 questions, synthesizing sanitized test paper", error?.message);
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error("Authentication required to take exam");
   }
 
-  const { data: testData, error: testErr } = await supabase
+  const { data: testData } = await supabase
     .from("mock_tests")
     .select("*")
     .eq("id", req.testId)
     .maybeSingle();
 
-  const isDemo = !testData || req.testId === "panchayat-mock-1";
-  const durationMinutes = testData?.duration_minutes || 90;
-  const totalMarks = testData?.total_marks || 100;
-  const passingMarks = testData?.passing_marks || 40;
-  const negativeMarking = Boolean(testData ? testData.negative_marking : true);
-  const negativeMarksPerQuestion = testData?.negative_marks_per_question ?? 0.25;
+  const presetMeta = getMockTestPreset(req.testId);
+
+  // Check if this is a topic-based chapter test
+  const isTopicId = req.testId.startsWith("topic-") || (!testData && !presetMeta && req.testId.length < 30);
+  let topicInfo: any = null;
+  if (isTopicId) {
+    const rawTopicId = req.testId.replace(/^topic-/, "");
+    const { data: tData } = await supabase
+      .from("topics")
+      .select("id, name, subject_id, subjects(name)")
+      .eq("id", rawTopicId)
+      .maybeSingle();
+    topicInfo = tData;
+  }
+
+  const durationMinutes = topicInfo
+    ? 15
+    : (testData?.duration_minutes || presetMeta?.duration || 90);
+  let totalMarks = topicInfo
+    ? 15
+    : (testData?.total_marks || presetMeta?.marks || presetMeta?.questions || 100);
+  let passingMarks = topicInfo
+    ? 6
+    : (testData?.passing_marks || Math.round(totalMarks * 0.4));
+  const negativeMarking = Boolean(
+    topicInfo
+      ? true
+      : (testData ? testData.negative_marking : (presetMeta ? presetMeta.negative !== "No Negative" : true))
+  );
+  const negativeMarksPerQuestion = topicInfo
+    ? 0.25
+    : (testData?.negative_marks_per_question ?? (presetMeta?.negative ? parseFloat(presetMeta.negative.replace(/[^0-9.]/g, "")) || 0.25 : 0.25));
+  const testTitle = topicInfo
+    ? `${topicInfo.name} অধ্যায় মক টেস্ট 01`
+    : (testData?.title || presetMeta?.title || "Panchayat Full Mock Test 1");
+
+  const targetQuestions = topicInfo
+    ? 15
+    : (presetMeta?.questions || (testData?.total_marks && testData.total_marks >= 10 ? testData.total_marks : 100));
 
   let attemptId = "";
   let startedAt = new Date().toISOString();
@@ -105,14 +143,14 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
   let savedResponses: Record<string, string> = {};
   let savedReviews: string[] = [];
 
-  if (!isDemo) {
+  if (testData && !isDemo) {
     // Check if there is an active in-progress attempt to resume
     const { data: existingAttempt } = await supabase
       .from("test_attempts")
-      .select("id, started_at, expires_at")
+      .select("id, started_at")
       .eq("test_id", req.testId)
       .eq("user_id", session.user.id)
-      .eq("status", "in_progress")
+      .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -120,7 +158,6 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
     if (existingAttempt) {
       attemptId = existingAttempt.id;
       startedAt = existingAttempt.started_at || startedAt;
-      expiresAt = existingAttempt.expires_at || expiresAt;
     } else {
       // Create new in-progress attempt
       const { data: newAttempt, error: newAttErr } = await supabase
@@ -132,12 +169,10 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
           total_marks: totalMarks,
           percentage: 0,
           passed: false,
-          status: "in_progress",
+          is_active: true,
           started_at: startedAt,
-          expires_at: expiresAt,
-          exam_mode: req.mode || "simulation",
         })
-        .select("id, started_at, expires_at")
+        .select("id, started_at")
         .single();
 
       if (!newAttErr && newAttempt) {
@@ -161,7 +196,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
   }
 
   if (!attemptId) {
-    attemptId = `demo_${req.testId}_${Date.now()}`;
+    attemptId = `att_${req.testId}_${Date.now()}`;
   }
 
   // Restore local draft backup
@@ -175,69 +210,26 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
 
   let sanitizedQuestions: SanitizedQuestionItem[] = [];
 
-  if (isDemo) {
-    sanitizedQuestions = [
-      {
-        id: "demo-tq-1",
-        questionId: "demo-q-1",
-        orderIndex: 1,
-        marks: 1,
-        negativeMarks: 0.25,
-        questionText: "ভারতের সংবিধান কোন সালে কার্যকর হয়?",
-        optionA: "1947",
-        optionB: "1950",
-        optionC: "1952",
-        optionD: "1955",
-        subject: "Indian Polity",
-        topic: "Constitution",
-        difficulty: "Medium",
-      },
-      {
-        id: "demo-tq-2",
-        questionId: "demo-q-2",
-        orderIndex: 2,
-        marks: 1,
-        negativeMarks: 0.25,
-        questionText: "পশ্চিমবঙ্গের সবচেয়ে বড় জেলা কোনটি?",
-        optionA: "দক্ষিণ ২৪ পরগনা",
-        optionB: "উত্তর ২৪ পরগনা",
-        optionC: "পশ্চিম মেদিনীপুর",
-        optionD: "মুর্শিদাবাদ",
-        subject: "West Bengal GK",
-        topic: "Geography",
-        difficulty: "Medium",
-      },
-      {
-        id: "demo-tq-3",
-        questionId: "demo-q-3",
-        orderIndex: 3,
-        marks: 1,
-        negativeMarks: 0.25,
-        questionText: "মানব শরীরে রক্তের প্রধান উপাদান কোনটি?",
-        optionA: "প্লাজমা",
-        optionB: "লোহিত রক্তকণিকা",
-        optionC: "শ্বেত রক্তকণিকা",
-        optionD: "অণুচক্রিকা",
-        subject: "General Science",
-        topic: "Biology",
-        difficulty: "Medium",
-      },
-      {
-        id: "demo-tq-4",
-        questionId: "demo-q-4",
-        orderIndex: 4,
-        marks: 1,
-        negativeMarks: 0.25,
-        questionText: "ভারতের জাতীয় গান কোনটি?",
-        optionA: "জন গণ মন",
-        optionB: "বন্দে মাতরম্",
-        optionC: "সারে জাহাঁ সে আচ্ছা",
-        optionD: "আমার সোনার বাংলা",
-        subject: "General Knowledge",
-        topic: "National Symbols",
-        difficulty: "Easy",
-      },
-    ];
+  if (topicInfo) {
+    // Topic-wise mock test: dynamically fetch 15 questions for this chapter!
+    const subjectName = (topicInfo.subjects as any)?.name || "General";
+    const topicQuestions = await fetchTopicQuestions(subjectName, topicInfo.name, "all", 15);
+    sanitizedQuestions = topicQuestions.map((tq, idx) => ({
+      id: `tq-${tq.id}`,
+      questionId: tq.id,
+      orderIndex: idx + 1,
+      marks: 1,
+      negativeMarks: negativeMarking ? negativeMarksPerQuestion : 0,
+      questionText: tq.question_text,
+      optionA: tq.option_a,
+      optionB: tq.option_b,
+      optionC: tq.option_c,
+      optionD: tq.option_d,
+      subject: tq.subject || subjectName,
+      topic: tq.topic || topicInfo.name,
+      difficulty: tq.difficulty || "medium",
+      year: tq.year,
+    }));
   } else {
     // Strictly sanitized query: NEVER query correct_answer or explanation
     const { data: questionsData, error: qErr } = await supabase
@@ -248,34 +240,64 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
       .order("created_at", { ascending: true });
 
     if (qErr) {
-      throw new Error(qErr.message || "Failed to load test questions");
+      console.warn("[AttemptEngine] test_questions query warning:", qErr.message);
     }
 
-    sanitizedQuestions = (questionsData || []).map((tq: any, idx: number) => {
-      const q = Array.isArray(tq.questions) ? tq.questions[0] : tq.questions;
-      return {
-        id: tq.id,
-        questionId: tq.question_id,
-        orderIndex: tq.question_order ?? idx + 1,
-        marks: tq.marks ?? 1,
+    if (questionsData && questionsData.length > 0) {
+      // Strictly deliver 100% of uploaded questions: if admin uploaded N questions, deliver all N questions!
+      sanitizedQuestions = questionsData.map((tq: any, idx: number) => {
+        const q = Array.isArray(tq.questions) ? tq.questions[0] : tq.questions;
+        return {
+          id: tq.id,
+          questionId: tq.question_id,
+          orderIndex: tq.question_order ?? idx + 1,
+          marks: tq.marks ?? 1,
+          negativeMarks: negativeMarking ? negativeMarksPerQuestion : 0,
+          questionText: q?.question_text || "",
+          optionA: q?.option_a || "",
+          optionB: q?.option_b || "",
+          optionC: q?.option_c || "",
+          optionD: q?.option_d || "",
+          subject: q?.subject || "General",
+          topic: q?.topic || "",
+          difficulty: q?.difficulty || "medium",
+          year: q?.year,
+        };
+      });
+
+      // Recalculate total marks and passing marks dynamically to match exact uploaded questions
+      totalMarks = sanitizedQuestions.reduce((acc, q) => acc + (q.marks || 1), 0);
+      passingMarks = testData?.passing_marks && testData.passing_marks <= totalMarks
+        ? testData.passing_marks
+        : Math.round(totalMarks * 0.4);
+    } else {
+      // ONLY fallback when 0 questions are uploaded to test_questions (e.g. unseeded/placeholder mock test)
+      const fullMockQuestions = getFullMockQuestions(targetQuestions, req.testId || testTitle);
+      sanitizedQuestions = fullMockQuestions.map((fq, idx) => ({
+        id: `tq-${fq.id}`,
+        questionId: fq.id,
+        orderIndex: idx + 1,
+        marks: 1,
         negativeMarks: negativeMarking ? negativeMarksPerQuestion : 0,
-        questionText: q?.question_text || "",
-        optionA: q?.option_a || "",
-        optionB: q?.option_b || "",
-        optionC: q?.option_c || "",
-        optionD: q?.option_d || "",
-        subject: q?.subject || "General",
-        topic: q?.topic || "",
-        difficulty: q?.difficulty || "medium",
-        year: q?.year,
-      };
-    });
+        questionText: fq.question_text,
+        optionA: fq.option_a,
+        optionB: fq.option_b,
+        optionC: fq.option_c,
+        optionD: fq.option_d,
+        subject: fq.subject || "General Knowledge",
+        topic: fq.topic || testTitle || "",
+        difficulty: fq.difficulty || "medium",
+        year: fq.year,
+      }));
+      totalMarks = sanitizedQuestions.reduce((acc, q) => acc + (q.marks || 1), 0);
+      passingMarks = Math.round(totalMarks * 0.4);
+    }
   }
 
   return {
     attemptId,
     testId: testData?.id || req.testId,
-    testTitle: testData?.title || "Panchayat Full Mock Test 1",
+    testTitle,
     durationMinutes,
     totalMarks,
     passingMarks,
@@ -410,10 +432,52 @@ export async function submitAttempt(
 
   // Retrieve canonical questions and answers for grading now that submission is triggered
   let rules: QuestionScoringRule[] = scoringFallbackRules || [];
+  let candidateQuestions: any[] = [];
+  let testTitle = "Mock Test";
+  let passingMarks = 40;
+
+  // Check if this is a topic-based test
+  const rawTopicId = resolvedTestId.replace(/^topic-/, "");
+  const { data: topicData } = await supabase
+    .from("topics")
+    .select("id, name, subject_id, subjects(name)")
+    .eq("id", rawTopicId)
+    .maybeSingle();
+
+  if (topicData) {
+    testTitle = `${topicData.name} অধ্যায় মক টেস্ট 01`;
+    passingMarks = 6;
+    const subjectName = (topicData.subjects as any)?.name || "General";
+    candidateQuestions = await fetchTopicQuestions(subjectName, topicData.name, "all", 25);
+  }
+
+  let testMeta: any = null;
+  const presetMeta = getMockTestPreset(resolvedTestId);
+
+  if (resolvedTestId) {
+    const { data: tm } = await supabase
+      .from("mock_tests")
+      .select("id, title, passing_marks, total_marks")
+      .eq("id", resolvedTestId)
+      .maybeSingle();
+    testMeta = tm;
+    if (testMeta) {
+      testTitle = testMeta.title;
+      passingMarks = testMeta.passing_marks || 40;
+    } else if (presetMeta) {
+      testTitle = presetMeta.title;
+      passingMarks = Math.round((presetMeta.marks || 100) * 0.4);
+    }
+  }
+
+  const targetCount = topicData
+    ? 15
+    : (presetMeta?.questions || (testMeta?.total_marks && testMeta.total_marks >= 10 ? testMeta.total_marks : 100));
+
   if (resolvedTestId && (rules.length === 0 || !rules.some(r => r.correctAnswer))) {
     const { data: tqData } = await supabase
       .from("test_questions")
-      .select("question_id, marks, questions(id, correct_answer, subject, topic)")
+      .select("question_id, marks, questions(id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, subject, topic)")
       .eq("test_id", resolvedTestId);
 
     if (tqData && tqData.length > 0) {
@@ -428,68 +492,173 @@ export async function submitAttempt(
           topic: q?.topic || undefined,
         };
       });
+      candidateQuestions = tqData.map((tq: any) => {
+        const q = Array.isArray(tq.questions) ? tq.questions[0] : tq.questions;
+        return {
+          id: tq.question_id,
+          question_text: q?.question_text || "",
+          option_a: q?.option_a || "",
+          option_b: q?.option_b || "",
+          option_c: q?.option_c || "",
+          option_d: q?.option_d || "",
+          correct_answer: q?.correct_answer || "",
+          explanation: q?.explanation || "",
+          subject: q?.subject || "General",
+          topic: q?.topic || "",
+        };
+      });
     }
   }
 
-  // If still empty (e.g. demo mock), provide demo answers
+  // If rules are still empty (meaning 0 questions uploaded in database for this test), use authentic full mock question bank
   if (rules.length === 0) {
-    rules = [
-      { questionId: "demo-q-1", marks: 1, negativeMarks: 0.25, correctAnswer: "B", subject: "Indian Polity" },
-      { questionId: "demo-q-2", marks: 1, negativeMarks: 0.25, correctAnswer: "A", subject: "West Bengal GK" },
-      { questionId: "demo-q-3", marks: 1, negativeMarks: 0.25, correctAnswer: "A", subject: "General Science" },
-      { questionId: "demo-q-4", marks: 1, negativeMarks: 0.25, correctAnswer: "B", subject: "General Knowledge" },
-    ];
+    const fullMockQuestions = getFullMockQuestions(targetCount, resolvedTestId || testTitle);
+    candidateQuestions = fullMockQuestions;
+    rules = fullMockQuestions.map((fq) => ({
+      questionId: fq.id,
+      marks: 1,
+      negativeMarks: 0.25,
+      correctAnswer: fq.correct_answer,
+      subject: fq.subject || "General Knowledge",
+      topic: fq.topic || "",
+    }));
+  }
+
+  const calculatedTotalMarks = rules.reduce((acc, r) => acc + (r.marks || 1), 0);
+  if (passingMarks > calculatedTotalMarks) {
+    passingMarks = Math.round(calculatedTotalMarks * 0.4);
   }
 
   const evaluated = calculateAttemptScore({
     rules,
     answers: req.finalAnswers || {},
+    totalTestMarks: calculatedTotalMarks,
+    passingMarks,
   });
 
   let finalAttemptId = req.attemptId;
 
   // Persist attempt record to test_attempts if UUID or create row
   if (isUuid) {
-    await supabase.from("test_attempts").update({
-      score: evaluated.score,
-      total_marks: evaluated.totalMarks,
-      percentage: evaluated.percentage,
-      passed: evaluated.passed,
-      status: "completed",
-      completed_at: new Date().toISOString(),
-      submitted_at: new Date().toISOString(),
-      time_taken_seconds: req.timeTakenSeconds || 0,
-      unanswered_count: evaluated.unansweredCount,
-      correct_count: evaluated.correctCount,
-      wrong_count: evaluated.incorrectCount,
-      is_active: false,
-      tab_violations: req.tabViolations || 0,
-      fullscreen_violations: req.fullscreenViolations || 0,
-    }).eq("id", req.attemptId);
-  } else if (resolvedTestId) {
-    const { data: newAtt } = await supabase.from("test_attempts").insert({
-      test_id: resolvedTestId,
-      user_id: session.user.id,
-      score: evaluated.score,
-      total_marks: evaluated.totalMarks,
-      percentage: evaluated.percentage,
-      passed: evaluated.passed,
-      status: "completed",
-      started_at: new Date(Date.now() - (req.timeTakenSeconds || 60) * 1000).toISOString(),
-      completed_at: new Date().toISOString(),
-      submitted_at: new Date().toISOString(),
-      time_taken_seconds: req.timeTakenSeconds || 0,
-      unanswered_count: evaluated.unansweredCount,
-      correct_count: evaluated.correctCount,
-      wrong_count: evaluated.incorrectCount,
-      is_active: false,
-      tab_violations: req.tabViolations || 0,
-      fullscreen_violations: req.fullscreenViolations || 0,
-    }).select("id").single();
-
-    if (newAtt?.id) {
-      finalAttemptId = newAtt.id;
+    try {
+      await supabase.from("test_attempts").update({
+        score: evaluated.score,
+        total_marks: evaluated.totalMarks,
+        percentage: evaluated.percentage,
+        passed: evaluated.passed,
+        completed_at: new Date().toISOString(),
+        time_taken_seconds: req.timeTakenSeconds || 0,
+        unanswered_count: evaluated.unansweredCount,
+        correct_count: evaluated.correctCount,
+        wrong_count: evaluated.incorrectCount,
+        is_active: false,
+        tab_violations: req.tabViolations || 0,
+        fullscreen_violations: req.fullscreenViolations || 0,
+      }).eq("id", req.attemptId);
+    } catch (updErr) {
+      console.warn("[AttemptEngine] test_attempts update warning:", updErr);
     }
+  } else if (resolvedTestId && !resolvedTestId.startsWith("topic-")) {
+    try {
+      const { data: newAtt } = await supabase.from("test_attempts").insert({
+        test_id: resolvedTestId,
+        user_id: session.user.id,
+        score: evaluated.score,
+        total_marks: evaluated.totalMarks,
+        percentage: evaluated.percentage,
+        passed: evaluated.passed,
+        started_at: new Date(Date.now() - (req.timeTakenSeconds || 60) * 1000).toISOString(),
+        completed_at: new Date().toISOString(),
+        time_taken_seconds: req.timeTakenSeconds || 0,
+        unanswered_count: evaluated.unansweredCount,
+        correct_count: evaluated.correctCount,
+        wrong_count: evaluated.incorrectCount,
+        is_active: false,
+        tab_violations: req.tabViolations || 0,
+        fullscreen_violations: req.fullscreenViolations || 0,
+      }).select("id").single();
+
+      if (newAtt?.id) {
+        finalAttemptId = newAtt.id;
+      }
+    } catch (insErr) {
+      console.warn("[AttemptEngine] test_attempts insert warning:", insErr);
+    }
+  }
+
+  // Local storage persistence: guarantees 100% data availability for ReviewTest & badges
+  try {
+    const reviewAnswers = rules.map((r) => {
+      const qDet =
+        candidateQuestions.find((cq) => cq.id === r.questionId) ||
+        FALLBACK_DRILL_QUESTIONS.find((fb) => fb.id === r.questionId) || {
+          id: r.questionId,
+          question_text: "Question",
+          option_a: "Option A",
+          option_b: "Option B",
+          option_c: "Option C",
+          option_d: "Option D",
+          correct_answer: r.correctAnswer,
+          explanation: "Official explanation is being updated.",
+          subject: r.subject || "General",
+          topic: r.topic || "",
+        };
+
+      const selected = req.finalAnswers?.[r.questionId] || null;
+      const isCorrect = selected ? selected.toUpperCase() === r.correctAnswer.toUpperCase() : false;
+      return {
+        id: `ans-${r.questionId}`,
+        attempt_id: finalAttemptId,
+        question_id: r.questionId,
+        selected_answer: selected,
+        is_correct: isCorrect,
+        marks_obtained: selected ? (isCorrect ? r.marks : -(r.negativeMarks || 0)) : 0,
+        questions: qDet,
+      };
+    });
+
+    const fullAttemptRecord = {
+      attempt: {
+        id: finalAttemptId,
+        test_id: resolvedTestId,
+        user_id: session.user.id,
+        score: evaluated.score,
+        total_marks: evaluated.totalMarks,
+        percentage: evaluated.percentage,
+        passed: evaluated.passed,
+        time_taken_seconds: req.timeTakenSeconds || 0,
+        unanswered_count: evaluated.unansweredCount,
+        correct_count: evaluated.correctCount,
+        wrong_count: evaluated.incorrectCount,
+        mock_tests: {
+          id: resolvedTestId,
+          title: testTitle,
+          passing_marks: passingMarks,
+          is_paid: false,
+          price: 0,
+        },
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+      },
+      answers: reviewAnswers,
+    };
+    localStorage.setItem(`pk_completed_attempt_${finalAttemptId}`, JSON.stringify(fullAttemptRecord));
+
+    // Update user attempts cache for chapter status badge
+    const userAttemptsKey = `pk_user_attempts_${session.user.id}`;
+    const localUserAttRaw = localStorage.getItem(userAttemptsKey);
+    const localUserAtt = localUserAttRaw ? JSON.parse(localUserAttRaw) : {};
+    const prev = localUserAtt[resolvedTestId];
+    localUserAtt[resolvedTestId] = {
+      test_id: resolvedTestId,
+      attempt_id: finalAttemptId,
+      best_percentage: prev ? Math.max(prev.best_percentage, evaluated.percentage) : evaluated.percentage,
+      passed: prev ? (prev.passed || evaluated.passed) : evaluated.passed,
+      attempt_count: (prev?.attempt_count || 0) + 1,
+    };
+    localStorage.setItem(userAttemptsKey, JSON.stringify(localUserAtt));
+  } catch (storageErr) {
+    console.warn("[AttemptEngine] Local attempt caching warning:", storageErr);
   }
 
   // Insert answers into test_answers if valid attempt ID

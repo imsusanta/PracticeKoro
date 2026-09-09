@@ -132,7 +132,7 @@ export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
     if ((test as any).isPyq || test.id.includes("pyq") || test.id.startsWith("wbssc-") || test.id.startsWith("rrb-")) {
       navigate(`/student/pyq${(test as any).year ? `?year=${(test as any).year}` : ""}`);
     } else {
-      navigate(`/student/take-test/${test.id}`);
+      navigate(`/student/take-test/${test.id}?start=true`);
     }
   };
 

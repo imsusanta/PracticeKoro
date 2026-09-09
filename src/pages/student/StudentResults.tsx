@@ -351,19 +351,19 @@ const StudentResults = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 px-4 py-3.5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white select-none"
+            className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-md shadow-blue-900/10 p-3.5 sm:p-6 md:p-8 bg-gradient-to-br from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white select-none"
           >
             {/* Ambient Glows */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
             <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-sky-400/15 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="relative z-10 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <span className="inline-block bg-white/15 backdrop-blur-sm text-sky-200 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-white/10">
+            <div className="relative z-10 space-y-3.5 sm:space-y-5">
+              <div className="flex items-center justify-between gap-2.5 sm:gap-4">
+                <div className="min-w-0">
+                  <span className="inline-block bg-white/15 backdrop-blur-sm text-sky-200 text-[9px] sm:text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-white/10">
                     EXAM ANALYTICS
                   </span>
-                  <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white tracking-tight leading-[1.15] mt-2">
+                  <h2 className="text-base sm:text-2xl md:text-3xl font-black text-white tracking-tight leading-tight mt-1 sm:mt-2 truncate">
                     Performance <span className="text-[#FBBF24]">Overview</span>
                   </h2>
                   <p className="hidden sm:block text-[11px] sm:text-xs text-blue-100 font-medium leading-relaxed mt-1.5">
@@ -373,34 +373,46 @@ const StudentResults = () => {
 
                 <button
                   onClick={() => navigate("/student/leaderboard")}
-                  className="bg-[#FBBF24] hover:bg-[#F59E0B] active:scale-95 text-slate-950 font-extrabold text-xs px-4 py-2 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-2 self-start sm:self-auto transition-all shrink-0"
+                  className="bg-[#FBBF24] hover:bg-[#F59E0B] active:scale-95 text-slate-950 font-extrabold text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer"
                 >
-                  <Trophy className="w-4 h-4 text-slate-950" />
-                  <span>View Leaderboard</span>
-                  <ArrowRight className="w-3.5 h-3.5 stroke-[2.8]" />
+                  <Trophy className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+                  <span className="whitespace-nowrap">Leaderboard</span>
+                  <ArrowRight className="w-3 h-3 stroke-[2.8] shrink-0" />
                 </button>
               </div>
 
               {/* 4 Glass KPI Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-white leading-tight">{stats.totalTests}</p>
-                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Tests Completed</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <p className="text-base sm:text-2xl md:text-3xl font-black text-white leading-tight">{stats.totalTests}</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-300 sm:hidden" />
+                  </div>
+                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-0.5 sm:mt-1 truncate">Tests Completed</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-emerald-300 leading-tight">{stats.passed}</p>
-                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Tests Passed</p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <p className="text-base sm:text-2xl md:text-3xl font-black text-emerald-300 leading-tight">{stats.passed}</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 sm:hidden" />
+                  </div>
+                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-0.5 sm:mt-1 truncate">Tests Passed</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-[#FBBF24] leading-tight">{stats.avg}%</p>
-                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Average Score</p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <p className="text-base sm:text-2xl md:text-3xl font-black text-[#FBBF24] leading-tight">{stats.avg}%</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 sm:hidden" />
+                  </div>
+                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-0.5 sm:mt-1 truncate">Average Score</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-3.5">
-                  <p className="text-lg sm:text-2xl md:text-3xl font-black text-cyan-300 leading-tight">{stats.overallAccuracy}%</p>
-                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-1">Overall Accuracy</p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <p className="text-base sm:text-2xl md:text-3xl font-black text-cyan-300 leading-tight">{stats.overallAccuracy}%</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 sm:hidden" />
+                  </div>
+                  <p className="text-sky-200 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-0.5 sm:mt-1 truncate">Overall Accuracy</p>
                 </div>
               </div>
             </div>

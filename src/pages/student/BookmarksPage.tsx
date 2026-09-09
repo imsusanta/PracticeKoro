@@ -277,10 +277,10 @@ export const BookmarksPage = () => {
             <div className="space-y-1.5 sm:space-y-2.5 max-w-xl">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#FBBF24] text-[9px] sm:text-[11px] font-black uppercase tracking-wider">
                 <Bookmark className="w-3.5 h-3.5" />
-                Quick Revision Vault
+                Quick Revision
               </div>
               <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display text-white">
-                Saved <span className="text-[#FBBF24]">Bookmarks</span>
+                <span className="text-[#FBBF24]">Bookmarks</span>
               </h1>
               <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
                 Review all the high-yield questions you flagged during test series and practice sessions before your actual exam day.

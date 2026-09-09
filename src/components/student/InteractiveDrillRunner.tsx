@@ -77,7 +77,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
       setElapsedSeconds(elapsed);
 
       if (isTimed && elapsed >= totalAllowedSeconds) {
-        toast.warning("Time is up! Auto-submitting your drill...");
+        toast.warning("Time is up! Auto-submitting your test...");
         handleFinish();
       }
     }, 1000);
@@ -209,7 +209,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
               onClick={() => {
                 if (isFinished || Object.keys(answers).length === 0) {
                   onClose();
-                } else if (confirm("Exit drill? Your current progress and score will be submitted.")) {
+                } else if (confirm("Exit test? Your current progress and score will be submitted.")) {
                   handleFinish();
                 }
               }}
@@ -394,7 +394,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
 
                 <div>
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-display">
-                    Drill Completed! 🎉
+                    Practice Test Completed! 🎉
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-500 mt-1">
                     Performance analytics and negative marking breakdown generated.
@@ -485,7 +485,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                     onClick={handleFinish}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold gap-1 px-4 shadow-sm"
                   >
-                    <span>Finish Drill</span>
+                    <span>Finish Test</span>
                     <CheckCircle2 className="w-4 h-4" />
                   </Button>
                 ) : (
@@ -527,7 +527,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                 className="w-full sm:w-auto rounded-xl text-xs font-bold gap-1.5"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Retry Drill</span>
+                <span>Retry Test</span>
               </Button>
 
               <Button

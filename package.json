@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "cap sync android",
     "build:dev": "vite build --mode development",
+    "cap:sync": "cap sync android",
+    "cap:copy": "cap copy android",
+    "cap:open": "cap open android",
+    "cap:run": "cap run android",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

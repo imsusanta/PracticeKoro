@@ -79,6 +79,7 @@ const AddQuestion = lazy(() => import("./pages/admin/AddQuestion"));
 const BlogManagement = lazy(() => import("./pages/admin/BlogManagement"));
 const AddBlog = lazy(() => import("./pages/admin/AddBlog"));
 const AddNote = lazy(() => import("./pages/admin/AddNote"));
+const CurrentAffairsManagement = lazy(() => import("./pages/admin/CurrentAffairsManagement"));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/40">
@@ -125,6 +126,7 @@ const AppContent = () => {
           <Route path="/admin/add-note" element={<ProtectedRoute requireRole="admin"><AddNote /></ProtectedRoute>} />
           <Route path="/admin/blogs" element={<ProtectedRoute requireRole="admin"><BlogManagement /></ProtectedRoute>} />
           <Route path="/admin/blogs/new" element={<ProtectedRoute requireRole="admin"><AddBlog /></ProtectedRoute>} />
+          <Route path="/admin/current-affairs" element={<ProtectedRoute requireRole="admin"><CurrentAffairsManagement /></ProtectedRoute>} />
 
           {/* Public Routes */}
           <Route path="/" element={<Landing />} />

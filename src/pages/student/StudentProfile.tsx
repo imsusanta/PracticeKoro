@@ -873,7 +873,7 @@ const StudentProfile = () => {
                         <div className="relative z-10 space-y-4 sm:space-y-6">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                             <div className="flex items-center gap-3 sm:gap-3.5">
-                              <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/30 shrink-0">
+                              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/30 shrink-0">
                                 <Crown className="w-6 h-6 sm:w-7 sm:h-7 fill-slate-950" />
                               </div>
                               <div className="min-w-0">
@@ -920,7 +920,7 @@ const StudentProfile = () => {
                       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200/90 shadow-sm space-y-4 sm:space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-4 sm:pb-6">
                           <div className="flex items-center gap-3 sm:gap-3.5">
-                            <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/25 shrink-0">
+                            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/25 shrink-0">
                               <Crown className="w-6 h-6 sm:w-7 sm:h-7 fill-slate-950" />
                             </div>
                             <div className="min-w-0">
@@ -1244,7 +1244,7 @@ const StudentProfile = () => {
                             <Bookmark className="w-5 h-5 group-hover:scale-110 transition-transform" />
                           </div>
                           <div>
-                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-amber-600">Saved Bookmarks</h4>
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-amber-600">Bookmarks</h4>
                             <p className="text-[10.5px] sm:text-[11px] text-slate-500 mt-0.5">Access marked questions</p>
                           </div>
                         </div>

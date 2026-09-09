@@ -24,6 +24,7 @@ import {
   Play,
   Lock,
   FileText,
+  Newspaper,
 } from "lucide-react";
 import StudentLayout from "@/components/student/StudentLayout";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +105,7 @@ const HeroBannerCarousel = ({
           <span className="text-[#FBBF24]">Selection 🔥</span>
         </>
       ),
-      subtitle: `${greeting}, ${firstName}! Smart Practice • Mistakes Notebook • Speed Drill • Selection`,
+      subtitle: `${greeting}, ${firstName}! Smart Practice • Mistakes Notebook • Speed Test • Selection`,
       buttonText: "Start Practice 🚀",
       buttonLink: "/student/practice",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
@@ -129,11 +130,11 @@ const HeroBannerCarousel = ({
       badge: "Daily Speed Booster",
       title: (
         <>
-          Daily 10 <span className="text-[#FBBF24]">Speed Drill ⏱️</span>
+          Daily 10 <span className="text-[#FBBF24]">Speed Test ⏱️</span>
         </>
       ),
       subtitle: "Build exam-ready speed and eliminate timer panic with 10 high-yield daily MCQs.",
-      buttonText: "Take Daily Drill",
+      buttonText: "Take Daily Test",
       buttonLink: "/student/daily",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
       badgeColor: "bg-amber-500/30 border-amber-300/40 text-amber-100",
@@ -454,9 +455,9 @@ const StudentDashboard = () => {
               <div className="h-4 w-32 bg-slate-200 rounded" />
               <div className="h-3 w-20 bg-slate-200 rounded" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-20 sm:h-24 bg-slate-100 rounded-2xl" />
+                <div key={i} className="h-20 sm:h-24 bg-slate-100 rounded-xl sm:rounded-2xl" />
               ))}
             </div>
           </div>
@@ -520,82 +521,96 @@ const StudentDashboard = () => {
       <div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-2 md:py-4 pb-2 md:pb-6 space-y-4 md:space-y-5">
         
         {/* ═══════════════════════════════════════════════════════════════
-            SECTION 1: HEADER (Logo Left + Center Search + Pro Plan Badge + Bell + Avatar Right)
+            SECTION 1: HEADER (Responsive Native App Header)
             ═══════════════════════════════════════════════════════════════ */}
-        <header className="flex items-center justify-between gap-2 sm:gap-3.5 pt-1 pb-1">
-          {/* Left: PracticeKoro Brand */}
-          <div
-            onClick={() => navigate("/student/dashboard")}
-            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0"
-          >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0 shadow-xs border border-slate-200/80 group-hover:scale-105 transition-transform bg-white">
-              <img src="/logo-circle.png" alt="PracticeKoro" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center leading-none">
-                <span className="text-base sm:text-lg font-black tracking-tight text-[#0F172A]">Practice</span>
-                <span className="text-base sm:text-lg font-black tracking-tight text-[#0066FF]">Koro</span>
+        <header className="space-y-2.5 pt-0.5 pb-1">
+          {/* Top Row: Brand on Left, Actions on Right */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: PracticeKoro Brand */}
+            <div
+              onClick={() => navigate("/student/dashboard")}
+              className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0"
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0 shadow-xs border border-slate-200/80 group-hover:scale-105 transition-transform bg-white">
+                <img src="/logo-circle.png" alt="PracticeKoro" className="w-full h-full object-cover" />
               </div>
-              <span className="text-[10px] text-slate-400 font-medium tracking-tight mt-0.5 hidden sm:block">
-                Your Exam Preparation Partner
-              </span>
+              <div className="flex flex-col">
+                <div className="flex items-center leading-none">
+                  <span className="text-base sm:text-lg font-black tracking-tight text-[#0F172A]">Practice</span>
+                  <span className="text-base sm:text-lg font-black tracking-tight text-[#0066FF]">Koro</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-medium tracking-tight mt-0.5 hidden sm:block">
+                  Your Exam Preparation Partner
+                </span>
+              </div>
+            </div>
+
+            {/* Desktop Center Search Bar */}
+            <div className="hidden sm:block flex-1 max-w-sm md:max-w-md mx-2">
+              <DashboardSearch
+                exams={exams}
+                mockTests={dbTests}
+                onSelectTest={(test) => setSelectedTestForModal(test)}
+              />
+            </div>
+
+            {/* Right: Pro Plan Badge + Notifications Bell + Avatar */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Pro Plan pill button */}
+              <button
+                onClick={handleProPlanClick}
+                className={`h-8 px-2.5 rounded-full flex items-center gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border ${
+                  hasSubscription
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                    : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-200/80"
+                }`}
+                title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
+              >
+                <Crown className={`w-3.5 h-3.5 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
+                <span className="text-[11px] font-bold hidden xs:inline">
+                  {hasSubscription ? "Pro Plan" : "Upgrade"}
+                </span>
+              </button>
+
+              {/* Notifications */}
+              <button
+                onClick={() => navigate("/student/notifications")}
+                className="relative w-8 h-8 rounded-full bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 hover:text-[#0066FF] hover:border-[#0066FF]/40 shadow-xs transition-colors cursor-pointer"
+                aria-label="Notifications"
+              >
+                <Bell className="w-4 h-4 stroke-[2.2]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9.5px] font-black flex items-center justify-center ring-2 ring-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Avatar */}
+              <button
+                onClick={() => navigate("/student/profile")}
+                className="w-8 h-8 rounded-full bg-white shadow-xs border border-slate-200 overflow-hidden hover:ring-2 hover:ring-[#0066FF]/30 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                aria-label="Student Profile"
+              >
+                <img
+                  src={avatarUrl || "/logo-circle.png"}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/logo-circle.png";
+                  }}
+                />
+              </button>
             </div>
           </div>
 
-          {/* Center: Search Bar (In Red Mark Area) */}
-          <DashboardSearch
-            exams={exams}
-            mockTests={dbTests}
-            onSelectTest={(test) => setSelectedTestForModal(test)}
-          />
-
-          {/* Right: Pro Plan Badge + Notifications Bell + Avatar */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* Pro Plan pill button */}
-            <button
-              onClick={handleProPlanClick}
-              className={`h-8 sm:h-8.5 px-2 sm:px-3 rounded-full flex items-center gap-1.5 font-bold text-xs transition-all shadow-2xs cursor-pointer border ${
-                hasSubscription
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                  : "bg-[#FEF3C7] text-amber-900 border-amber-200 hover:bg-amber-200/80"
-              }`}
-              title={hasSubscription ? "Pro Plan Active" : "Upgrade to Pro"}
-            >
-              <Crown className={`w-3.5 h-3.5 shrink-0 ${hasSubscription ? "text-emerald-600 fill-emerald-500" : "text-amber-600 fill-amber-500"}`} />
-              <span className="text-[11px] sm:text-xs font-bold hidden xs:inline">
-                {hasSubscription ? "Pro Plan" : "Upgrade to Pro"}
-              </span>
-            </button>
-
-            {/* Notifications */}
-            <button
-              onClick={() => navigate("/student/notifications")}
-              className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border border-slate-200/90 flex items-center justify-center text-slate-700 hover:text-[#0066FF] hover:border-[#0066FF]/40 shadow-xs transition-colors cursor-pointer"
-              aria-label="Notifications"
-            >
-              <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9.5px] font-black flex items-center justify-center ring-2 ring-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </button>
-
-            {/* Avatar */}
-            <button
-              onClick={() => navigate("/student/profile")}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white shadow-xs border border-slate-200 overflow-hidden hover:ring-2 hover:ring-[#0066FF]/30 transition-all flex items-center justify-center cursor-pointer shrink-0"
-              aria-label="Student Profile"
-            >
-              <img
-                src={avatarUrl || "/logo-circle.png"}
-                alt={displayName}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/logo-circle.png";
-                }}
-              />
-            </button>
+          {/* Mobile Full-Width Search Row */}
+          <div className="sm:hidden w-full">
+            <DashboardSearch
+              exams={exams}
+              mockTests={dbTests}
+              onSelectTest={(test) => setSelectedTestForModal(test)}
+            />
           </div>
         </header>
 
@@ -640,19 +655,19 @@ const StudentDashboard = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-center">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-3 text-center">
             {/* Metric 1: Questions Solved */}
             <div
               onClick={() => navigate("/student/results")}
-              className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-b from-blue-50/70 to-indigo-50/30 border border-blue-100/80 hover:border-blue-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
+              className="p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-blue-50/70 to-indigo-50/30 border border-blue-100/80 hover:border-blue-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
             >
-              <div className="w-9 h-9 sm:w-8.5 sm:h-8.5 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center mb-1.5 sm:mb-2 shadow-2xs">
-                <Target className="w-4 h-4 sm:w-4 sm:h-4 stroke-[2.4]" />
+              <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center mb-1 sm:mb-2 shadow-2xs">
+                <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
               </div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+              <p className="text-base sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {todayMetrics.questions}
               </p>
-              <p className="text-xs sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5 truncate w-full">
                 Solved
               </p>
             </div>
@@ -660,15 +675,15 @@ const StudentDashboard = () => {
             {/* Metric 2: Accuracy */}
             <div
               onClick={() => navigate("/student/results")}
-              className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-b from-purple-50/70 to-violet-50/30 border border-purple-100/80 hover:border-purple-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
+              className="p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-purple-50/70 to-violet-50/30 border border-purple-100/80 hover:border-purple-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
             >
-              <div className="w-9 h-9 sm:w-8.5 sm:h-8.5 rounded-full bg-purple-500/10 text-purple-600 flex items-center justify-center mb-1.5 sm:mb-2 shadow-2xs">
-                <Zap className="w-4 h-4 sm:w-4 sm:h-4 stroke-[2.4]" />
+              <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-purple-500/10 text-purple-600 flex items-center justify-center mb-1 sm:mb-2 shadow-2xs">
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
               </div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+              <p className="text-base sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {todayMetrics.accuracy}%
               </p>
-              <p className="text-xs sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5 truncate w-full">
                 Accuracy
               </p>
             </div>
@@ -676,15 +691,15 @@ const StudentDashboard = () => {
             {/* Metric 3: Study Time */}
             <div
               onClick={() => navigate("/student/results")}
-              className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-b from-amber-50/70 to-orange-50/30 border border-amber-100/80 hover:border-amber-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
+              className="p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-amber-50/70 to-orange-50/30 border border-amber-100/80 hover:border-amber-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
             >
-              <div className="w-9 h-9 sm:w-8.5 sm:h-8.5 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mb-1.5 sm:mb-2 shadow-2xs">
-                <Clock className="w-4 h-4 sm:w-4 sm:h-4 stroke-[2.4]" />
+              <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mb-1 sm:mb-2 shadow-2xs">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4]" />
               </div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+              <p className="text-base sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {todayMetrics.studyTimeMinutes}m
               </p>
-              <p className="text-xs sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1 sm:mt-1.5 truncate w-full">
                 Study Time
               </p>
             </div>
@@ -692,15 +707,15 @@ const StudentDashboard = () => {
             {/* Metric 4: Day Streak */}
             <div
               onClick={() => navigate("/student/results")}
-              className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 hover:border-emerald-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
+              className="p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 hover:border-emerald-300 hover:shadow-2xs active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
             >
-              <div className="w-9 h-9 sm:w-8.5 sm:h-8.5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mb-1.5 sm:mb-2 shadow-2xs">
-                <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse" />
+              <div className="w-7 h-7 sm:w-8.5 sm:h-8.5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mb-1 sm:mb-2 shadow-2xs">
+                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 animate-pulse" />
               </div>
-              <p className="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight leading-none">
+              <p className="text-base sm:text-2xl font-black text-emerald-800 tracking-tight leading-none">
                 {todayMetrics.streakDays}
               </p>
-              <p className="text-xs sm:text-[11px] font-black text-emerald-700 mt-1 sm:mt-1.5">
+              <p className="text-[10px] sm:text-[11px] font-black text-emerald-700 mt-1 sm:mt-1.5 truncate w-full">
                 Streak
               </p>
             </div>
@@ -784,7 +799,7 @@ const StudentDashboard = () => {
           </div>
 
           {exams && exams.length > 0 ? (
-            <div className="flex items-stretch gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar scroll-native pb-2 pt-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">
+            <div className="flex items-stretch gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden overscroll-x-contain touch-pan-x pb-2 pt-0.5 -mx-1 px-1 sm:mx-0 sm:px-0">
               {exams.map((exam) => {
                 const count = examMockCounts[exam.id] || 0;
                 const region = exam.name.toLowerCase().includes("wb")
@@ -868,7 +883,7 @@ const StudentDashboard = () => {
                   >
                     {/* Left Icon / Score Badge */}
                     <div
-                      className={`w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-all ${
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border transition-all ${
                         attempt
                           ? attempt.passed
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -1163,10 +1178,10 @@ const StudentDashboard = () => {
                 path: "/student/practice/subject",
               },
               {
-                title: "PYQ Vault",
-                icon: Calendar,
+                title: "Current Affairs",
+                icon: Newspaper,
                 bg: "bg-emerald-50 border-emerald-200/80 text-emerald-600",
-                path: "/student/pyq",
+                path: "/student/current-affairs",
               },
               {
                 title: "Mistakes Notebook",
@@ -1181,7 +1196,7 @@ const StudentDashboard = () => {
                 path: "/student/notes",
               },
               {
-                title: "Saved Questions",
+                title: "Bookmarks",
                 icon: Bookmark,
                 bg: "bg-cyan-50 border-cyan-200/80 text-cyan-600",
                 path: "/student/bookmarks",

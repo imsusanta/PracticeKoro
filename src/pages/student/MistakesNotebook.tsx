@@ -62,7 +62,7 @@ export const MistakesNotebook = () => {
   }>({
     isOpen: false,
     items: [],
-    title: "Targeted Revision Drill",
+    title: "Targeted Revision Practice",
   });
 
   const loadMistakes = useCallback(async () => {
@@ -137,14 +137,14 @@ export const MistakesNotebook = () => {
   const handleLaunchDrill = (customItems?: MistakeItem[], title?: string) => {
     const targetItems = customItems || filteredMistakes.filter((m) => !m.is_mastered);
     if (targetItems.length === 0) {
-      toast.info("No active mistakes to drill in this category!");
+      toast.info("No active mistakes to practice in this category!");
       return;
     }
 
     setDrillModalConfig({
       isOpen: true,
       items: targetItems,
-      title: title || `Revision Drill (${targetItems.length} questions)`,
+      title: title || `Revision Practice (${targetItems.length} questions)`,
     });
   };
 
@@ -166,7 +166,7 @@ export const MistakesNotebook = () => {
                   Mistakes Notebook
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">Automatic Error Notebook & Targeted Drills</p>
+              <p className="text-[11px] text-slate-500 font-medium">Automatic Error Notebook & Targeted Practice</p>
             </div>
           </div>
         </div>
@@ -187,11 +187,11 @@ export const MistakesNotebook = () => {
                 Mistakes Notebook <span className="text-[#FBBF24]">— Zero Mark Loss</span>
               </h1>
               <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
-                Review questions you missed in mocks & drills, understand why you lost marks, and master them to eliminate negative marking in the actual exam.
+                Review questions you missed in mocks & practice tests, understand why you lost marks, and master them to eliminate negative marking in the actual exam.
               </p>
             </div>
 
-            {/* Launch Drill Action */}
+            {/* Launch Action */}
             {analytics.activeMistakes > 0 && (
               <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2.5">
                 <Button
@@ -199,7 +199,7 @@ export const MistakesNotebook = () => {
                   className="h-10 px-4 sm:h-12 sm:px-6 rounded-2xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  Start Revision Drill 🚀 ({analytics.activeMistakes})
+                  Start Revision Test 🚀 ({analytics.activeMistakes})
                 </Button>
                 {analytics.weakestSubject && (
                   <Button
@@ -208,7 +208,7 @@ export const MistakesNotebook = () => {
                       const subjectItems = mistakes.filter(
                         (m) => !m.is_mastered && m.questions?.subject === analytics.weakestSubject
                       );
-                      handleLaunchDrill(subjectItems, `Drill ${analytics.weakestSubject} (${subjectItems.length})`);
+                      handleLaunchDrill(subjectItems, `Practice ${analytics.weakestSubject} (${subjectItems.length})`);
                     }}
                     className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5"
                   >

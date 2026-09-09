@@ -35,7 +35,7 @@ export const RevisionDrillModal: React.FC<RevisionDrillModalProps> = ({
   isOpen,
   onClose,
   mistakes,
-  title = "Targeted Revision Drill",
+  title = "Targeted Revision Test",
   onMistakeUpdated,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -262,7 +262,7 @@ export const RevisionDrillModal: React.FC<RevisionDrillModalProps> = ({
                         onClick={handleNext}
                         className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5"
                       >
-                        <span>{currentIndex < mistakes.length - 1 ? "Next Mistake" : "Finish Drill"}</span>
+                        <span>{currentIndex < mistakes.length - 1 ? "Next Mistake" : "Finish Test"}</span>
                         <ChevronRight className="w-4 h-4" />
                       </Button>
                     </motion.div>
@@ -280,7 +280,7 @@ export const RevisionDrillModal: React.FC<RevisionDrillModalProps> = ({
 
             <div className="space-y-1">
               <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                Revision Drill Completed! 🎉
+                Revision Test Completed! 🎉
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
                 You re-attempted {mistakes.length} mistakes and solved {correctCount} correctly.

@@ -19,6 +19,23 @@ body {
   scrollbar-gutter: stable;
 }
 
+/* Hide scrollbars completely for horizontal/smooth scrollers */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar,
+*::-webkit-scrollbar.no-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  -webkit-appearance: none !important;
+}
+
+.no-scrollbar,
+.scrollbar-hide {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    PRACTICEKORO PREMIUM DESIGN SYSTEM v3.0
    Official brand palette: #026BFC #028EFD #051A43
@@ -265,87 +282,66 @@ textarea {
 
 @supports (padding: max(0px)) {
   body {
-    padding-left: max(env(safe-area-inset-left), 8px);
-    padding-right: max(env(safe-area-inset-right), 8px);
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
   }
 }
 
-main,
-.main-content,
-[role="main"] {
-  margin-left: max(0px, env(safe-area-inset-left));
-  margin-right: max(0px, env(safe-area-inset-right));
+/* ═══════════════════════════════════════════════════════════════
+   SAFE AREA & MOBILE NATIVE APP UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
+.safe-area-top {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+.safe-area-left {
+  padding-left: max(env(safe-area-inset-left), 0px);
+}
+.safe-area-right {
+  padding-right: max(env(safe-area-inset-right), 0px);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
 }
 
-.container,
-[class*="max-w-"] {
-  padding-left: 8px;
-  padding-right: 8px;
+/* Mobile tap target & touch manipulation */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch momentum scrolling for scroll containers */
+.overflow-x-auto,
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
 }
 
 @media screen and (max-width: 380px) {
-  html { font-size: 14px; }
+  html { font-size: 14.5px; }
 
-  .container,
-  main,
-  section,
-  article,
-  div {
-    max-width: 100% !important;
-    overflow-x: hidden;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  p,
-  span,
-  a,
-  button,
-  label {
+  h1, h2, h3, h4, h5, h6,
+  p, span, a, button, label {
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
-    hyphens: auto;
   }
 
   .card-glass-premium,
-  .card-premium { padding: 0.75rem !important; }
-  .rounded-3xl { border-radius: 1rem !important; }
-
-  .rounded-\[24px\],
-  .rounded-\[28px\],
-  .rounded-\[32px\],
-  .rounded-\[36px\] { border-radius: 1rem !important; }
-
-  .grid { gap: 0.5rem !important; }
-
-  .px-4,
-  .px-5,
-  .px-6 {
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-
-  .flex { flex-wrap: wrap; }
-  .flex-1 { min-width: 0; }
+  .card-premium { padding: 0.85rem; }
 }
 
 @media screen and (max-width: 320px) {
-  html { font-size: 13px; }
-
-  .p-5,
-  .p-6 { padding: 0.625rem !important; }
-
-  .px-3,
-  .px-4,
-  .px-5 {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-  }
+  html { font-size: 13.5px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════

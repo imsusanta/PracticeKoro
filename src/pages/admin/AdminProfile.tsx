@@ -191,9 +191,9 @@ const AdminProfile = () => {
           <CardContent>
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <Avatar className="w-20 h-20">
+                <Avatar className="w-14 h-14 sm:w-16 sm:h-16 shadow-xs border border-emerald-100 shrink-0">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-2xl">
+                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xl sm:text-2xl font-bold">
                     {profile?.full_name?.charAt(0)?.toUpperCase() || profile?.email?.charAt(0)?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>

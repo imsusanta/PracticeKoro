@@ -620,7 +620,7 @@ const ArticleReader = ({
               </div>
               
               <Button
-                className="w-full h-13 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-base shadow-lg shadow-blue-500/20"
+                className="w-full h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-base shadow-lg shadow-blue-500/20"
                 onClick={async () => {
                   const { data: { session } } = await supabase.auth.getSession();
                   if (!session) return;

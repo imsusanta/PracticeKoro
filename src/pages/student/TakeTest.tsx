@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +50,7 @@ import {
   saveLocalDraft,
   clearLocalDraft,
 } from "@/services/attemptEngineService";
+import { getMockTestPreset } from "@/data/fullMockQuestionBank";
 
 interface QuestionDetails {
   id: string;
@@ -90,6 +91,8 @@ interface MockTest {
 const TakeTest = () => {
   const navigate = useNavigate();
   const { testId } = useParams();
+  const [searchParams] = useSearchParams();
+  const shouldAutoStart = searchParams.get("start") === "true";
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [test, setTest] = useState<MockTest | null>(null);
@@ -102,7 +105,7 @@ const TakeTest = () => {
   const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
-  const [hasConfirmedInstructions, setHasConfirmedInstructions] = useState(false);
+  const [hasConfirmedInstructions, setHasConfirmedInstructions] = useState(shouldAutoStart);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showNavigator, setShowNavigator] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -296,14 +299,59 @@ const TakeTest = () => {
       return;
     }
 
-    // Check entitlement if paid test
+    // Check test metadata in mock_tests or topics
     const { data: testMeta } = await supabase
       .from("mock_tests")
       .select("*")
       .eq("id", testId)
       .maybeSingle();
 
-    if (testMeta?.is_paid) {
+    let activeTestMeta = testMeta;
+    if (!activeTestMeta && testId) {
+      const preset = getMockTestPreset(testId);
+      if (preset) {
+        activeTestMeta = {
+          id: testId,
+          title: preset.title,
+          description: `${preset.title} - ${preset.questions} Questions Full Mock Exam`,
+          duration_minutes: preset.duration,
+          total_marks: preset.marks || preset.questions || 100,
+          passing_marks: Math.round((preset.marks || 100) * 0.4),
+          is_paid: Boolean(preset.isPaid),
+          price: preset.isPaid ? 49 : 0,
+          shuffle_questions: false,
+          shuffle_options: false,
+          negative_marking: preset.negative !== "No Negative",
+          negative_marks_per_question: preset.negative ? parseFloat(preset.negative.replace(/[^0-9.]/g, "")) || 0.25 : 0.25,
+        } as any;
+      } else {
+        const rawTopicId = testId.replace(/^topic-/, "");
+        const { data: topicData } = await supabase
+          .from("topics")
+          .select("id, name, subject_id, subjects(name)")
+          .eq("id", rawTopicId)
+          .maybeSingle();
+
+        if (topicData) {
+          activeTestMeta = {
+            id: testId,
+            title: `${topicData.name} অধ্যায় মক টেস্ট 01`,
+            description: `${(topicData.subjects as any)?.name || "Subject"} অধ্যায়ভিত্তিক টেস্ট`,
+            duration_minutes: 15,
+            total_marks: 15,
+            passing_marks: 6,
+            is_paid: false,
+            price: 0,
+            shuffle_questions: false,
+            shuffle_options: false,
+            negative_marking: true,
+            negative_marks_per_question: 0.25,
+          } as any;
+        }
+      }
+    }
+
+    if (activeTestMeta?.is_paid) {
       const oneYearAgo = new Date();
       oneYearAgo.setDate(oneYearAgo.getDate() - 365);
 
@@ -319,7 +367,7 @@ const TakeTest = () => {
         .maybeSingle();
 
       if (!purchaseData) {
-        setTest(testMeta as any);
+        setTest(activeTestMeta as any);
         setIsPurchased(false);
         setLoading(false);
         return;
@@ -360,14 +408,14 @@ const TakeTest = () => {
       const activeTest: MockTest = {
         id: attemptRes.testId,
         title: attemptRes.testTitle,
-        description: testMeta?.description || null,
+        description: activeTestMeta?.description || null,
         duration_minutes: attemptRes.durationMinutes,
         total_marks: attemptRes.totalMarks,
         passing_marks: attemptRes.passingMarks,
         shuffle_questions: false,
         shuffle_options: false,
-        is_paid: Boolean(testMeta?.is_paid),
-        price: testMeta?.price || 0,
+        is_paid: Boolean(activeTestMeta?.is_paid),
+        price: activeTestMeta?.price || 0,
         negative_marking: attemptRes.negativeMarking,
         negative_marks_per_question: attemptRes.negativeMarksPerQuestion,
       };
@@ -852,6 +900,7 @@ const TakeTest = () => {
             ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white'
             : 'bg-gradient-to-r from-[#0A2655] via-[#0D3B7E] to-[#1455AF] text-white'
         }`}
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
           <div className="flex items-center justify-between gap-2 sm:gap-4">
@@ -937,7 +986,7 @@ const TakeTest = () => {
       </header>
 
       {/* Main Content Area: Responsive 2-column on desktop / single column on mobile */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-6 pb-28 lg:pb-8 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 items-start">
+      <div className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-6 pb-[calc(env(safe-area-inset-bottom,0px)+84px)] lg:pb-8 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 items-start">
         {/* Left Column: Question & Options (8 or 9 cols on desktop) */}
         <main className="w-full lg:col-span-8 xl:col-span-9 flex flex-col space-y-4">
           <AnimatePresence mode="wait">
@@ -1171,7 +1220,10 @@ const TakeTest = () => {
       </div>
 
       {/* Mobile-Only Bottom Floating Bar */}
-      <footer className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 safe-area-bottom p-3 shadow-lg">
+      <footer
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-3 pt-2.5 shadow-lg select-none"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      >
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
           <Button
             variant="outline"

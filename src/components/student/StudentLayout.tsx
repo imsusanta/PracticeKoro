@@ -103,7 +103,7 @@ const navGroups = [
     items: [
       { name: "Mistakes Notebook", path: "/student/mistakes", icon: RotateCcw },
       { name: "State Leaderboard", path: "/student/leaderboard", icon: Trophy },
-      { name: "Saved Bookmarks", path: "/student/bookmarks", icon: Bookmark },
+      { name: "Bookmarks", path: "/student/bookmarks", icon: Bookmark },
       { name: "Study Notes", path: "/student/notes", icon: BookOpen },
     ],
   },
@@ -161,6 +161,7 @@ const StudentLayout = ({
       style={{
         paddingLeft: "env(safe-area-inset-left)",
         paddingRight: "env(safe-area-inset-right)",
+        paddingTop: "env(safe-area-inset-top)",
       }}
     >
       <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -341,7 +342,7 @@ const StudentLayout = ({
               initial="initial"
               animate="animate"
               exit="exit"
-              className="flex flex-col px-0 pt-1 pb-20 sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
+              className="flex flex-col px-0 pt-1 pb-[calc(env(safe-area-inset-bottom,0px)+76px)] sm:px-3 sm:pt-2 md:items-center md:p-6 md:pb-6 relative z-10 w-full overflow-x-hidden"
             >
               <div className="w-full max-w-7xl mx-auto">{children}</div>
             </motion.main>
@@ -351,13 +352,13 @@ const StudentLayout = ({
 
       {/* ═══════════════════════════════════════════════════════════════
           MOBILE BOTTOM NAVIGATION - Balanced 5-Item Touch Bar
-          Home | Exams | Practice | Study | Profile
+          Home | Exams | Practice | Results | Profile
           ═══════════════════════════════════════════════════════════════ */}
       {!hideNavbar && (
         <nav
-          className="md:hidden fixed bottom-0 left-0 right-0 z-[100] w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-[100] w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-4px_24px_rgba(15,23,42,0.08)]"
           style={{
-            paddingBottom: "max(env(safe-area-inset-bottom), 6px)",
+            paddingBottom: "max(env(safe-area-inset-bottom), 8px)",
             paddingTop: "6px",
           }}
         >
@@ -397,27 +398,27 @@ const StudentLayout = ({
                   <Link
                     key={item.path}
                     to={item.path}
-                    className="relative flex flex-col items-center justify-center flex-1 py-0.5 tap-highlight"
+                    className="relative flex flex-col items-center justify-center flex-1 py-0.5 tap-highlight select-none min-h-[48px]"
                   >
                     <motion.div
-                      whileTap={{ scale: 0.92 }}
-                      className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 ${
+                      whileTap={{ scale: 0.9 }}
+                      className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 ${
                         isActive
                           ? "bg-[#0066FF]/10 text-[#0066FF]"
                           : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
                       <Icon
-                        className={`w-5 h-5 transition-transform duration-200 ${
+                        className={`w-5 h-5 transition-all duration-200 ${
                           isActive
-                            ? "text-[#0066FF] stroke-[2.4] scale-105"
+                            ? "text-[#0066FF] stroke-[2.5] scale-110"
                             : "text-slate-400 stroke-[1.8]"
                         }`}
                       />
                       <span
-                        className={`text-[10.5px] mt-0.5 tracking-tight transition-colors duration-150 ${
+                        className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-150 ${
                           isActive
-                            ? "font-bold text-[#0066FF]"
+                            ? "font-extrabold text-[#0066FF]"
                             : "font-semibold text-slate-500"
                         }`}
                       >

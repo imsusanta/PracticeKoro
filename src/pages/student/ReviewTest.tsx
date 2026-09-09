@@ -144,6 +144,22 @@ export const ReviewTest = () => {
       ]);
 
       if (attemptResult.error || !attemptResult.data) {
+        // Fallback: check localStorage for topic-wise tests or offline attempts
+        const localAttRaw = localStorage.getItem(`pk_completed_attempt_${attemptId}`);
+        if (localAttRaw) {
+          try {
+            const localData = JSON.parse(localAttRaw);
+            if (localData?.attempt) {
+              setAttempt(localData.attempt);
+              setAnswers(localData.answers || []);
+              setHasSubscription(true);
+              setLoading(false);
+              return;
+            }
+          } catch (pErr) {
+            console.warn("Failed to parse local attempt review", pErr);
+          }
+        }
         toast({ title: "Error", description: "Test attempt not found", variant: "destructive" });
         navigate("/student/results");
         return;
@@ -375,9 +391,15 @@ export const ReviewTest = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-20">
+    <div
+      className="min-h-screen bg-slate-50/70"
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 32px)" }}
+    >
       {/* Sticky Header */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
+      <header
+        className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs"
+        style={{ paddingTop: "max(env(safe-area-inset-top), 0px)" }}
+      >
         <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -520,7 +542,7 @@ export const ReviewTest = () => {
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-sm flex items-center gap-1.5"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  🎯 Launch Revision Drill ({wrongCount} Mistakes)
+                  🎯 Practice Mistakes ({wrongCount} Questions)
                 </Button>
                 <Button
                   size="sm"
@@ -539,7 +561,7 @@ export const ReviewTest = () => {
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-sm"
               >
                 <Layers className="w-3.5 h-3.5 mr-1.5" />
-                Drill {weakTopics[0].topic}
+                Practice {weakTopics[0].topic}
               </Button>
             )}
           </div>
