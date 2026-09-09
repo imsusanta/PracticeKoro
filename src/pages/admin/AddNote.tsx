@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { NotebookPen, Save, RefreshCw, ArrowLeft, Loader2 } from "lucide-react";
+import { NotebookPen, Save, RefreshCw, ArrowLeft, Loader2, FileText, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
     Select,
     SelectContent,
@@ -198,9 +199,9 @@ const AddNote = () => {
     if (loading || initialLoading) {
         return (
             <AdminLayout title={editId ? "Edit Note" : "Add Note"} subtitle="Organizing your articles" headerActions={BackButton}>
-                <div className="flex flex-col items-center justify-center h-64 gap-4">
-                    <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-                    <p className="text-gray-500 font-medium">Preparing your workspace...</p>
+                <div className="flex flex-col items-center justify-center h-64 gap-3">
+                    <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-slate-600 font-medium text-sm">Preparing article workspace...</p>
                 </div>
             </AdminLayout>
         );
@@ -209,54 +210,79 @@ const AddNote = () => {
     return (
         <AdminLayout
             title={editId ? "Edit Article" : "Create Article"}
-            subtitle={editId ? "Updating your educational content" : "Publishing a new study guide"}
+            subtitle={editId ? "Updating educational content" : "Publishing a new study guide"}
             headerActions={BackButton}
         >
             <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-12">
-                <Card className="border-0 shadow-xl shadow-gray-200/50 bg-white/80 backdrop-blur-md rounded-3xl overflow-hidden">
-                    <div className="h-2 bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500" />
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-3 text-2xl font-black text-gray-800">
-                            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-                                <NotebookPen className="w-5 h-5 text-violet-600" />
+                {/* Executive Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <NotebookPen className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                                    {editId ? "Edit Study Article" : "Create Study Article"}
+                                </h1>
                             </div>
-                            {editId ? "Update Educational Article" : "New Educational Article"}
-                        </CardTitle>
+                            <p className="text-xs text-slate-500 font-medium">
+                                {editId ? "Update lesson content and syllabus structure" : "Author comprehensive notes and study material for candidates"}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+                            {editId ? "Editing Article" : "New Article Draft"}
+                        </Badge>
+                    </div>
+                </div>
+
+                {/* Main Article Editor Card */}
+                <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex flex-row items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-blue-600" />
+                            <CardTitle className="text-sm sm:text-base font-bold text-slate-900">Article Content & Details</CardTitle>
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-medium">Study Notes Portal</span>
                     </CardHeader>
-                    <CardContent className="p-8">
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-3">
-                                    <Label className="text-sm font-bold text-gray-700 ml-1">Core Subject</Label>
+                    <CardContent className="p-6">
+                        <div className="space-y-6">
+                            {/* Subject & Topic Selectors */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200/90">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold text-slate-700">Target Subject *</Label>
                                     <Select
                                         value={formData.subject_id}
                                         onValueChange={(value) => setFormData({ ...formData, subject_id: value, topic_id: "" })}
                                     >
-                                        <SelectTrigger className="rounded-2xl h-14 border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-violet-500/20 transition-all shadow-sm">
-                                            <SelectValue placeholder="Which subject is this for?" />
+                                        <SelectTrigger className="rounded-2xl h-11 border-slate-200 bg-white text-sm shadow-2xs">
+                                            <SelectValue placeholder="Select Subject" />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-2xl">
                                             {subjects.map((subject) => (
-                                                <SelectItem key={subject.id} value={subject.id} className="rounded-xl my-1 focus:bg-violet-50">
+                                                <SelectItem key={subject.id} value={subject.id}>
                                                     {subject.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-3">
-                                    <Label className="text-sm font-bold text-gray-700 ml-1">Topic</Label>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold text-slate-700">Target Topic *</Label>
                                     <Select
                                         value={formData.topic_id}
                                         onValueChange={(value) => setFormData({ ...formData, topic_id: value })}
                                         disabled={!formData.subject_id}
                                     >
-                                        <SelectTrigger className="rounded-2xl h-14 border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-violet-500/20 transition-all shadow-sm">
-                                            <SelectValue placeholder={formData.subject_id ? "Select a topic" : "Select a subject first"} />
+                                        <SelectTrigger className="rounded-2xl h-11 border-slate-200 bg-white text-sm shadow-2xs">
+                                            <SelectValue placeholder={formData.subject_id ? "Select Topic" : "Select subject first"} />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-2xl">
                                             {filteredTopics.map((topic) => (
-                                                <SelectItem key={topic.id} value={topic.id} className="rounded-xl my-1 focus:bg-violet-50">
+                                                <SelectItem key={topic.id} value={topic.id}>
                                                     {topic.name}
                                                 </SelectItem>
                                             ))}
@@ -265,62 +291,68 @@ const AddNote = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <Label className="text-sm font-bold text-gray-700 ml-1">Article Headline</Label>
+                            {/* Headline */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-bold text-slate-700">Article Headline / Title *</Label>
                                 <Input
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="Enter a catchy title for your article..."
-                                    className="h-14 rounded-2xl border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-violet-500/20 transition-all font-bold text-lg shadow-sm"
+                                    placeholder="Enter descriptive article title..."
+                                    className="h-11 rounded-2xl border-slate-200 bg-white font-bold text-sm sm:text-base shadow-2xs"
                                 />
                             </div>
 
-                            <div className="space-y-6">
-                                <div className="flex items-center space-x-3 p-2">
-                                    <Checkbox
-                                        id="is_paid"
-                                        checked={formData.is_paid}
-                                        onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked as boolean })}
-                                        className="w-6 h-6 rounded-lg border-violet-300 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
-                                    />
-                                    <div className="grid gap-1.5 leading-none">
-                                        <Label htmlFor="is_paid" className="text-sm font-bold text-gray-700 cursor-pointer">
-                                            Premium Content
-                                        </Label>
-                                        <p className="text-xs text-gray-500">Enable this to make this article require a premium subscription</p>
-                                    </div>
+                            {/* Premium Toggle */}
+                            <div className="flex items-center space-x-3 p-3.5 rounded-2xl bg-blue-50/40 border border-blue-100/80">
+                                <Checkbox
+                                    id="is_paid"
+                                    checked={formData.is_paid}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked as boolean })}
+                                    className="w-5 h-5 rounded-lg border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                />
+                                <div className="grid gap-0.5 leading-none">
+                                    <Label htmlFor="is_paid" className="text-xs font-bold text-slate-800 cursor-pointer">
+                                        Premium Access Only
+                                    </Label>
+                                    <p className="text-[11px] text-slate-500">Require an active subscription plan to unlock and read this article</p>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between ml-1">
-                                    <Label className="text-sm font-bold text-gray-700">Article Content</Label>
-                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">Supports Rich Text (Upcoming)</span>
+                            {/* Content Textarea */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs font-bold text-slate-700">Article Body Content *</Label>
+                                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Markdown & LaTeX Compatible</span>
                                 </div>
                                 <Textarea
                                     value={formData.content}
                                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    placeholder="Start writing your educational masterpiece here..."
-                                    rows={18}
-                                    className="rounded-3xl border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-violet-500/20 transition-all leading-relaxed shadow-sm p-6 text-gray-700 resize-none"
+                                    placeholder="Start drafting your comprehensive study notes..."
+                                    rows={16}
+                                    className="rounded-2xl border-slate-200 bg-slate-50/30 focus-visible:bg-white focus-visible:ring-blue-600 transition-all leading-relaxed shadow-inner p-4 text-slate-800 text-sm resize-none"
                                 />
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                <Button variant="ghost" onClick={handleReset} className="rounded-2xl h-14 flex-1 text-gray-500 font-bold hover:bg-gray-100">
-                                    <RefreshCw className="w-5 h-5 mr-2" />
+                            {/* Actions */}
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-100">
+                                <Button
+                                    variant="outline"
+                                    onClick={handleReset}
+                                    className="rounded-2xl h-11 px-5 text-slate-600 font-bold border-slate-200 hover:bg-slate-50 flex-1 sm:flex-none"
+                                >
+                                    <RefreshCw className="w-4 h-4 mr-2" />
                                     {editId ? "Restore Original" : "Reset Draft"}
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={saving}
-                                    className="rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-700 hover:to-indigo-800 h-14 flex-[2] shadow-xl shadow-indigo-500/20 text-white font-black text-lg transition-all active:scale-95"
+                                    disabled={saving || !formData.title.trim() || !formData.content.trim()}
+                                    className="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-11 px-6 flex-[2] shadow-md shadow-blue-500/20 text-white font-bold text-sm transition-all"
                                 >
                                     {saving ? (
-                                        <Loader2 className="w-6 h-6 animate-spin" />
+                                        <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (
                                         <>
-                                            <Save className="w-5 h-5 mr-2" />
+                                            <Save className="w-4 h-4 mr-2" />
                                             {editId ? "Commit Changes" : "Publish Article"}
                                         </>
                                     )}

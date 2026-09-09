@@ -79,40 +79,40 @@ const SortableSubjectItem = ({ subject, isSelected, onClick, onEdit, onDelete }:
             ref={setNodeRef}
             style={style}
             onClick={onClick}
-            className={`p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between ${isSelected
-                ? "bg-emerald-50 border-2 border-emerald-500"
-                : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
+            className={`p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-all flex items-center justify-between border ${isSelected
+                ? "bg-blue-50/70 border-blue-600 shadow-xs ring-2 ring-blue-500/15"
+                : "bg-white hover:bg-slate-50 border-slate-200/90 shadow-2xs hover:border-slate-300"
                 }`}
         >
-            <div className="flex items-center gap-3">
-                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded" onClick={e => e.stopPropagation()}>
-                    <GripVertical className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-3 min-w-0">
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded-xl text-slate-300 hover:text-slate-600 transition-colors shrink-0" onClick={e => e.stopPropagation()}>
+                    <GripVertical className="w-4 h-4" />
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
-                    <BookOpen className="w-5 h-5 text-emerald-600" />
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/70 border border-blue-100/80 flex items-center justify-center text-blue-600 shrink-0 shadow-2xs">
+                    <BookOpen className="w-5 h-5" />
                 </div>
-                <div>
-                    <p className="font-semibold text-gray-900 text-sm">{subject.name}</p>
+                <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-sm truncate">{subject.name}</p>
                     {subject.description && (
-                        <p className="text-xs text-gray-500 truncate max-w-[150px]">{subject.description}</p>
+                        <p className="text-xs text-slate-400 truncate max-w-[180px]">{subject.description}</p>
                     )}
                 </div>
             </div>
-            <div className="flex items-center gap-2">
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2 shrink-0">
+                <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? "text-blue-600 translate-x-0.5" : "text-slate-300"}`} />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="w-8 h-8">
+                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-xl hover:bg-slate-100 text-slate-400">
                             <MoreVertical className="w-4 h-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                    <DropdownMenuContent align="end" className="rounded-2xl shadow-lg border-slate-200">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }} className="gap-2 rounded-xl cursor-pointer">
+                            <Pencil className="w-4 h-4 text-blue-600" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-red-600">
-                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2 rounded-xl cursor-pointer text-rose-600 focus:text-rose-600">
+                            <Trash2 className="w-4 h-4" /> Delete
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -136,34 +136,34 @@ const SortableTopicItem = ({ topic, index, onEdit, onDelete }: {
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
+        <div ref={setNodeRef} style={style} className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded-xl text-slate-300 hover:text-slate-600 transition-colors shrink-0">
+                    <GripVertical className="w-4 h-4" />
                 </div>
-                <Badge variant="secondary" className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-100 text-violet-600 text-xs">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-violet-50 text-violet-700 text-xs font-black shrink-0 border border-violet-100">
                     {index + 1}
-                </Badge>
-                <div>
-                    <p className="font-medium text-gray-900 text-sm">{topic.name}</p>
+                </div>
+                <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-sm truncate">{topic.name}</p>
                     {topic.description && (
-                        <p className="text-xs text-gray-500 truncate max-w-[180px]">{topic.description}</p>
+                        <p className="text-xs text-slate-400 truncate max-w-[180px]">{topic.description}</p>
                     )}
                 </div>
             </div>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-8 h-8">
+                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-xl hover:bg-slate-100 text-slate-400">
                         <MoreVertical className="w-4 h-4" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl">
-                    <DropdownMenuItem onClick={() => onEdit()}>
-                        <Pencil className="w-4 h-4 mr-2" /> Edit
+                <DropdownMenuContent align="end" className="rounded-2xl shadow-lg border-slate-200">
+                    <DropdownMenuItem onClick={() => onEdit()} className="gap-2 rounded-xl cursor-pointer">
+                        <Pencil className="w-4 h-4 text-blue-600" /> Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDelete()} className="text-red-600">
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    <DropdownMenuItem onClick={() => onDelete()} className="gap-2 rounded-xl cursor-pointer text-rose-600 focus:text-rose-600">
+                        <Trash2 className="w-4 h-4" /> Delete
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -552,7 +552,7 @@ const SubjectManagement = () => {
     };
 
     const CreateSubjectButton = (
-        <Button onClick={openCreateSubject} size="icon" className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 border border-white/20">
+        <Button onClick={openCreateSubject} size="icon" className="w-10 h-10 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 text-white">
             <Plus className="w-5 h-5" />
         </Button>
     );
@@ -561,7 +561,7 @@ const SubjectManagement = () => {
         return (
             <AdminLayout title="Subject & Topics" subtitle="Manage subjects and topics for notes">
                 <div className="flex items-center justify-center h-64">
-                    <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                 </div>
             </AdminLayout>
         );
@@ -569,90 +569,124 @@ const SubjectManagement = () => {
 
     return (
         <AdminLayout title="Subject & Topics" subtitle="Manage subjects and topics for notes" headerActions={CreateSubjectButton}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Subjects List */}
-                <Card className="border-0 bg-white rounded-2xl">
-                    <CardContent className="p-4">
-                        <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                            <FolderOpen className="w-5 h-5 text-emerald-600" />
-                            Subjects ({subjects.length})
-                        </h3>
-
-                        {subjects.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="text-gray-500 text-sm">No subjects yet</p>
-                                <Button onClick={openCreateSubject} size="sm" className="mt-3 rounded-xl">
-                                    <Plus className="w-4 h-4 mr-1" /> Add Subject
-                                </Button>
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Section Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <FolderOpen className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Study Notes Subjects & Topics</h1>
                             </div>
-                        ) : (
-                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubjectDragEnd}>
-                                <SortableContext items={subjects.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                                    <div className="space-y-2">
-                                        {subjects.map(subject => (
-                                            <SortableSubjectItem
-                                                key={subject.id}
-                                                subject={subject}
-                                                isSelected={selectedSubject?.id === subject.id}
-                                                onClick={() => selectSubject(subject)}
-                                                onEdit={() => openEditSubject(subject)}
-                                                onDelete={() => handleDeleteSubject(subject)}
-                                            />
-                                        ))}
+                            <p className="text-xs text-slate-500 font-medium">Manage subject categorization and chapter trees for study notes and PDFs</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+                            {subjects.length} Subjects · {topics.length} Selected Topics
+                        </Badge>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                    {/* Subjects List */}
+                    <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                            <h3 className="font-black text-slate-900 flex items-center gap-2 text-sm sm:text-base">
+                                <span className="w-2 h-2 rounded-full bg-blue-600" />
+                                Subjects ({subjects.length})
+                            </h3>
+                            <Button onClick={openCreateSubject} size="sm" className="rounded-xl h-9 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs">
+                                <Plus className="w-4 h-4 mr-1" /> Add Subject
+                            </Button>
+                        </div>
+                        <CardContent className="p-4 sm:p-5">
+                            {subjects.length === 0 ? (
+                                <div className="text-center py-10">
+                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                                        <FolderOpen className="w-6 h-6" />
                                     </div>
-                                </SortableContext>
-                            </DndContext>
-                        )}
+                                    <p className="text-slate-500 text-sm font-medium">No subjects yet</p>
+                                    <Button onClick={openCreateSubject} size="sm" className="mt-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                                        <Plus className="w-4 h-4 mr-1" /> Add First Subject
+                                    </Button>
+                                </div>
+                            ) : (
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubjectDragEnd}>
+                                    <SortableContext items={subjects.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                                        <div className="space-y-3">
+                                            {subjects.map(subject => (
+                                                <SortableSubjectItem
+                                                    key={subject.id}
+                                                    subject={subject}
+                                                    isSelected={selectedSubject?.id === subject.id}
+                                                    onClick={() => selectSubject(subject)}
+                                                    onEdit={() => openEditSubject(subject)}
+                                                    onDelete={() => handleDeleteSubject(subject)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </SortableContext>
+                                </DndContext>
+                            )}
+                        </CardContent>
+                    </Card>
 
-                    </CardContent>
-                </Card>
-
-                {/* Topics List */}
-                <Card className="border-0 bg-white rounded-2xl">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                <BookOpen className="w-5 h-5 text-violet-600" />
+                    {/* Topics List */}
+                    <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                            <h3 className="font-black text-slate-900 flex items-center gap-2 text-sm sm:text-base">
+                                <span className="w-2 h-2 rounded-full bg-violet-600" />
                                 Topics {selectedSubject && `(${topics.length})`}
                             </h3>
                             {selectedSubject && (
-                                <Button onClick={openCreateTopic} size="sm" className="rounded-xl h-8">
+                                <Button onClick={openCreateTopic} size="sm" className="rounded-xl h-9 font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs">
                                     <Plus className="w-4 h-4 mr-1" /> Add Topic
                                 </Button>
                             )}
                         </div>
-
-                        {!selectedSubject ? (
-                            <div className="text-center py-8">
-                                <p className="text-gray-500 text-sm">Select a subject to view topics</p>
-                            </div>
-                        ) : topics.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="text-gray-500 text-sm">No topics in {selectedSubject.name}</p>
-                                <Button onClick={openCreateTopic} size="sm" className="mt-3 rounded-xl">
-                                    <Plus className="w-4 h-4 mr-1" /> Add Topic
-                                </Button>
-                            </div>
-                        ) : (
-                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTopicDragEnd}>
-                                <SortableContext items={topics.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                                    <div className="space-y-2">
-                                        {topics.map((topic, idx) => (
-                                            <SortableTopicItem
-                                                key={topic.id}
-                                                topic={topic}
-                                                index={idx}
-                                                onEdit={() => openEditTopic(topic)}
-                                                onDelete={() => handleDeleteTopic(topic)}
-                                            />
-                                        ))}
+                        <CardContent className="p-4 sm:p-5">
+                            {!selectedSubject ? (
+                                <div className="text-center py-10">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-center justify-center mx-auto mb-3 text-blue-600">
+                                        <BookOpen className="w-6 h-6" />
                                     </div>
-                                </SortableContext>
-                            </DndContext>
-                        )}
-
-                    </CardContent>
-                </Card>
+                                    <p className="text-slate-600 font-bold text-sm">Select a Subject</p>
+                                    <p className="text-slate-400 text-xs mt-1">Choose any subject from the left panel to manage its topics</p>
+                                </div>
+                            ) : topics.length === 0 ? (
+                                <div className="text-center py-10">
+                                    <div className="w-12 h-12 rounded-2xl bg-violet-50/60 border border-violet-100 flex items-center justify-center mx-auto mb-3 text-violet-600">
+                                        <BookOpen className="w-6 h-6" />
+                                    </div>
+                                    <p className="text-slate-700 font-bold text-sm">No topics in {selectedSubject.name}</p>
+                                    <Button onClick={openCreateTopic} size="sm" className="mt-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold">
+                                        <Plus className="w-4 h-4 mr-1" /> Add First Topic
+                                    </Button>
+                                </div>
+                            ) : (
+                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTopicDragEnd}>
+                                    <SortableContext items={topics.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                                        <div className="space-y-3">
+                                            {topics.map((topic, idx) => (
+                                                <SortableTopicItem
+                                                    key={topic.id}
+                                                    topic={topic}
+                                                    index={idx}
+                                                    onEdit={() => openEditTopic(topic)}
+                                                    onDelete={() => handleDeleteTopic(topic)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </SortableContext>
+                                </DndContext>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             {/* Subject Dialog */}

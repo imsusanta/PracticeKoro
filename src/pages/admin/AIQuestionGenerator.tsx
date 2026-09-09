@@ -609,11 +609,11 @@ const AIQuestionGenerator = () => {
 
     return (
       <div className="animate-in fade-in slide-in-from-bottom-5 duration-500 mt-8">
-        <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
-          <CardHeader>
+        <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs">
+          <CardHeader className="bg-slate-50/80 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 Generated Questions ({questions.length})
               </CardTitle>
               <div className="flex items-center gap-2">
@@ -622,17 +622,17 @@ const AIQuestionGenerator = () => {
                   id={`select-all-${activeTab}`}
                   checked={selectedIndices.length === questions.length && questions.length > 0}
                   onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                <Label htmlFor={`select-all-${activeTab}`} className="text-sm font-medium cursor-pointer text-slate-700">
+                <Label htmlFor={`select-all-${activeTab}`} className="text-xs font-bold cursor-pointer text-slate-700">
                   Select All ({selectedIndices.length})
                 </Label>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+            <div className="p-4 bg-white rounded-2xl border border-slate-200/90 space-y-4 shadow-2xs">
               <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full space-y-4">
-                  <Label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Destination Details</Label>
+                <div className="flex-1 w-full space-y-3">
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Destination Hierarchy</Label>
                   <SubjectTopicSelectors
                     category="questions"
                     initialSubjectId={formData.subject_id}
@@ -646,7 +646,7 @@ const AIQuestionGenerator = () => {
                 <Button
                   onClick={handleSave}
                   disabled={saving || selectedIndices.length === 0}
-                  className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                  className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold shadow-md shadow-blue-500/20"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {saving ? "Saving..." : `Add to Question Bank (${selectedIndices.length})`}
@@ -654,63 +654,65 @@ const AIQuestionGenerator = () => {
                 <Button
                   variant="outline"
                   onClick={handleDownloadPDF}
-                  className="flex-1 rounded-xl border-slate-200 hover:bg-slate-100 text-slate-700 font-medium"
+                  className="flex-1 h-11 rounded-2xl border-slate-200/90 hover:bg-slate-50 text-slate-700 font-bold"
                 >
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="w-4 h-4 mr-2 text-slate-500" />
                   Download PDF
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-[1000px] overflow-y-auto pr-2 custom-scrollbar">
+          <CardContent className="p-4 sm:p-5">
+            <div className="space-y-4 max-h-[900px] overflow-y-auto pr-1">
               {questions.map((q, index) => (
-                <Card
+                <div
                   key={index}
-                  className={`p-5 rounded-2xl transition-all border-2 ${selectedIndices.includes(index)
-                    ? 'border-emerald-500 bg-emerald-50/30'
-                    : 'border-slate-100 bg-white hover:border-slate-200'
-                    }`}
+                  className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl transition-all border ${
+                    selectedIndices.includes(index)
+                      ? 'border-blue-500/80 bg-blue-50/20 shadow-xs'
+                      : 'border-slate-200/90 bg-white hover:border-slate-300'
+                  }`}
                 >
-                  <div className="flex gap-3 mb-3 items-start">
+                  <div className="flex gap-3 items-start">
                     <input
                       type="checkbox"
                       checked={selectedIndices.includes(index)}
                       onChange={() => handleToggleQuestion(index)}
-                      className="w-5 h-5 rounded-lg border-slate-300 text-emerald-600 focus:ring-emerald-500 mt-1"
+                      className="w-4 h-4 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 mt-1"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex gap-2 mb-2 items-center flex-wrap">
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 font-bold">Q{index + 1}</Badge>
-                        <Badge variant="outline" className="text-slate-500 font-medium border-slate-200">Answer: {q.correct_answer}</Badge>
+                        <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-0 font-bold text-xs rounded-full px-2.5 py-0.5">Q{index + 1}</Badge>
+                        <Badge variant="outline" className="text-emerald-700 bg-emerald-50/60 font-bold border-emerald-200 text-xs rounded-full px-2.5 py-0.5">Ans: ({q.correct_answer})</Badge>
                       </div>
-                      <div className="font-bold text-slate-800 text-lg mb-4 leading-snug"><MathText text={q.question_text} /></div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="font-bold text-slate-900 text-base mb-3 leading-snug"><MathText text={q.question_text} /></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                         {(['A', 'B', 'C', 'D'] as const).map((opt) => (
                           <div
                             key={opt}
-                            className={`p-3 rounded-xl border flex items-center gap-3 ${q.correct_answer === opt
-                              ? 'bg-emerald-100 border-emerald-200 text-emerald-800 font-bold'
-                              : 'bg-slate-50 border-slate-100 text-slate-600'
-                              }`}
+                            className={`p-2.5 rounded-xl border flex items-center gap-2.5 ${
+                              q.correct_answer === opt
+                                ? 'bg-emerald-50/80 border-emerald-300 text-emerald-800 font-bold'
+                                : 'bg-slate-50/60 border-slate-100 text-slate-700'
+                            }`}
                           >
-                            <span className="w-6 h-6 rounded-lg bg-white/50 flex items-center justify-center text-[10px] font-black min-w-[24px]">{opt}</span>
-                            <MathText text={opt === 'A' ? q.option_a : opt === 'B' ? q.option_b : opt === 'C' ? q.option_c : q.option_d} />
+                            <span className="w-5 h-5 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black shrink-0">{opt}</span>
+                            <span className="truncate"><MathText text={opt === 'A' ? q.option_a : opt === 'B' ? q.option_b : opt === 'C' ? q.option_c : q.option_d} /></span>
                           </div>
                         ))}
                       </div>
                       {q.explanation && (
-                        <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="w-4 h-4 text-slate-400" />
-                            <span className="font-bold text-xs text-slate-500 uppercase tracking-widest">Short Notes & Explanation</span>
+                        <div className="mt-3 p-3 bg-blue-50/40 rounded-xl border border-blue-100/80">
+                          <div className="flex items-center gap-1.5 mb-1 text-[11px] font-bold text-blue-700 uppercase tracking-wider">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Explanation & Notes</span>
                           </div>
-                          <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line"><MathText text={q.explanation} /></div>
+                          <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-line"><MathText text={q.explanation} /></div>
                         </div>
                       )}
                     </div>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -724,8 +726,8 @@ const AIQuestionGenerator = () => {
       <AdminLayout title="AI Question Generator" subtitle="Generate questions with AI">
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-emerald-700 font-medium">Loading...</p>
+            <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-blue-600 font-medium">Loading generator...</p>
           </div>
         </div>
       </AdminLayout>
@@ -734,34 +736,57 @@ const AIQuestionGenerator = () => {
 
   return (
     <AdminLayout title="AI Question Generator" subtitle="Generate questions with AI">
-      <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+      <div className="flex flex-col gap-6 max-w-5xl mx-auto">
+        {/* Modern Executive Header Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">AI MCQ Generator Studio</h1>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Generate high-yield questions from curriculum topics or uploaded PDF study materials</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+              AI Powered
+            </Badge>
+          </div>
+        </div>
+
         <Tabs defaultValue="topic" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1 bg-gray-100 overflow-hidden mb-6">
-            <TabsTrigger value="topic" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm py-3 transition-all">
+          <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1 bg-white border border-slate-200/90 shadow-2xs mb-6 h-auto">
+            <TabsTrigger value="topic" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-bold py-2.5 transition-all text-xs sm:text-sm">
               <Sparkles className="w-4 h-4 mr-2" />
-              AI General Generator
+              Curriculum Topic Generator
             </TabsTrigger>
-            <TabsTrigger value="pdf" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm py-3 transition-all">
+            <TabsTrigger value="pdf" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-bold py-2.5 transition-all text-xs sm:text-sm">
               <FileText className="w-4 h-4 mr-2" />
-              PDF to Question Generator
+              PDF Study Material to MCQs
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="topic">
-            <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border-t-4 border-emerald-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-emerald-600" />
+            <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+              <CardHeader className="bg-slate-50/80 border-b border-slate-100 p-4 sm:p-5">
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
                   General Topic Generation
                 </CardTitle>
-                <p className="text-sm text-gray-500">Enter a subject and topic to generate balanced MCQs with AI.</p>
+                <p className="text-xs text-slate-500">Enter a subject and topic to generate exam-ready MCQs with detailed explanations.</p>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 mb-2">
-                  <h4 className="text-sm font-semibold mb-2 text-emerald-800">💡 Tips:</h4>
-                  <ul className="text-xs text-emerald-700 space-y-1 list-disc list-inside">
-                    <li>Be specific with Subject and Topic (e.g., "History" + "French Revolution")</li>
-                    <li>Questions will include detailed "Short Notes" automatically</li>
+              <CardContent className="p-5 sm:p-6 space-y-5">
+                <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-100">
+                  <h4 className="text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Best Practices:
+                  </h4>
+                  <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                    <li>Be specific with Subject and Topic (e.g., "History" + "1857 Revolt")</li>
+                    <li>Questions will include comprehensive "Short Notes & Explanations" automatically</li>
                   </ul>
                 </div>
 
@@ -774,20 +799,20 @@ const AIQuestionGenerator = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Language</Label>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 block">Language</Label>
                       <Select value={formData.language} onValueChange={(value) => setFormData({ ...formData, language: value })}>
-                        <SelectTrigger className="h-12 rounded-xl mt-1">
+                        <SelectTrigger className="h-11 rounded-2xl border-slate-200/90 shadow-2xs text-xs">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Bengali">Bengali</SelectItem>
+                        <SelectContent className="rounded-2xl">
+                          <SelectItem value="Bengali">বাংলা (Bengali)</SelectItem>
                           <SelectItem value="English">English</SelectItem>
                           <SelectItem value="Hindi">Hindi</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Number of Questions</Label>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 block">Number of Questions (Max 50)</Label>
                       <Input
                         type="number"
                         min="1"
@@ -797,30 +822,30 @@ const AIQuestionGenerator = () => {
                           const value = parseInt(e.target.value) || 1;
                           setFormData({ ...formData, count: Math.min(Math.max(value, 1), 50) });
                         }}
-                        className="rounded-xl mt-1 h-12"
+                        className="h-11 rounded-2xl border-slate-200/90 shadow-2xs text-xs"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Custom Instructions (Optional)</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 block">Custom Instructions (Optional)</Label>
                     <Textarea
                       value={formData.systemPrompt}
                       onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                      placeholder="e.g., Focus on numerical problems, make it hard..."
-                      className="rounded-xl mt-1 min-h-[80px]"
+                      placeholder="e.g., Focus on numerical problems, make it difficult, focus on PYQ style..."
+                      className="rounded-2xl border-slate-200/90 shadow-2xs min-h-[80px] text-xs"
                     />
                   </div>
 
                   <Button
                     onClick={handleGenerate}
                     disabled={generating}
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-semibold shadow-lg shadow-emerald-200/50"
+                    className="w-full h-11 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-white shadow-md shadow-blue-500/20"
                   >
                     {generating ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Questions...</>
                     ) : (
-                      <><Sparkles className="w-4 h-4 mr-2" /> Generate Questions</>
+                      <><Sparkles className="w-4 h-4 mr-2" /> Generate Questions with AI</>
                     )}
                   </Button>
                 </div>

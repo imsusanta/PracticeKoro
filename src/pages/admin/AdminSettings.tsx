@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Loader2, UserCheck, Shield, UserPlus, Check, X, Clock } from "lucide-react";
+import { Settings, Save, Loader2, UserCheck, Shield, UserPlus, Check, X, Clock, ArrowRight, Coins, Sparkles, UserCog } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
 import { logAdminAction } from "@/lib/adminAudit";
@@ -248,7 +249,10 @@ const AdminSettings = () => {
         return (
             <AdminLayout title="Admin Settings">
                 <div className="flex items-center justify-center h-64">
-                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-slate-600 font-medium text-sm">Loading system settings...</p>
+                    </div>
                 </div>
             </AdminLayout>
         );
@@ -256,113 +260,139 @@ const AdminSettings = () => {
 
     return (
         <AdminLayout title="Admin Settings" subtitle="Configure system-wide settings">
-            <div className="max-w-2xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-6 pb-12">
+                {/* Executive Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <Settings className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">System & Governance Settings</h1>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium">Configure monetization pricing, access control, and user approval workflows</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+                            System Control
+                        </Badge>
+                    </div>
+                </div>
+
                 {/* Admin Profile Card */}
                 {adminProfile && (
-                    <Card className="border-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg text-white">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-white">
-                                <Shield className="w-5 h-5" />
-                                Admin Profile
-                            </CardTitle>
-                            <CardDescription className="text-indigo-100">
-                                Your administrator account details
-                            </CardDescription>
+                    <Card className="border border-slate-200/90 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 rounded-2xl sm:rounded-3xl shadow-md text-white overflow-hidden">
+                        <CardHeader className="border-b border-white/10 pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2 text-white text-base font-bold">
+                                    <Shield className="w-4 h-4 text-blue-400" />
+                                    Active Administrator Credentials
+                                </CardTitle>
+                                <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-blue-300 border border-white/10">
+                                    {adminProfile.role.replace('_', ' ')}
+                                </span>
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center gap-3 sm:gap-4">
-                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold shrink-0">
+                        <CardContent className="p-6 space-y-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-600/30 border border-blue-400/30 flex items-center justify-center text-xl font-black text-white shrink-0 shadow-inner">
                                     {adminProfile.full_name?.charAt(0)?.toUpperCase() || adminProfile.email.charAt(0).toUpperCase()}
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-lg font-semibold">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-base font-bold text-white truncate">
                                         {adminProfile.full_name || "Admin User"}
                                     </p>
-                                    <p className="text-indigo-200 text-sm">
+                                    <p className="text-blue-200/80 text-xs truncate">
                                         {adminProfile.email}
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 pt-2 border-t border-white/20">
-                                <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-medium uppercase tracking-wide">
-                                    {adminProfile.role.replace('_', ' ')}
-                                </span>
-                                <span className="text-indigo-200 text-xs">
-                                    {adminProfile.role === "super_admin"
-                                        ? "· Super admin can manage settings, admin requests, and all content"
-                                        : "· Admin can manage students, content, notifications, and settings"}
-                                </span>
+                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-blue-200/90">
+                                {adminProfile.role === "super_admin"
+                                    ? "• Super Administrator: Unrestricted privileges over system settings, admin approvals, monetization, and content."
+                                    : "• Administrator: Standard administrative access across question bank, students, tests, and announcements."}
                             </div>
                         </CardContent>
                     </Card>
                 )}
 
                 {/* Pending Admin Requests */}
-                <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <UserPlus className="w-5 h-5 text-amber-600" />
-                            Pending Admin Requests
-                            {adminRequests.length > 0 && (
-                                <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">
-                                    {adminRequests.length}
-                                </span>
-                            )}
-                        </CardTitle>
-                        <CardDescription>
-                            Review and approve admin access requests from Google login users
-                        </CardDescription>
+                <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900">
+                                <UserPlus className="w-4 h-4 text-blue-600" />
+                                Pending Admin Access Requests
+                                {adminRequests.length > 0 && (
+                                    <Badge className="ml-1 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        {adminRequests.length}
+                                    </Badge>
+                                )}
+                            </CardTitle>
+                            <CardDescription className="text-xs text-slate-500 mt-0.5">
+                                Review and approve admin access requests from Google login users
+                            </CardDescription>
+                        </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-6">
                         {adminRequests.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
-                                <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                                <p className="text-sm">No pending admin requests</p>
+                            <div className="text-center py-8 text-slate-400">
+                                <Clock className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                                <p className="text-xs sm:text-sm font-medium">No pending admin authorization requests</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 {adminRequests.map((request) => (
                                     <div
                                         key={request.id}
-                                        className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100"
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/90 hover:bg-slate-50 transition-colors"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
                                                 {request.full_name?.charAt(0)?.toUpperCase() || request.email.charAt(0).toUpperCase()}
                                             </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900">
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-slate-900 text-sm truncate">
                                                     {request.full_name || "Unknown User"}
                                                 </p>
-                                                <p className="text-sm text-gray-500">{request.email}</p>
+                                                <p className="text-xs text-slate-500 truncate">{request.email}</p>
+                                                <span className="text-[10px] text-slate-400 font-medium">
+                                                    Requested {new Date(request.requested_at).toLocaleDateString()}
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 self-end sm:self-center">
                                             <Button
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={() => setRequestToReject(request)}
                                                 disabled={processingRequest === request.id}
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="rounded-xl h-9 px-3 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-slate-200 text-xs font-semibold"
                                             >
                                                 {processingRequest === request.id ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
                                                 ) : (
-                                                    <X className="w-4 h-4" />
+                                                    <>
+                                                        <X className="w-3.5 h-3.5 mr-1" />
+                                                        Reject
+                                                    </>
                                                 )}
                                             </Button>
                                             <Button
                                                 size="sm"
                                                 onClick={() => handleApproveRequest(request)}
                                                 disabled={processingRequest === request.id}
-                                                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                                                className="rounded-xl h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
                                             >
                                                 {processingRequest === request.id ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                     <>
-                                                        <Check className="w-4 h-4 mr-1" />
-                                                        Approve
+                                                        <Check className="w-3.5 h-3.5 mr-1" />
+                                                        Grant Admin
                                                     </>
                                                 )}
                                             </Button>
@@ -375,56 +405,55 @@ const AdminSettings = () => {
                 </Card>
 
                 {/* Subscription Settings */}
-                <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="w-5 h-5 text-indigo-600" />
-                            Monetization Settings
+                <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                        <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900">
+                            <Coins className="w-4 h-4 text-blue-600" />
+                            Monetization & Subscription Settings
                         </CardTitle>
-                        <CardDescription>
-                            Configure site-wide subscription pricing
+                        <CardDescription className="text-xs text-slate-500">
+                            Configure site-wide membership pricing for paid mock tests and courses
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-3">
-                            <Label htmlFor="subscription_fee" className="text-sm font-bold text-gray-700 ml-1">Yearly Subscription Fee (INR)</Label>
+                    <CardContent className="p-6 space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="subscription_fee" className="text-xs font-bold text-slate-700">Yearly Subscription Fee (INR ₹)</Label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₹</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₹</span>
                                 <Input
                                     id="subscription_fee"
                                     type="number"
                                     value={settings.yearly_subscription_fee}
                                     onChange={(e) => setSettings({ ...settings, yearly_subscription_fee: parseFloat(e.target.value) || 0 })}
-                                    className="h-14 pl-8 rounded-2xl border-gray-200 bg-white focus:ring-violet-500/20 transition-all font-bold shadow-sm"
+                                    className="h-12 pl-9 rounded-2xl border-slate-200 bg-white focus-visible:ring-blue-600 font-black text-lg shadow-2xs"
                                     placeholder="0.00"
                                 />
                             </div>
-                            <p className="text-xs text-gray-500 ml-1">This fee unlocks all content marked as "Paid" for 1 year.</p>
+                            <p className="text-xs text-slate-500 font-medium">Students who purchase this plan unlock all items marked as "Paid" for 1 whole year.</p>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Student Approval Settings */}
-                <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <UserCheck className="w-5 h-5 text-emerald-600" />
-                            Student Approval Settings
+                <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                        <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900">
+                            <UserCheck className="w-4 h-4 text-blue-600" />
+                            Student Registration Workflow
                         </CardTitle>
-                        <CardDescription>
-                            Configure how new student registrations are handled
+                        <CardDescription className="text-xs text-slate-500">
+                            Configure how new candidate accounts are verified and admitted
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="p-6 space-y-5">
                         {/* Auto Approve Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                            <div className="space-y-1">
-                                <Label htmlFor="auto_approve" className="text-base font-medium text-gray-900">
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-blue-50/40 border border-blue-100/80">
+                            <div className="space-y-1 pr-4">
+                                <Label htmlFor="auto_approve" className="text-sm font-bold text-slate-900 cursor-pointer">
                                     Auto Approve Students
                                 </Label>
-                                <p className="text-sm text-gray-500">
-                                    When enabled, new students will be automatically approved upon registration.
-                                    No manual approval required.
+                                <p className="text-xs text-slate-500">
+                                    When enabled, new students will be automatically granted active access upon registration without manual moderation.
                                 </p>
                             </div>
                             <Switch
@@ -433,20 +462,18 @@ const AdminSettings = () => {
                                 onCheckedChange={(checked) =>
                                     setSettings({ ...settings, auto_approve_students: checked })
                                 }
-                                className="data-[state=checked]:bg-emerald-500"
+                                className="data-[state=checked]:bg-blue-600"
                             />
                         </div>
 
-                        {/* Info Box */}
-                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                        {/* Informational Alert Box */}
+                        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80">
                             <div className="flex items-start gap-3">
-                                <Shield className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                                <Shield className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium text-amber-800">Important Note</p>
-                                    <p className="text-xs text-amber-700">
-                                        When auto-approve is disabled, new students will have "pending" status
-                                        and will need manual approval from the Student Management page before
-                                        they can access tests and exams.
+                                    <p className="text-xs font-bold text-amber-900">Manual Approval Protocol</p>
+                                    <p className="text-xs text-amber-800 leading-relaxed">
+                                        When auto-approve is turned off, candidates register with a <strong className="font-bold">Pending</strong> status and will require explicit one-click approval from the <strong className="font-bold">Student Management</strong> tab before taking exams.
                                     </p>
                                 </div>
                             </div>
@@ -456,17 +483,17 @@ const AdminSettings = () => {
                         <Button
                             onClick={handleSave}
                             disabled={saving}
-                            className="w-full mt-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-semibold shadow-lg shadow-emerald-200/50"
+                            className="w-full h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-white shadow-md shadow-blue-500/20 text-sm transition-all"
                         >
                             {saving ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Saving...
+                                    Saving System Configuration...
                                 </>
                             ) : (
                                 <>
                                     <Save className="w-4 h-4 mr-2" />
-                                    Save Settings
+                                    Save System Configuration
                                 </>
                             )}
                         </Button>
@@ -474,20 +501,28 @@ const AdminSettings = () => {
                 </Card>
 
                 {/* Quick Links */}
-                <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Settings className="w-4 h-4 text-gray-500" />
-                            Other Settings
+                <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                        <CardTitle className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                            <Sparkles className="w-4 h-4 text-blue-600" />
+                            Connected Administrative Tools
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4">
                         <a
                             href="/admin/ai-settings"
-                            className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group"
+                            className="flex items-center justify-between p-3.5 rounded-2xl hover:bg-blue-50/50 border border-transparent hover:border-blue-100 transition-all group"
                         >
-                            <span className="text-sm text-gray-700 group-hover:text-gray-900">AI & OpenRouter Settings</span>
-                            <span className="text-xs text-gray-400">→</span>
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                    <Sparkles className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">AI & OpenRouter Configuration</p>
+                                    <p className="text-xs text-slate-400">Configure LLM models, API keys, and prompt parameters</p>
+                                </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
                         </a>
                     </CardContent>
                 </Card>

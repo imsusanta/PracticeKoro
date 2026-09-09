@@ -1208,39 +1208,86 @@ const MockTestCreation = () => {
 
   return (
     <AdminLayout title="Mock Test Creation" subtitle={`${tests.length} mock & pyq tests`} headerActions={CreateButton}>
-      <div className="space-y-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <BarChart className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Mock Tests & PYQ Papers</h1>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Create, publish, reorder and configure tests with automated marking</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+              {tests.length} Total Tests
+            </Badge>
+          </div>
+        </div>
+
         {/* Stats Row */}
-        <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <button
             onClick={() => setTestFilterStatus("all")}
-            className={`flex-1 min-w-[120px] bg-white rounded-2xl p-4 border shadow-sm transition-all ${testFilterStatus === "all" ? "border-blue-600 ring-2 ring-blue-100" : "border-gray-100 hover:border-blue-200"}`}
+            className={`text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/70 to-indigo-50/30 border transition-all duration-200 shadow-xs hover:shadow-sm ${
+              testFilterStatus === "all" ? "border-blue-600 ring-2 ring-blue-500/20 shadow-blue-500/10" : "border-blue-100/80 hover:border-blue-300"
+            }`}
           >
-            <p className="text-2xl font-bold text-gray-900">{tests.length}</p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Total Tests</p>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Tests</span>
+              <div className="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center">
+                <BarChart className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{tests.length}</div>
+            <div className="text-[11px] text-blue-600/80 font-semibold mt-1">All mock & PYQ papers</div>
           </button>
+
           <button
             onClick={() => setTestFilterStatus("published")}
-            className={`flex-1 min-w-[120px] bg-white rounded-2xl p-4 border shadow-sm transition-all ${testFilterStatus === "published" ? "border-emerald-500 ring-2 ring-emerald-100" : "border-gray-100 hover:border-emerald-200"}`}
+            className={`text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border transition-all duration-200 shadow-xs hover:shadow-sm ${
+              testFilterStatus === "published" ? "border-emerald-600 ring-2 ring-emerald-500/20 shadow-emerald-500/10" : "border-emerald-200/90 hover:border-emerald-300"
+            }`}
           >
-            <p className="text-2xl font-bold text-emerald-600">{tests.filter(t => t.is_published).length}</p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Published</p>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Live & Published</span>
+              <div className="w-9 h-9 rounded-xl bg-emerald-600/10 text-emerald-600 flex items-center justify-center">
+                <Power className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-800 tracking-tight">{tests.filter(t => t.is_published).length}</div>
+            <div className="text-[11px] text-emerald-600 font-semibold mt-1">Active for students</div>
           </button>
+
           <button
             onClick={() => setTestFilterStatus("draft")}
-            className={`flex-1 min-w-[120px] bg-white rounded-2xl p-4 border shadow-sm transition-all ${testFilterStatus === "draft" ? "border-amber-500 ring-2 ring-amber-100" : "border-gray-100 hover:border-amber-200"}`}
+            className={`text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/70 to-orange-50/30 border transition-all duration-200 shadow-xs hover:shadow-sm ${
+              testFilterStatus === "draft" ? "border-amber-600 ring-2 ring-amber-500/20 shadow-amber-500/10" : "border-amber-100/80 hover:border-amber-300"
+            }`}
           >
-            <p className="text-2xl font-bold text-amber-600">{tests.filter(t => !t.is_published).length}</p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Drafts</p>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Draft Tests</span>
+              <div className="w-9 h-9 rounded-xl bg-amber-600/10 text-amber-600 flex items-center justify-center">
+                <PowerOff className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-amber-800 tracking-tight">{tests.filter(t => !t.is_published).length}</div>
+            <div className="text-[11px] text-amber-600 font-semibold mt-1">Unpublished / in progress</div>
           </button>
         </div>
 
         {/* Test Type Filter Tabs */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
             { key: "all", label: "All Tests" },
-            { key: "full_mock", label: "Full Test" },
+            { key: "full_mock", label: "Full Mock Tests" },
             { key: "pyq", label: "PYQ Papers" },
-            { key: "topic_wise", label: "Topic Test" }
+            { key: "topic_wise", label: "Topic Tests" }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -1249,10 +1296,11 @@ const MockTestCreation = () => {
                 setTestFilterExam("all");
                 setTestFilterSubject("all");
               }}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${testFilterType === tab.key
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                : "bg-white text-slate-600 border border-slate-200 hover:border-blue-200"
-                }`}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+                testFilterType === tab.key
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-500/25"
+                  : "bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 hover:border-blue-200"
+              }`}
             >
               {tab.label}
             </button>
@@ -1262,21 +1310,21 @@ const MockTestCreation = () => {
         {/* Filters Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-3">
           <div className="flex-1 lg:min-w-[300px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Search tests by title or keyword..."
               value={testSearchQuery}
               onChange={e => setTestSearchQuery(e.target.value)}
-              className="pl-10 h-11 rounded-xl bg-white border-gray-200"
+              className="pl-10 h-11 rounded-2xl bg-white border-slate-200/90 text-sm shadow-2xs focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
           {/* Show Exam filter for Full Test or PYQ */}
           {(testFilterType === "full_mock" || testFilterType === "pyq" || testFilterType === "all") && (
             <Select value={testFilterExam} onValueChange={setTestFilterExam}>
-              <SelectTrigger className="h-11 rounded-xl bg-white lg:w-[190px]">
+              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 lg:w-[200px] text-sm shadow-2xs font-medium text-slate-700">
                 <SelectValue placeholder="All Exams" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                 <SelectItem value="all">All Exams</SelectItem>
                 {exams.map(exam => <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>)}
               </SelectContent>
@@ -1284,10 +1332,10 @@ const MockTestCreation = () => {
           )}
           {testFilterType === "topic_wise" && (
             <Select value={testFilterSubject} onValueChange={setTestFilterSubject}>
-              <SelectTrigger className="h-11 rounded-xl bg-white lg:w-[190px]">
+              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 lg:w-[200px] text-sm shadow-2xs font-medium text-slate-700">
                 <SelectValue placeholder="All Subjects" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                 <SelectItem value="all">All Subjects</SelectItem>
                 {questionSubjects.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}
               </SelectContent>
@@ -1296,24 +1344,24 @@ const MockTestCreation = () => {
         </div>
 
         {filteredTests.length > 0 && (
-          <div className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={handleSelectAllTests} className="rounded-xl gap-2">
-              {selectedTestIds.length === filteredTests.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+          <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 shadow-xs flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleSelectAllTests} className="rounded-xl gap-2 font-bold text-slate-700 border-slate-200">
+              {selectedTestIds.length === filteredTests.length ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
               Select all ({filteredTests.length})
             </Button>
             {selectedTestIds.length > 0 && (
               <>
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">{selectedTestIds.length} selected</Badge>
-                <Button variant="outline" size="sm" onClick={() => handleBulkPublish(true)} className="rounded-lg text-emerald-700 border-emerald-200">
+                <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-full text-xs">{selectedTestIds.length} selected</Badge>
+                <Button variant="outline" size="sm" onClick={() => handleBulkPublish(true)} className="rounded-xl text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 font-bold">
                   <Power className="w-3.5 h-3.5 mr-1" /> Publish
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkPublish(false)} className="rounded-lg">
+                <Button variant="outline" size="sm" onClick={() => handleBulkPublish(false)} className="rounded-xl text-slate-700 border-slate-200 hover:bg-slate-100/70 font-bold">
                   <PowerOff className="w-3.5 h-3.5 mr-1" /> Unpublish
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setBulkDeleteOpen(true)} className="rounded-lg text-red-600 border-red-200">
+                <Button variant="outline" size="sm" onClick={() => setBulkDeleteOpen(true)} className="rounded-xl text-rose-600 border-rose-200 bg-rose-50/40 hover:bg-rose-100/50 font-bold">
                   <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedTestIds([])} className="text-gray-500">Clear</Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedTestIds([])} className="text-slate-500 hover:text-slate-700 font-bold">Clear</Button>
               </>
             )}
           </div>
@@ -1321,36 +1369,36 @@ const MockTestCreation = () => {
 
         {/* Tests List - Row Based */}
         {tests.length === 0 ? (
-          <Card className="border-0 bg-white rounded-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-                <BarChart className="w-8 h-8 text-blue-600" />
+          <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 rounded-3xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <BarChart className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No Tests Yet</h3>
-              <p className="text-gray-500 text-sm mb-4">Create your first mock test or PYQ paper</p>
-              <Button onClick={openCreateDialog} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white">
+              <h3 className="text-lg font-black text-slate-900 mb-1">No Tests Yet</h3>
+              <p className="text-slate-500 text-sm mb-5">Create your first mock test or PYQ paper</p>
+              <Button onClick={openCreateDialog} className="rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 px-5">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Test
               </Button>
             </CardContent>
           </Card>
         ) : filteredTests.length === 0 ? (
-          <Card className="border-0 bg-white rounded-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-gray-400" />
+          <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center mx-auto mb-4 text-slate-400">
+                <Search className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No Tests Found</h3>
-              <p className="text-gray-500 text-sm mb-4">Try adjusting your search or filters</p>
-              <Button variant="outline" onClick={() => { setTestSearchQuery(""); setTestFilterType("all"); setTestFilterExam("all"); setTestFilterSubject("all"); setTestFilterStatus("all"); }} className="rounded-xl">
+              <h3 className="text-lg font-black text-slate-900 mb-1">No Tests Found</h3>
+              <p className="text-slate-500 text-sm mb-5">Try adjusting your search or filters</p>
+              <Button variant="outline" onClick={() => { setTestSearchQuery(""); setTestFilterType("all"); setTestFilterExam("all"); setTestFilterSubject("all"); setTestFilterStatus("all"); }} className="rounded-2xl font-bold border-slate-200">
                 Clear Filters
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-0 bg-white rounded-2xl overflow-hidden shadow-sm">
+          <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
             {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[36px_2fr_1fr_1fr_1.2fr_1fr_80px] gap-4 px-4 py-3 bg-slate-50 border-b border-gray-100 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <div className="hidden md:grid md:grid-cols-[40px_2fr_1.1fr_1fr_1.2fr_1fr_60px] gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span></span>
               <span>Test Name</span>
               <span>Category / Type</span>
@@ -1360,7 +1408,7 @@ const MockTestCreation = () => {
               <span className="text-center">Actions</span>
             </div>
 
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-100">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -1372,69 +1420,70 @@ const MockTestCreation = () => {
                 >
                   {filteredTests.map(test => (
                     <SortableTestItem key={test.id} test={test}>
-                      <div className="hover:bg-blue-50/20 transition-colors w-full">
+                      <div className="hover:bg-slate-50/70 transition-colors w-full">
                         {/* Desktop Row */}
-                        <div className="hidden md:grid md:grid-cols-[36px_2fr_1fr_1fr_1.2fr_1fr_80px] gap-4 px-4 py-3.5 items-center">
+                        <div className="hidden md:grid md:grid-cols-[40px_2fr_1.1fr_1fr_1.2fr_1fr_60px] gap-4 px-5 py-4 items-center">
                           <div>
                             <Checkbox
                               checked={selectedTestIds.includes(test.id)}
                               onCheckedChange={() => toggleTestSelection(test.id)}
+                              className="rounded-md border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
                           </div>
                           {/* Test Name */}
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${test.is_published
-                              ? "bg-blue-50 text-blue-600"
-                              : "bg-gray-100 text-gray-400"
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${test.is_published
+                              ? "bg-blue-50 text-blue-600 border-blue-100/80"
+                              : "bg-slate-100 text-slate-400 border-slate-200/80"
                               }`}>
                               <BarChart className="w-5 h-5" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-gray-900 truncate">{test.title}</p>
-                              {test.description && <p className="text-xs text-gray-500 truncate">{test.description}</p>}
+                              <p className="font-bold text-slate-900 truncate text-sm hover:text-blue-600 transition-colors">{test.title}</p>
+                              {test.description && <p className="text-xs text-slate-400 truncate">{test.description}</p>}
                             </div>
                           </div>
 
                           {/* Category / Type */}
                           <div className="flex flex-col items-start gap-1">
-                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 max-w-[140px] truncate">
+                            <Badge variant="secondary" className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 max-w-[140px] truncate">
                               {test.test_type === "topic_wise" ? (test.subjects?.name || "Subject") : (test.exams?.name || "Exam")}
                             </Badge>
                             {test.test_type === "pyq" ? (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                              <Badge variant="outline" className="text-[9px] px-2 py-0 rounded-full font-bold bg-amber-50 text-amber-700 border-amber-200/80">
                                 PYQ Paper
                               </Badge>
                             ) : test.test_type === "topic_wise" ? (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
+                              <Badge variant="outline" className="text-[9px] px-2 py-0 rounded-full font-bold bg-purple-50 text-purple-700 border-purple-200/80">
                                 Topic Test
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="text-[9px] px-2 py-0 rounded-full font-bold bg-blue-50 text-blue-700 border-blue-200/80">
                                 Full Mock
                               </Badge>
                             )}
                           </div>
 
                           {/* Duration */}
-                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                            <Clock className="w-3.5 h-3.5 text-gray-400" />
+                          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
                             <span>{test.duration_minutes} min</span>
                           </div>
 
                           {/* Marks & Negative Marking */}
                           <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-1 text-sm font-medium text-gray-800">
+                            <div className="flex items-center gap-1 text-xs sm:text-sm font-bold text-slate-800">
                               <Target className="w-3.5 h-3.5 text-blue-600" />
                               <span>{test.question_count ?? 0} Q · {test.total_marks} Marks</span>
                             </div>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[11px] text-gray-400">{test.passing_marks} pass</span>
+                              <span className="text-[11px] text-slate-400 font-medium">{test.passing_marks} pass</span>
                               {test.negative_marking ? (
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-rose-50 text-rose-700 border-rose-200">
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-bold bg-rose-50 text-rose-700 border-rose-200/80">
                                   -{test.negative_marks_per_question ?? 0.25} Neg
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-medium bg-slate-50 text-slate-500 border-slate-200/80">
                                   No Neg
                                 </Badge>
                               )}
@@ -1445,19 +1494,19 @@ const MockTestCreation = () => {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <Badge
                               variant="secondary"
-                              className={`text-[10px] px-2 py-0.5 font-semibold ${test.is_published
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-amber-100 text-amber-700"
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-black tracking-wider uppercase ${test.is_published
+                                ? "bg-emerald-100/80 text-emerald-700"
+                                : "bg-amber-100/80 text-amber-700"
                                 }`}
                             >
                               {test.is_published ? "PUBLISHED" : "DRAFT"}
                             </Badge>
                             {test.is_paid ? (
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200 font-semibold">
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border-blue-200 font-bold uppercase tracking-wider">
                                 PRO PASS
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 text-green-700 border-green-200 font-semibold">
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border-emerald-200 font-bold uppercase tracking-wider">
                                 FREE
                               </Badge>
                             )}
@@ -1467,31 +1516,31 @@ const MockTestCreation = () => {
                           <div className="flex justify-center">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-blue-50">
-                                  <MoreVertical className="w-4 h-4 text-gray-400" />
+                                <Button variant="ghost" size="icon" className="w-8 h-8 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700">
+                                  <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="rounded-xl min-w-[180px]">
-                                <DropdownMenuItem onClick={() => openEditDialog(test)} className="gap-2">
-                                  <Pencil className="w-4 h-4" />
+                              <DropdownMenuContent align="end" className="rounded-2xl min-w-[180px] shadow-lg border-slate-200">
+                                <DropdownMenuItem onClick={() => openEditDialog(test)} className="gap-2 rounded-xl cursor-pointer">
+                                  <Pencil className="w-4 h-4 text-blue-600" />
                                   Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleTogglePublish(test)} className="gap-2">
+                                <DropdownMenuItem onClick={() => handleTogglePublish(test)} className="gap-2 rounded-xl cursor-pointer">
                                   {test.is_published ? (
                                     <>
-                                      <PowerOff className="w-4 h-4" />
+                                      <PowerOff className="w-4 h-4 text-amber-600" />
                                       Unpublish
                                     </>
                                   ) : (
                                     <>
-                                      <Power className="w-4 h-4" />
+                                      <Power className="w-4 h-4 text-emerald-600" />
                                       Publish
                                     </>
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleToggleLandingVisibility(test.id, test.title)}
-                                  className={`gap-2 ${landingVisibility[test.id] ? "text-blue-600" : ""}`}
+                                  className={`gap-2 rounded-xl cursor-pointer ${landingVisibility[test.id] ? "text-blue-600 font-bold" : ""}`}
                                 >
                                   {landingVisibility[test.id] ? (
                                     <>
@@ -1500,20 +1549,20 @@ const MockTestCreation = () => {
                                     </>
                                   ) : (
                                     <>
-                                      <EyeOff className="w-4 h-4" />
+                                      <EyeOff className="w-4 h-4 text-slate-400" />
                                       Show on Landing
                                     </>
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => setTestToNotify(test)}
-                                  className="gap-2 text-blue-600"
+                                  className="gap-2 rounded-xl cursor-pointer text-blue-600"
                                 >
                                   <Bell className="w-4 h-4" />
                                   Send Notification
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleDeleteTest(test.id)} className="gap-2 text-red-600 focus:text-red-600">
+                                <DropdownMenuItem onClick={() => handleDeleteTest(test.id)} className="gap-2 rounded-xl cursor-pointer text-rose-600 focus:text-rose-600">
                                   <Trash2 className="w-4 h-4" />
                                   Delete
                                 </DropdownMenuItem>
@@ -1523,76 +1572,77 @@ const MockTestCreation = () => {
                         </div>
 
                         {/* Mobile Row */}
-                        <div className="md:hidden p-3.5">
+                        <div className="md:hidden p-4">
                           <div className="flex items-center gap-3">
                             <Checkbox
                               checked={selectedTestIds.includes(test.id)}
                               onCheckedChange={() => toggleTestSelection(test.id)}
+                              className="rounded-md border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${test.is_published
-                              ? "bg-blue-50 text-blue-600"
-                              : "bg-gray-100 text-gray-400"
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${test.is_published
+                              ? "bg-blue-50 text-blue-600 border-blue-100/80"
+                              : "bg-slate-100 text-slate-400 border-slate-200/80"
                               }`}>
                               <BarChart className="w-5 h-5" />
                             </div>
 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold text-gray-900 truncate text-sm">{test.title}</p>
+                                <p className="font-bold text-slate-900 truncate text-sm">{test.title}</p>
                                 <Badge
                                   variant="secondary"
-                                  className={`text-[9px] px-1.5 py-0 shrink-0 ${test.is_published
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : "bg-amber-100 text-amber-700"
+                                  className={`text-[9px] px-2 py-0 rounded-full font-black tracking-wider uppercase shrink-0 ${test.is_published
+                                    ? "bg-emerald-100/80 text-emerald-700"
+                                    : "bg-amber-100/80 text-amber-700"
                                     }`}
                                 >
                                   {test.is_published ? "PUB" : "DRAFT"}
                                 </Badge>
                                 {test.test_type === "pyq" && (
-                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-bold bg-amber-50 text-amber-700 border-amber-200/80">
                                     PYQ
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 flex-wrap">
-                                <span>{test.test_type === "topic_wise" ? test.subjects?.name : test.exams?.name}</span>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 flex-wrap">
+                                <span className="font-medium text-slate-700">{test.test_type === "topic_wise" ? test.subjects?.name : test.exams?.name}</span>
                                 <span>•</span>
                                 <span>{test.duration_minutes}m</span>
                                 <span>•</span>
-                                <span>{test.question_count ?? 0}Q · {test.total_marks} marks</span>
+                                <span>{test.question_count ?? 0}Q · {test.total_marks}m</span>
                                 {test.negative_marking && (
-                                  <span className="text-rose-600 font-medium">• -{test.negative_marks_per_question ?? 0.25} neg</span>
+                                  <span className="text-rose-600 font-semibold">• -{test.negative_marks_per_question ?? 0.25} neg</span>
                                 )}
                               </div>
                             </div>
 
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-blue-50 shrink-0">
-                                  <MoreVertical className="w-4 h-4 text-gray-400" />
+                                <Button variant="ghost" size="icon" className="w-8 h-8 rounded-xl hover:bg-slate-100 text-slate-400 shrink-0">
+                                  <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="rounded-xl min-w-[180px]">
-                                <DropdownMenuItem onClick={() => openEditDialog(test)} className="gap-2">
-                                  <Pencil className="w-4 h-4" />
+                              <DropdownMenuContent align="end" className="rounded-2xl min-w-[180px] shadow-lg border-slate-200">
+                                <DropdownMenuItem onClick={() => openEditDialog(test)} className="gap-2 rounded-xl cursor-pointer">
+                                  <Pencil className="w-4 h-4 text-blue-600" />
                                   Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleTogglePublish(test)} className="gap-2">
+                                <DropdownMenuItem onClick={() => handleTogglePublish(test)} className="gap-2 rounded-xl cursor-pointer">
                                   {test.is_published ? (
                                     <>
-                                      <PowerOff className="w-4 h-4" />
+                                      <PowerOff className="w-4 h-4 text-amber-600" />
                                       Unpublish
                                     </>
                                   ) : (
                                     <>
-                                      <Power className="w-4 h-4" />
+                                      <Power className="w-4 h-4 text-emerald-600" />
                                       Publish
                                     </>
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleToggleLandingVisibility(test.id, test.title)}
-                                  className={`gap-2 ${landingVisibility[test.id] ? "text-emerald-600" : ""}`}
+                                  className={`gap-2 rounded-xl cursor-pointer ${landingVisibility[test.id] ? "text-emerald-600 font-bold" : ""}`}
                                 >
                                   {landingVisibility[test.id] ? (
                                     <>
@@ -1601,20 +1651,20 @@ const MockTestCreation = () => {
                                     </>
                                   ) : (
                                     <>
-                                      <EyeOff className="w-4 h-4" />
+                                      <EyeOff className="w-4 h-4 text-slate-400" />
                                       Show on Landing
                                     </>
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => setTestToNotify(test)}
-                                  className="gap-2 text-blue-600"
+                                  className="gap-2 rounded-xl cursor-pointer text-blue-600"
                                 >
                                   <Bell className="w-4 h-4" />
                                   Send Notification
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleDeleteTest(test.id)} className="gap-2 text-red-600 focus:text-red-600">
+                                <DropdownMenuItem onClick={() => handleDeleteTest(test.id)} className="gap-2 rounded-xl cursor-pointer text-rose-600 focus:text-rose-600">
                                   <Trash2 className="w-4 h-4" />
                                   Delete
                                 </DropdownMenuItem>

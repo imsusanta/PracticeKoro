@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Lock, User } from "lucide-react";
+import { Save, Lock, User, ShieldCheck, KeyRound, Mail, Calendar, BadgeCheck, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AdminLayout from "@/components/admin/AdminLayout";
 
@@ -170,8 +171,8 @@ const AdminProfile = () => {
       <AdminLayout title="Admin Profile" subtitle="Manage your account">
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-emerald-700 font-medium">Loading...</p>
+            <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-slate-600 font-medium text-sm">Loading administrator profile...</p>
           </div>
         </div>
       </AdminLayout>
@@ -180,99 +181,151 @@ const AdminProfile = () => {
 
   return (
     <AdminLayout title="Admin Profile" subtitle="Manage your account">
-      <div className="flex flex-col gap-6 max-w-2xl mx-auto">
-        <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-emerald-600" />
-              Profile Information
-            </CardTitle>
+      <div className="flex flex-col gap-6 max-w-2xl mx-auto pb-12">
+        {/* Executive Header Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Admin Profile & Security</h1>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Manage credentials, display name, and system credentials</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+              Verified Administrator
+            </Badge>
+          </div>
+        </div>
+
+        {/* Profile Card */}
+        <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-blue-600" />
+              <CardTitle className="text-sm sm:text-base font-bold text-slate-900">Personal Information</CardTitle>
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium">Admin Account</span>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-14 h-14 sm:w-16 sm:h-16 shadow-xs border border-emerald-100 shrink-0">
+              {/* User Hero Banner */}
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                <Avatar className="w-14 h-14 sm:w-16 sm:h-16 shadow-2xs border-2 border-white shrink-0">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xl sm:text-2xl font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-xl sm:text-2xl font-black">
                     {profile?.full_name?.charAt(0)?.toUpperCase() || profile?.email?.charAt(0)?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{profile?.full_name || "Admin"}</h3>
-                  <p className="text-sm text-gray-500">{profile?.email}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 truncate">{profile?.full_name || "Admin"}</h3>
+                    <BadgeCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  </div>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">{profile?.email}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
+                      Administrator
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="full_name" className="text-sm font-medium">Full Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name" className="text-xs font-bold text-slate-700">Full Name</Label>
                 <Input
                   id="full_name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Enter your full name"
-                  className="rounded-xl"
+                  className="h-11 rounded-2xl border-slate-200 text-sm shadow-2xs"
                 />
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Email (read-only)</Label>
-                <Input value={profile?.email || ""} disabled className="rounded-xl bg-gray-50" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  Email Address (Read-only)
+                </Label>
+                <Input value={profile?.email || ""} disabled className="h-11 rounded-2xl bg-slate-50 border-slate-200 text-sm text-slate-500 shadow-2xs" />
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Member Since</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  Registered On
+                </Label>
                 <Input
-                  value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : ""}
+                  value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : ""}
                   disabled
-                  className="rounded-xl bg-gray-50"
+                  className="h-11 rounded-2xl bg-slate-50 border-slate-200 text-sm text-slate-500 shadow-2xs"
                 />
               </div>
 
-              <Button onClick={handleUpdateProfile} disabled={saving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-12">
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? "Saving..." : "Update Profile"}
-              </Button>
+              <div className="pt-2">
+                <Button
+                  onClick={handleUpdateProfile}
+                  disabled={saving}
+                  className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-blue-500/20"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? "Saving Changes..." : "Update Profile"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-white/80 backdrop-blur-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-emerald-600" />
-              Change Password
-            </CardTitle>
+        {/* Change Password Card */}
+        <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-blue-600" />
+              <CardTitle className="text-sm sm:text-base font-bold text-slate-900">Change Password</CardTitle>
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium">Security</span>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="new_password" className="text-sm font-medium">New Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="new_password" className="text-xs font-bold text-slate-700">New Password</Label>
                 <Input
                   id="new_password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  className="rounded-xl"
+                  placeholder="Min 6 characters"
+                  className="h-11 rounded-2xl border-slate-200 text-sm shadow-2xs"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="confirm_password" className="text-sm font-medium">Confirm New Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm_password" className="text-xs font-bold text-slate-700">Confirm New Password</Label>
                 <Input
                   id="confirm_password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  className="rounded-xl"
+                  placeholder="Re-enter new password"
+                  className="h-11 rounded-2xl border-slate-200 text-sm shadow-2xs"
                 />
               </div>
 
-              <Button onClick={handleChangePassword} disabled={saving} className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 h-12">
-                <Lock className="w-4 h-4 mr-2" />
-                {saving ? "Changing..." : "Change Password"}
-              </Button>
+              <div className="pt-2">
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={saving || !newPassword}
+                  className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-blue-500/20"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  {saving ? "Updating Password..." : "Change Password"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

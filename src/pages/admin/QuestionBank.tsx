@@ -797,7 +797,7 @@ const QuestionBank = () => {
     <Button
       onClick={() => navigate("/admin/add-question")}
       size="icon"
-      className="w-10 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border border-white/20"
+      className="w-10 h-10 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 text-white"
     >
       <Plus className="w-5 h-5" />
     </Button>
@@ -808,8 +808,8 @@ const QuestionBank = () => {
       <AdminLayout title="Question Bank" subtitle="Manage questions">
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-emerald-600 text-sm">Loading questions...</p>
+            <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-blue-600 text-sm font-semibold">Loading questions...</p>
           </div>
         </div>
       </AdminLayout>
@@ -818,53 +818,74 @@ const QuestionBank = () => {
 
   return (
     <AdminLayout title="Question Bank" subtitle={`${questions.length} questions in database`} headerActions={AddButton}>
-      <div className="space-y-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <FileQuestion className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Question Bank Vault</h1>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Manage, filter, verify formulas and organize questions across exams & subjects</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+              {questions.length} MCQs Total
+            </Badge>
+          </div>
+        </div>
+
         {/* Stats Row with Difficulty & PYQ breakdown */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
-            <p className="text-xl font-extrabold text-slate-900">{questions.length}</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Total MCQs</p>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/70 to-indigo-50/30 border border-blue-100/80 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{questions.length}</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mt-0.5">Total MCQs</p>
           </div>
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
-            <p className="text-xl font-extrabold text-emerald-600">{questions.filter(q => q.difficulty === 'easy').length}</p>
-            <p className="text-[10px] text-emerald-700 uppercase tracking-wider font-bold">Easy</p>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{questions.filter(q => q.difficulty === 'easy').length}</p>
+            <p className="text-[10px] text-emerald-700 uppercase tracking-wider font-bold mt-0.5">Easy</p>
           </div>
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
-            <p className="text-xl font-extrabold text-amber-600">{questions.filter(q => q.difficulty === 'medium').length}</p>
-            <p className="text-[10px] text-amber-700 uppercase tracking-wider font-bold">Medium</p>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/70 to-orange-50/30 border border-amber-100/80 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{questions.filter(q => q.difficulty === 'medium').length}</p>
+            <p className="text-[10px] text-amber-700 uppercase tracking-wider font-bold mt-0.5">Medium</p>
           </div>
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
-            <p className="text-xl font-extrabold text-rose-600">{questions.filter(q => q.difficulty === 'hard').length}</p>
-            <p className="text-[10px] text-rose-700 uppercase tracking-wider font-bold">Hard</p>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-rose-50/70 to-red-50/30 border border-rose-100/80 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-rose-700 tracking-tight">{questions.filter(q => q.difficulty === 'hard').length}</p>
+            <p className="text-[10px] text-rose-700 uppercase tracking-wider font-bold mt-0.5">Hard</p>
           </div>
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
-            <p className="text-xl font-extrabold text-purple-600">{questions.filter(q => q.year && Number(q.year) > 0).length}</p>
-            <p className="text-[10px] text-purple-700 uppercase tracking-wider font-bold">PYQs</p>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-purple-50/70 to-violet-50/30 border border-purple-100/80 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-purple-700 tracking-tight">{questions.filter(q => q.year && Number(q.year) > 0).length}</p>
+            <p className="text-[10px] text-purple-700 uppercase tracking-wider font-bold mt-0.5">PYQs</p>
           </div>
-          <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm">
-            <p className="text-xl font-extrabold text-blue-600">{subjectOptions.length}</p>
-            <p className="text-[10px] text-blue-700 uppercase tracking-wider font-bold">Subjects</p>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-slate-50 to-slate-100/80 border border-slate-200/90 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-blue-700 tracking-tight">{subjectOptions.length}</p>
+            <p className="text-[10px] text-blue-700 uppercase tracking-wider font-bold mt-0.5">Subjects</p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div className="space-y-3.5 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="relative md:col-span-2 lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search question text or source..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm"
+                className="pl-10 h-11 rounded-2xl bg-white border-slate-200/90 text-sm shadow-2xs focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
 
             <Select value={filterCategory} onValueChange={handleCategoryChange}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                 <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value="exam">Exam Linked</SelectItem>
                 <SelectItem value="subject">Subject Linked</SelectItem>
@@ -876,10 +897,10 @@ const QuestionBank = () => {
               onValueChange={handleSubcategoryChange} 
               disabled={filterCategory === "all"}
             >
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs">
                 <SelectValue placeholder={filterCategory === "exam" ? "Select Exam" : filterCategory === "subject" ? "Select Subject" : "Exam / Subject"} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                 <SelectItem value="all">
                   {filterCategory === "exam" ? "All Exams" : filterCategory === "subject" ? "All Subjects" : "All"}
                 </SelectItem>
@@ -894,10 +915,10 @@ const QuestionBank = () => {
 
             {/* Difficulty Filter */}
             <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs">
                 <SelectValue placeholder="Difficulty" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                 <SelectItem value="all">All Difficulties</SelectItem>
                 <SelectItem value="easy">🟢 Easy</SelectItem>
                 <SelectItem value="medium">🟡 Medium</SelectItem>
@@ -907,10 +928,10 @@ const QuestionBank = () => {
 
             {/* PYQ Year Filter */}
             <Select value={filterYear} onValueChange={setFilterYear}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs">
                 <SelectValue placeholder="PYQ Year" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                 <SelectItem value="all">All Questions</SelectItem>
                 <SelectItem value="pyq">All PYQ Papers</SelectItem>
                 <SelectItem value="2025">2025 PYQ</SelectItem>
@@ -922,25 +943,26 @@ const QuestionBank = () => {
                 <SelectItem value="2019">2019 PYQ</SelectItem>
               </SelectContent>
             </Select>
+
             <Button
               variant="outline"
               onClick={handleExportQuestions}
               disabled={filteredQuestions.length === 0}
-              className="h-12 rounded-xl gap-2 col-span-2 lg:col-span-1"
+              className="h-11 rounded-2xl gap-2 font-bold text-slate-700 border-slate-200/90 shadow-2xs hover:bg-slate-50 col-span-2 lg:col-span-1"
             >
-              <Download className="w-4 h-4" />
-              {selectedQuestions.length > 0 ? `Export ${selectedQuestions.length}` : "Export CSV"}
+              <Download className="w-4 h-4 text-blue-600" />
+              {selectedQuestions.length > 0 ? `Export (${selectedQuestions.length})` : "Export CSV"}
             </Button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100">
             {/* Language filter */}
             <div className="w-40">
               <Select value={filterLanguage} onValueChange={setFilterLanguage}>
-                <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-slate-200/90 text-xs font-bold text-slate-700">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                   <SelectItem value="all">All Languages</SelectItem>
                   <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
                   <SelectItem value="en">English</SelectItem>
@@ -956,10 +978,10 @@ const QuestionBank = () => {
                   value={filterMockTest} 
                   onValueChange={handleMockTestFilterChange}
                 >
-                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                  <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-slate-200/90 text-xs font-bold text-slate-700">
                     <SelectValue placeholder="Select Mock Test" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                     <SelectItem value="all">All Mock Tests</SelectItem>
                     {mockTests
                       .filter(test => test.exam_id === filterExam)
@@ -974,14 +996,14 @@ const QuestionBank = () => {
             {/* Show Topic dropdown ONLY when a Subject is selected */}
             {filterCategory === "subject" && filterSubcategory !== "all" && filterSubcategory.startsWith("subject:") && (
               <div className="w-56">
-                 <Select 
+                <Select 
                   value={filterTopic} 
                   onValueChange={handleTopicChange} 
                 >
-                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                  <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-slate-200/90 text-xs font-bold text-slate-700">
                     <SelectValue placeholder="Topic" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl shadow-lg border-slate-200">
                     <SelectItem value="all">All Topics</SelectItem>
                     {topicOptions
                       // Only show topics belonging to the selected subject
@@ -1020,40 +1042,40 @@ const QuestionBank = () => {
 
         {/* Selection Tools */}
         {filteredQuestions.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-200/90 shadow-xs">
             <div className="flex items-center gap-4 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSelectAll}
-                className="gap-2 rounded-xl"
+                className="gap-2 rounded-xl font-bold text-slate-700 border-slate-200"
               >
                 {selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0 ? (
-                  <CheckSquare className="w-4 h-4" />
+                  <CheckSquare className="w-4 h-4 text-blue-600" />
                 ) : (
-                  <Square className="w-4 h-4" />
+                  <Square className="w-4 h-4 text-slate-400" />
                 )}
                 Select All ({filteredQuestions.length})
               </Button>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Range:</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Range:</span>
                 <Input
                   type="number"
                   placeholder="From"
                   value={rangeStart}
                   onChange={(e) => setRangeStart(e.target.value)}
-                  className="w-16 h-9 rounded-lg"
+                  className="w-16 h-9 rounded-xl border-slate-200 text-xs font-medium"
                   min="1"
                   max={filteredQuestions.length}
                 />
-                <span className="text-sm text-gray-500">to</span>
+                <span className="text-xs font-bold text-slate-400">to</span>
                 <Input
                   type="number"
                   placeholder="To"
                   value={rangeEnd}
                   onChange={(e) => setRangeEnd(e.target.value)}
-                  className="w-16 h-9 rounded-lg"
+                  className="w-16 h-9 rounded-xl border-slate-200 text-xs font-medium"
                   min="1"
                   max={filteredQuestions.length}
                 />
@@ -1062,7 +1084,7 @@ const QuestionBank = () => {
                   size="sm"
                   onClick={handleRangeSelect}
                   disabled={!rangeStart || !rangeEnd}
-                  className="rounded-lg"
+                  className="rounded-xl font-bold border-slate-200 text-xs h-9"
                 >
                   Select Range
                 </Button>
@@ -1070,7 +1092,7 @@ const QuestionBank = () => {
 
               {selectedQuestions.length > 0 && (
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
-                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-full text-xs">
                     {selectedQuestions.length} selected
                   </Badge>
                   <Button
@@ -1090,7 +1112,7 @@ const QuestionBank = () => {
                       });
                       setBulkEditOpen(true);
                     }}
-                    className="rounded-lg gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="rounded-xl gap-1.5 text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 font-bold text-xs"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit Subject/Topic
@@ -1099,12 +1121,12 @@ const QuestionBank = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setBulkDeleteOpen(true)}
-                    className="rounded-lg gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
+                    className="rounded-xl gap-1.5 text-rose-600 border-rose-200 bg-rose-50/40 hover:bg-rose-100/60 font-bold text-xs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete Selected
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={clearSelection} className="text-gray-500">
+                  <Button variant="ghost" size="sm" onClick={clearSelection} className="text-slate-500 font-bold text-xs">
                     Clear
                   </Button>
                 </div>
@@ -1115,25 +1137,25 @@ const QuestionBank = () => {
 
         {/* Questions List - Row Based */}
         {filteredQuestions.length === 0 ? (
-          <Card className="border-0 bg-white rounded-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <FileQuestion className="w-8 h-8 text-emerald-600" />
+          <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 rounded-3xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <FileQuestion className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No Questions Found</h3>
-              <p className="text-gray-500 text-sm mb-4">
+              <h3 className="text-lg font-black text-slate-900 mb-1">No Questions Found</h3>
+              <p className="text-slate-500 text-sm mb-5">
                 {searchQuery || filterExam !== "all" || filterSubject !== "all" || filterTopic !== "all"
                   ? "Try adjusting your filters"
                   : "Start by adding questions to your question bank"}
               </p>
-              <Button onClick={() => navigate("/admin/add-question")} className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600">
+              <Button onClick={() => navigate("/admin/add-question")} className="rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 px-5">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Question
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-4">
             {currentQuestions.map((question, index) => {
               const isSelected = selectedQuestions.includes(question.id);
               const correct = (question.correct_answer || "").toUpperCase().trim();
@@ -1145,10 +1167,10 @@ const QuestionBank = () => {
               return (
                 <div
                   key={question.id}
-                  className={`bg-white rounded-2xl border transition-all p-4 sm:p-5 ${
+                  className={`bg-white rounded-2xl sm:rounded-3xl border transition-all p-4 sm:p-5 ${
                     isSelected
-                      ? "border-blue-500 bg-blue-50/20 shadow-xs ring-1 ring-blue-500/30"
-                      : "border-slate-200/80 shadow-2xs hover:border-slate-300 hover:shadow-xs"
+                      ? "border-blue-500 bg-blue-50/20 shadow-xs ring-2 ring-blue-500/20"
+                      : "border-slate-200/90 shadow-xs hover:border-blue-300 hover:shadow-sm"
                   }`}
                 >
                   {/* Top Row: Circular Selector + Number & Question Text + Action Icons */}
@@ -1160,8 +1182,8 @@ const QuestionBank = () => {
                         onClick={() => handleSelectQuestion(question.id)}
                         className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center shrink-0 mt-0.5 cursor-pointer ${
                           isSelected
-                            ? "border-blue-500 bg-blue-500 text-white"
-                            : "border-blue-400/80 bg-white hover:border-blue-600"
+                            ? "border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-500/30"
+                            : "border-slate-300 bg-white hover:border-blue-600"
                         }`}
                         aria-label="Select question"
                       >
@@ -1169,8 +1191,8 @@ const QuestionBank = () => {
                       </button>
 
                       {/* Question Number & Text */}
-                      <div className="flex-1 min-w-0 flex items-start gap-1.5 text-sm sm:text-base font-bold text-slate-900 leading-snug">
-                        <span className="shrink-0">{indexOfFirstQuestion + index + 1}.</span>
+                      <div className="flex-1 min-w-0 flex items-start gap-2 text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+                        <span className="shrink-0 text-blue-600">{indexOfFirstQuestion + index + 1}.</span>
                         <div className="flex-1 min-w-0">
                           <MathText text={question.question_text} formatBullets={false} />
                         </div>
@@ -1182,7 +1204,7 @@ const QuestionBank = () => {
                       <button
                         type="button"
                         onClick={() => handleEdit(question)}
-                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
                         title="Edit Question"
                       >
                         <Pencil className="w-4 h-4" />
@@ -1190,7 +1212,7 @@ const QuestionBank = () => {
                       <button
                         type="button"
                         onClick={() => handleDelete(question.id)}
-                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                         title="Delete Question"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1199,88 +1221,84 @@ const QuestionBank = () => {
                   </div>
 
                   {/* Middle: 2-Column Options (A & C left, B & D right) */}
-                  <div className="ml-8 mt-3 mb-3.5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 sm:gap-x-12 gap-y-1.5 text-xs sm:text-sm">
+                  <div className="ml-8 mt-3 mb-3.5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 sm:gap-x-12 gap-y-2 text-xs sm:text-sm">
                     {/* Left Column: A and C */}
-                    <div className="space-y-1.5">
-                      <div className={`flex items-start gap-1.5 ${isA ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
-                        <span className="shrink-0">A.</span>
-                        <div className="flex items-center gap-1 flex-wrap">
+                    <div className="space-y-2">
+                      <div className={`flex items-start gap-2 p-2 rounded-xl transition-colors ${isA ? "font-bold text-slate-900 bg-emerald-50/70 border border-emerald-200/70" : "text-slate-600 bg-slate-50/50"}`}>
+                        <span className={`w-5 h-5 rounded-md flex items-center justify-center text-xs shrink-0 font-black ${isA ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}>A</span>
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
                           <MathText text={question.option_a || ""} formatBullets={false} />
-                          {isA && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                          {isA && <span className="text-emerald-700 font-black ml-1 text-xs">✓ Correct</span>}
                         </div>
                       </div>
-                      <div className={`flex items-start gap-1.5 ${isC ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
-                        <span className="shrink-0">C.</span>
-                        <div className="flex items-center gap-1 flex-wrap">
+                      <div className={`flex items-start gap-2 p-2 rounded-xl transition-colors ${isC ? "font-bold text-slate-900 bg-emerald-50/70 border border-emerald-200/70" : "text-slate-600 bg-slate-50/50"}`}>
+                        <span className={`w-5 h-5 rounded-md flex items-center justify-center text-xs shrink-0 font-black ${isC ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}>C</span>
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
                           <MathText text={question.option_c || ""} formatBullets={false} />
-                          {isC && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                          {isC && <span className="text-emerald-700 font-black ml-1 text-xs">✓ Correct</span>}
                         </div>
                       </div>
                     </div>
 
                     {/* Right Column: B and D */}
-                    <div className="space-y-1.5">
-                      <div className={`flex items-start gap-1.5 ${isB ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
-                        <span className="shrink-0">B.</span>
-                        <div className="flex items-center gap-1 flex-wrap">
+                    <div className="space-y-2">
+                      <div className={`flex items-start gap-2 p-2 rounded-xl transition-colors ${isB ? "font-bold text-slate-900 bg-emerald-50/70 border border-emerald-200/70" : "text-slate-600 bg-slate-50/50"}`}>
+                        <span className={`w-5 h-5 rounded-md flex items-center justify-center text-xs shrink-0 font-black ${isB ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}>B</span>
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
                           <MathText text={question.option_b || ""} formatBullets={false} />
-                          {isB && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                          {isB && <span className="text-emerald-700 font-black ml-1 text-xs">✓ Correct</span>}
                         </div>
                       </div>
-                      <div className={`flex items-start gap-1.5 ${isD ? "font-bold text-slate-900" : "text-slate-600 font-normal"}`}>
-                        <span className="shrink-0">D.</span>
-                        <div className="flex items-center gap-1 flex-wrap">
+                      <div className={`flex items-start gap-2 p-2 rounded-xl transition-colors ${isD ? "font-bold text-slate-900 bg-emerald-50/70 border border-emerald-200/70" : "text-slate-600 bg-slate-50/50"}`}>
+                        <span className={`w-5 h-5 rounded-md flex items-center justify-center text-xs shrink-0 font-black ${isD ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}>D</span>
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
                           <MathText text={question.option_d || ""} formatBullets={false} />
-                          {isD && <span className="text-slate-900 font-bold ml-1">✓</span>}
+                          {isD && <span className="text-emerald-700 font-black ml-1 text-xs">✓ Correct</span>}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Bottom: Metadata Row */}
-                  <div className="ml-8 flex items-center flex-wrap gap-3 text-xs text-slate-500 font-medium pt-1">
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>
-                        {question.subjects?.name || question.subject || question.topics?.name || "General"}
-                      </span>
-                    </div>
-
-                    <span className="text-slate-500 font-sans text-xs">
-                      {question.language || "bn"}
-                    </span>
-
-                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="ml-8 flex items-center flex-wrap gap-2.5 text-xs text-slate-500 font-medium pt-2 border-t border-slate-100">
+                    <Badge variant="secondary" className="rounded-full text-[10px] font-bold px-2.5 py-0.5 bg-slate-100 text-slate-700">
+                      <BookOpen className="w-3 h-3 mr-1 text-slate-400 shrink-0" />
+                      {question.subjects?.name || question.subject || question.topics?.name || "General"}
+                    </Badge>
 
                     {question.exams?.name && (
-                      <span className="text-slate-400 text-[11px]">
-                        • {question.exams.name}
-                      </span>
+                      <Badge variant="outline" className="rounded-full text-[10px] font-bold px-2.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200">
+                        {question.exams.name}
+                      </Badge>
                     )}
 
                     {question.year && (
-                      <span className="text-purple-600 text-[11px] font-semibold">
-                        • PYQ {question.year}
-                      </span>
+                      <Badge variant="outline" className="rounded-full text-[10px] font-bold px-2.5 py-0.5 bg-purple-50 text-purple-700 border-purple-200">
+                        PYQ {question.year}
+                      </Badge>
                     )}
 
                     {question.difficulty && (
-                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                        question.difficulty === 'easy' ? 'bg-emerald-50 text-emerald-700' :
-                        question.difficulty === 'hard' ? 'bg-rose-50 text-rose-700' :
-                        'bg-amber-50 text-amber-700'
+                      <Badge variant="secondary" className={`rounded-full text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 ${
+                        question.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-800' :
+                        question.difficulty === 'hard' ? 'bg-rose-100 text-rose-800' :
+                        'bg-amber-100 text-amber-800'
                       }`}>
                         {question.difficulty}
-                      </span>
+                      </Badge>
                     )}
+
+                    <span className="text-slate-400 font-medium text-[11px] uppercase">
+                      LANG: {question.language || "bn"}
+                    </span>
 
                     {question.explanation && (
                       <button
                         type="button"
                         onClick={() => viewDetails(question)}
-                        className="ml-auto text-[11px] text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                        className="ml-auto text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                       >
-                        <Eye className="w-3 h-3" /> ব্যাখ্যা দেখুন
+                        <Eye className="w-3.5 h-3.5" /> ব্যাখ্যা দেখুন
                       </button>
                     )}
                   </div>
@@ -1290,27 +1308,29 @@ const QuestionBank = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 py-6">
+              <div className="flex items-center justify-center gap-2 py-4">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-xl border-slate-200"
+                  className="rounded-2xl border-slate-200 h-10 px-3 font-bold"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Prev
                 </Button>
-                <span className="text-sm text-slate-600 font-medium px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200/90 rounded-xl px-3 py-2 shadow-2xs">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="rounded-xl border-slate-200"
+                  className="rounded-2xl border-slate-200 h-10 px-3 font-bold"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             )}

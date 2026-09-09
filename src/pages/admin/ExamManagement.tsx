@@ -100,67 +100,69 @@ const SortableExamItem = ({
             ref={setNodeRef}
             style={style}
             onClick={onClick}
-            className={`p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
-                ? "bg-blue-50/70 border-2 border-blue-600 shadow-sm"
-                : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
+            className={`p-3.5 rounded-2xl cursor-pointer transition-all duration-150 flex items-center justify-between group border ${isSelected
+                ? "bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border-blue-500 shadow-sm ring-2 ring-blue-500/20"
+                : "bg-white hover:bg-slate-50 border-slate-200/80 hover:border-blue-300 shadow-2xs"
                 }`}
         >
             <div className="flex items-center gap-3 min-w-0">
-                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded shrink-0" onClick={e => e.stopPropagation()}>
-                    <GripVertical className="w-4 h-4 text-gray-400" />
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-200/80 rounded-xl shrink-0 transition-colors" onClick={e => e.stopPropagation()}>
+                    <GripVertical className="w-4 h-4 text-slate-400" />
                 </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${exam.is_active
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-gray-200 text-gray-400"
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-all ${exam.is_active
+                    ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-400"
                     }`}>
                     <BookOpen className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">{exam.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <p className="font-bold text-slate-900 text-sm truncate">{exam.name}</p>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {exam.category && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/70">
                                 {exam.category}
-                            </Badge>
+                            </span>
                         )}
                         {!exam.is_active && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-200 text-gray-600">INACTIVE</Badge>
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                                INACTIVE
+                            </span>
                         )}
                         {exam.is_paid ? (
-                            <span className="text-[10px] font-semibold text-blue-600">₹{exam.price}</span>
+                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">₹{exam.price}</span>
                         ) : (
-                            <span className="text-[10px] font-semibold text-emerald-600">FREE</span>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/70">FREE</span>
                         )}
-                        {visibility && <Eye className="w-3 h-3 text-blue-600" />}
+                        {visibility && <Eye className="w-3.5 h-3.5 text-blue-600 ml-0.5" />}
                     </div>
                 </div>
             </div>
             <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-blue-50">
-                            <MoreVertical className="w-4 h-4 text-gray-400" />
+                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-xl hover:bg-blue-50">
+                            <MoreVertical className="w-4 h-4 text-slate-400" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl min-w-[160px]">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(exam); }}>
-                            <Pencil className="w-4 h-4 mr-2" /> Edit Exam
+                    <DropdownMenuContent align="end" className="rounded-2xl min-w-[160px] p-1.5 shadow-xl border border-slate-200">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(exam); }} className="rounded-xl font-medium">
+                            <Pencil className="w-4 h-4 mr-2 text-slate-500" /> Edit Exam
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleActive(exam); }}>
-                            {exam.is_active ? <PowerOff className="w-4 h-4 mr-2" /> : <Power className="w-4 h-4 mr-2" />}
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleActive(exam); }} className="rounded-xl font-medium">
+                            {exam.is_active ? <PowerOff className="w-4 h-4 mr-2 text-slate-500" /> : <Power className="w-4 h-4 mr-2 text-slate-500" />}
                             {exam.is_active ? "Deactivate" : "Activate"}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleVisibility(exam.id, exam.name); }}>
-                            {visibility ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleVisibility(exam.id, exam.name); }} className="rounded-xl font-medium">
+                            {visibility ? <EyeOff className="w-4 h-4 mr-2 text-slate-500" /> : <Eye className="w-4 h-4 mr-2 text-slate-500" />}
                             {visibility ? "Hide from Landing" : "Show on Landing"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(exam.id); }} className="text-red-600 focus:text-red-600">
-                            <Trash2 className="w-4 h-4 mr-2" /> Delete Exam
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(exam.id); }} className="rounded-xl font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50">
+                            <Trash2 className="w-4 h-4 mr-2 text-rose-500" /> Delete Exam
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? "text-blue-600 translate-x-1" : "text-gray-300"}`} />
+                <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? "text-blue-600 translate-x-1" : "text-slate-300"}`} />
             </div>
         </div>
     );
@@ -174,58 +176,58 @@ const SortableMockTestItem = ({ mockTest, index, onEdit, onDelete }: {
     onDelete: () => void;
 }) => {
     return (
-        <div className="p-4 rounded-xl bg-gray-50 hover:bg-blue-50/20 transition-all border border-gray-100 flex items-center justify-between group">
-            <div className="flex items-center gap-4 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center shrink-0 shadow-sm text-blue-600 font-bold text-xs">
+        <div className="p-4 rounded-2xl bg-white hover:bg-slate-50/80 transition-all border border-slate-200/90 hover:border-blue-300 shadow-2xs hover:shadow-xs flex items-center justify-between group">
+            <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs text-blue-600 font-black text-xs">
                     {index + 1}
                 </div>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-semibold text-gray-900 text-sm truncate">{mockTest.title}</h4>
+                        <h4 className="font-bold text-slate-900 text-sm truncate">{mockTest.title}</h4>
                         {mockTest.test_type === "pyq" ? (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                                 PYQ
-                            </Badge>
+                            </span>
                         ) : (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                                 Full Mock
-                            </Badge>
+                            </span>
                         )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2.5 mt-1">
-                        <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                    <div className="flex flex-wrap items-center gap-2.5 mt-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
                             <Clock className="w-3 h-3 text-blue-500" />
                             {mockTest.duration_minutes}m
                         </div>
-                        <div className="flex items-center gap-1 text-[11px] text-gray-500">
-                            <Target className="w-3 h-3 text-blue-500" />
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                            <Target className="w-3 h-3 text-indigo-500" />
                             {mockTest.total_marks} Marks
                         </div>
                         {mockTest.negative_marking ? (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-rose-50 text-rose-700 border-rose-200">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
                                 -{mockTest.negative_marks_per_question ?? 0.25} Neg
-                            </Badge>
+                            </span>
                         ) : (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                                 No Neg
-                            </Badge>
+                            </span>
                         )}
-                        <div className="flex items-center gap-1 text-[11px] text-purple-600 font-medium">
+                        <div className="flex items-center gap-1 text-[11px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
                             <FileText className="w-3 h-3" />
                             {mockTest.test_questions?.[0]?.count || 0} Qs
                         </div>
-                        <Badge variant="outline" className={`text-[9px] px-1.5 py-0 font-medium ${mockTest.is_published ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-100 text-gray-500"}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${mockTest.is_published ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"}`}>
                             {mockTest.is_published ? "PUBLISHED" : "DRAFT"}
-                        </Badge>
+                        </span>
                     </div>
                 </div>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" onClick={onEdit} className="w-8 h-8 rounded-lg hover:bg-white hover:shadow-sm">
-                    <Pencil className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" onClick={onEdit} className="w-8 h-8 rounded-xl hover:bg-blue-50 text-blue-600">
+                    <Pencil className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onDelete} className="w-8 h-8 rounded-lg hover:bg-white hover:shadow-sm">
-                    <Trash2 className="w-4 h-4 text-red-600" />
+                <Button variant="ghost" size="icon" onClick={onDelete} className="w-8 h-8 rounded-xl hover:bg-rose-50 text-rose-600">
+                    <Trash2 className="w-4 h-4" />
                 </Button>
             </div>
         </div>
@@ -625,35 +627,56 @@ const ExamManagement = () => {
 
     return (
         <AdminLayout title="Exam Management" subtitle="Manage exams, categories, and mock tests">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-10">
-                {/* Left Column: Exams */}
-                <div className="lg:col-span-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <BookOpen className="w-5 h-5 text-blue-600" />
-                            Exam Categories
-                        </h3>
+            <div className="max-w-7xl mx-auto space-y-6 pb-10">
+                {/* Executive Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+                            <BookOpen className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Exam Engine & Categories</h2>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium mt-0.5">Organize target recruitment exams, categories, and full mock test series</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                         <Button
                             onClick={() => {
                                 setEditingExam(null);
                                 setExamFormData({ name: "", description: "", category: "State Govt.", is_active: true, is_paid: false, price: 0 });
                                 setExamDialogOpen(true);
                             }}
-                            size="sm"
-                            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 h-9"
+                            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-4 h-10 shadow-sm shadow-blue-600/20 active:scale-[0.98]"
                         >
-                            <Plus className="w-4 h-4 mr-1.5" /> Add Exam
+                            <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" /> Add New Exam
                         </Button>
                     </div>
+                </div>
 
-                    <Card className="border-0 shadow-sm bg-white rounded-2xl overflow-hidden">
-                        <CardContent className="p-3">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left Column: Exams */}
+                    <div className="lg:col-span-4 space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                                <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                                    Exam Categories ({exams.length})
+                                </h3>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 p-3.5 shadow-xs">
                             {exams.length === 0 ? (
-                                <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                    <p className="text-sm text-gray-500">No exams yet</p>
+                                <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200">
+                                    <BookOpen className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                    <p className="text-xs font-bold text-slate-600">No exams yet</p>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">Click "Add New Exam" above to create one</p>
                                 </div>
                             ) : (
-                                <div className="space-y-2">
+                                <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
                                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleExamDragEnd}>
                                         <SortableContext items={exams.map(e => e.id)} strategy={verticalListSortingStrategy}>
                                             {exams.map(exam => (
@@ -684,50 +707,52 @@ const ExamManagement = () => {
                                     </DndContext>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Right Column: Mock Tests */}
-                <div className="lg:col-span-8 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-blue-600" />
-                            {selectedExamId ? `Mock Tests for ${selectedExamName}` : "Select an Exam"}
-                        </h3>
-                        {selectedExamId && (
-                            <Button onClick={openCreateMockTest} size="sm" className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 h-9">
-                                <Plus className="w-4 h-4 mr-1.5" /> Add Test
-                            </Button>
-                        )}
+                        </div>
                     </div>
 
-                    <Card className="border-0 shadow-sm bg-white rounded-2xl min-h-[400px]">
-                        <CardContent className="p-4">
+                    {/* Right Column: Mock Tests */}
+                    <div className="lg:col-span-8 space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                                <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                                    {selectedExamId ? `Mock Tests for ${selectedExamName} (${mockTests.length})` : "Select an Exam"}
+                                </h3>
+                            </div>
+                            {selectedExamId && (
+                                <Button onClick={openCreateMockTest} size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 h-8 shadow-sm active:scale-[0.98]">
+                                    <Plus className="w-3.5 h-3.5 mr-1 stroke-[2.5]" /> Add Mock Test
+                                </Button>
+                            )}
+                        </div>
+
+                        <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs min-h-[420px]">
                             {!selectedExamId ? (
                                 <div className="flex flex-col items-center justify-center h-[350px] text-center">
-                                    <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                                    <div className="w-16 h-16 rounded-3xl bg-blue-50/80 text-blue-600 border border-blue-100 flex items-center justify-center mb-4 shadow-2xs">
                                         <BookOpen className="w-8 h-8" />
                                     </div>
-                                    <h4 className="text-gray-900 font-semibold mb-1">No Exam Selected</h4>
-                                    <p className="text-gray-500 text-sm max-w-[250px]">Choose an exam from the left to manage its full mock tests and PYQs.</p>
+                                    <h4 className="text-slate-900 font-black text-base mb-1">No Exam Selected</h4>
+                                    <p className="text-slate-500 text-xs max-w-xs leading-relaxed">Choose an exam from the left column to view and manage its full mock tests and previous year papers.</p>
                                 </div>
                             ) : testsLoading ? (
                                 <div className="flex flex-col items-center justify-center h-[350px]">
-                                    <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-                                    <p className="text-gray-500 text-sm font-medium">Loading tests...</p>
+                                    <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+                                    <p className="text-slate-500 text-xs font-semibold">Loading test papers...</p>
                                 </div>
                             ) : mockTests.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-[350px] text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                    <FileText className="w-10 h-10 text-gray-300 mb-3" />
-                                    <h4 className="text-gray-900 font-semibold mb-1">No Mock Tests Yet</h4>
-                                    <p className="text-gray-500 text-sm mb-6">Create the first comprehensive mock test or PYQ for this exam.</p>
-                                    <Button onClick={openCreateMockTest} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white">
-                                        <Plus className="w-4 h-4 mr-2" /> Create Mock Test
+                                <div className="flex flex-col items-center justify-center h-[350px] text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 p-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mb-3 shadow-2xs">
+                                        <FileText className="w-7 h-7 text-slate-400" />
+                                    </div>
+                                    <h4 className="text-slate-900 font-bold text-sm mb-1">No Mock Tests Yet</h4>
+                                    <p className="text-slate-500 text-xs mb-5 max-w-xs">Create the first comprehensive mock test or PYQ paper for this exam.</p>
+                                    <Button onClick={openCreateMockTest} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 shadow-sm active:scale-[0.98]">
+                                        <Plus className="w-4 h-4 mr-1.5" /> Create Mock Test
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                                     {mockTests.map((test, idx) => (
                                         <SortableMockTestItem
                                             key={test.id}
@@ -739,8 +764,8 @@ const ExamManagement = () => {
                                     ))}
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
 

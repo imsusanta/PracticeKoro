@@ -669,7 +669,7 @@ const StudentManagement = () => {
         <Button 
           size="sm" 
           onClick={() => setAddStudentDialogOpen(true)} 
-          className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 font-semibold text-xs px-3.5 h-9"
+          className="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 font-bold text-xs px-4 h-10"
         >
           <Plus className="w-4 h-4 mr-1.5" /> Add Student
         </Button>
@@ -696,9 +696,30 @@ const StudentManagement = () => {
       subtitle={activeTab === "students" ? `${students.length} registered students` : `₹${totalRevenue.toLocaleString('en-IN')} total revenue (${transactions.length} orders)`} 
       headerActions={HeaderActions}
     >
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Modern Executive Header Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Student & Payments Hub</h1>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">
+                {activeTab === "students" ? `${students.length} enrolled candidates across all batches` : `₹${totalRevenue.toLocaleString('en-IN')} gross revenue across ${transactions.length} orders`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {HeaderActions}
+          </div>
+        </div>
+
         {/* Navigation View Switcher */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-fit">
             <button
               onClick={() => setActiveTab("students")}
@@ -710,7 +731,7 @@ const StudentManagement = () => {
             >
               <Users className="w-4 h-4" />
               <span>Students Directory</span>
-              <Badge variant="secondary" className={`text-[11px] px-1.5 py-0 ${activeTab === "students" ? "bg-blue-50 text-blue-700" : "bg-slate-200/70 text-slate-600"}`}>
+              <Badge variant="secondary" className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${activeTab === "students" ? "bg-blue-50 text-blue-700" : "bg-slate-200/70 text-slate-600"}`}>
                 {students.length}
               </Badge>
             </button>
@@ -724,7 +745,7 @@ const StudentManagement = () => {
             >
               <CreditCard className="w-4 h-4" />
               <span>Purchases & Transactions</span>
-              <Badge variant="secondary" className={`text-[11px] px-1.5 py-0 ${activeTab === "transactions" ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-slate-200/70 text-slate-600"}`}>
+              <Badge variant="secondary" className={`text-[11px] px-2 py-0.5 rounded-full ${activeTab === "transactions" ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-slate-200/70 text-slate-600"}`}>
                 ₹{totalRevenue.toLocaleString('en-IN')}
               </Badge>
             </button>
@@ -734,94 +755,105 @@ const StudentManagement = () => {
         {/* STUDENTS VIEW */}
         {activeTab === "students" && (
           <div className="space-y-6">
-            {/* Filter Tabs - Colored Card Style */}
-            <div className="flex overflow-x-auto gap-3 pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-6 md:gap-4 no-scrollbar">
+            {/* Filter Tabs - Soft Gradient Student Dashboard Metric Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
-                { key: "all", label: "All Students", count: statusCounts.all, bgColor: "bg-blue-50", textColor: "text-blue-700", borderColor: "border-blue-400", ringColor: "ring-blue-400" },
-                { key: "premium", label: "PRO PASS", count: statusCounts.premium, bgColor: "bg-amber-50", textColor: "text-amber-700", borderColor: "border-amber-400", ringColor: "ring-amber-400" },
-                { key: "pending", label: "Pending", count: statusCounts.pending, bgColor: "bg-amber-50", textColor: "text-amber-600", borderColor: "border-amber-300", ringColor: "ring-amber-300" },
-                { key: "approved", label: "Approved", count: statusCounts.approved, bgColor: "bg-emerald-50", textColor: "text-emerald-700", borderColor: "border-emerald-300", ringColor: "ring-emerald-300" },
-                { key: "rejected", label: "Rejected", count: statusCounts.rejected, bgColor: "bg-rose-50", textColor: "text-rose-600", borderColor: "border-rose-300", ringColor: "ring-rose-300" },
-                { key: "deactivated", label: "Inactive", count: statusCounts.deactivated, bgColor: "bg-slate-50", textColor: "text-slate-600", borderColor: "border-slate-300", ringColor: "ring-slate-300" },
-              ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => {
-                if (item.key === 'premium') {
-                  setPaymentFilter(item.key);
-                  setFilterStatus("all");
-                } else {
-                  setFilterStatus(item.key);
-                  setPaymentFilter("all");
-                }
-              }}
-              className={`flex flex-col items-center justify-center min-w-[100px] md:min-w-0 py-4 px-5 rounded-2xl transition-all duration-200 shrink-0 ${item.bgColor} border-2 ${(item.key === 'premium' ? paymentFilter === item.key : filterStatus === item.key)
-                ? `${item.borderColor}`
-                : "border-transparent hover:border-gray-200"
-                }`}
-            >
-              <span className={`text-2xl md:text-3xl font-bold ${item.textColor}`}>{item.count}</span>
-              <span className={`text-xs font-medium ${item.textColor} mt-1`}>{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Search & Payment Filter */}
-        <div className="flex flex-col md:flex-row gap-4 mt-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search by name or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-12 rounded-xl bg-white border-gray-200 shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
-            />
-          </div>
-          <div className="flex bg-gray-100 p-1 rounded-xl w-fit shrink-0">
-            <button
-              onClick={() => setPaymentFilter("all")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${paymentFilter === 'all' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              All Types
-            </button>
-            <button
-              onClick={() => setPaymentFilter("premium")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${paymentFilter === 'premium' ? 'bg-white text-amber-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Premium
-            </button>
-            <button
-              onClick={() => setPaymentFilter("free")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${paymentFilter === 'free' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Free
-            </button>
-          </div>
-        </div>
-
-        {/* Students List - Row Based */}
-        {filteredStudents.length === 0 ? (
-          <Card className="border-0 bg-white rounded-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-emerald-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No Students Found</h3>
-              <p className="text-gray-500 text-sm">{searchQuery || filterStatus !== "all" ? "Try different filters" : "No students registered yet"}</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-0 bg-white rounded-2xl overflow-hidden">
-            {/* Table Header */}
-            <div className="hidden md:grid md:grid-cols-[2fr_1.5fr_1fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <span>Student</span>
-              <span>Contact</span>
-              <span>Status</span>
-              <span>Joined</span>
-              <span className="text-center">Actions</span>
+                { key: "all", label: "All Students", count: statusCounts.all, gradient: "from-blue-50/80 to-indigo-50/40", border: "border-blue-200/90", text: "text-blue-700", ring: "ring-2 ring-blue-500 shadow-sm", icon: Users },
+                { key: "premium", label: "PRO PASS", count: statusCounts.premium, gradient: "from-amber-50/80 to-yellow-50/40", border: "border-amber-200/90", text: "text-amber-700", ring: "ring-2 ring-amber-500 shadow-sm", icon: Sparkles },
+                { key: "pending", label: "Pending", count: statusCounts.pending, gradient: "from-orange-50/80 to-amber-50/40", border: "border-orange-200/90", text: "text-orange-700", ring: "ring-2 ring-orange-500 shadow-sm", icon: Clock },
+                { key: "approved", label: "Approved", count: statusCounts.approved, gradient: "from-emerald-50/80 to-teal-50/40", border: "border-emerald-200/90", text: "text-emerald-700", ring: "ring-2 ring-emerald-500 shadow-sm", icon: CheckCircle },
+                { key: "rejected", label: "Rejected", count: statusCounts.rejected, gradient: "from-rose-50/80 to-red-50/40", border: "border-rose-200/90", text: "text-rose-700", ring: "ring-2 ring-rose-500 shadow-sm", icon: XCircle },
+                { key: "deactivated", label: "Inactive", count: statusCounts.deactivated, gradient: "from-slate-50 to-gray-100/60", border: "border-slate-200/90", text: "text-slate-700", ring: "ring-2 ring-slate-400 shadow-sm", icon: UserX },
+              ].map((item) => {
+                const isSelected = item.key === 'premium' ? paymentFilter === item.key : filterStatus === item.key;
+                const IconComponent = item.icon;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => {
+                      if (item.key === 'premium') {
+                        setPaymentFilter(item.key);
+                        setFilterStatus("all");
+                      } else {
+                        setFilterStatus(item.key);
+                        setPaymentFilter("all");
+                      }
+                    }}
+                    className={`flex flex-col text-left p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl border bg-gradient-to-b ${item.gradient} ${item.border} transition-all duration-200 ${
+                      isSelected ? `${item.ring} scale-[1.02]` : "hover:shadow-xs hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className={`w-8 h-8 rounded-xl bg-white/80 backdrop-blur-xs flex items-center justify-center ${item.text} shadow-2xs`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.text} border-current/20 bg-white/60`}>
+                        {isSelected ? "Active" : "Filter"}
+                      </Badge>
+                    </div>
+                    <span className="text-2xl font-black text-slate-900 tracking-tight">{item.count}</span>
+                    <span className="text-xs font-semibold text-slate-600 mt-0.5">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="divide-y divide-gray-100">
+            {/* Search & Payment Filter Bar */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search student by name, phone or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-11 h-11 rounded-2xl bg-white border-slate-200/90 text-sm shadow-2xs focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="flex bg-white p-1 rounded-2xl border border-slate-200/90 shadow-2xs w-fit shrink-0">
+                <button
+                  onClick={() => setPaymentFilter("all")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${paymentFilter === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  All Types
+                </button>
+                <button
+                  onClick={() => setPaymentFilter("premium")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${paymentFilter === 'premium' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  PRO Pass
+                </button>
+                <button
+                  onClick={() => setPaymentFilter("free")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${paymentFilter === 'free' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  Free Access
+                </button>
+              </div>
+            </div>
+
+            {/* Students List - Row Based */}
+            {filteredStudents.length === 0 ? (
+              <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs">
+                <CardContent className="p-12 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+                    <Users className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">No Students Found</h3>
+                  <p className="text-slate-500 text-xs">{searchQuery || filterStatus !== "all" ? "Try adjusting your search query or filter tags" : "No students registered yet in this category"}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+                {/* Table Header */}
+                <div className="hidden md:grid md:grid-cols-[2fr_1.5fr_1fr_1fr_80px] gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <span>Student Details</span>
+                  <span>Contact Info</span>
+                  <span>Approval & Pass</span>
+                  <span>Enrollment Date</span>
+                  <span className="text-center">Action</span>
+                </div>
+
+                <div className="divide-y divide-slate-100">
               {filteredStudents.map((student) => {
                 const status = student.approval_status?.status || "pending";
 
@@ -1177,59 +1209,55 @@ const StudentManagement = () => {
     {/* TRANSACTIONS VIEW */}
     {activeTab === "transactions" && (
       <div className="space-y-6">
-        {/* KPI Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 opacity-5 rounded-full -mr-8 -mt-8" />
+        {/* Modern Soft Gradient KPI Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl border bg-gradient-to-b from-amber-50/80 to-amber-100/30 border-amber-200/90 shadow-xs relative overflow-hidden">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/90 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
                 <CreditCard className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Revenue</p>
-                <p className="text-2xl font-bold text-slate-900 mt-0.5">₹{totalRevenue.toLocaleString('en-IN')}</p>
+                <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Gross Revenue</p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">₹{totalRevenue.toLocaleString('en-IN')}</p>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-600 opacity-5 rounded-full -mr-8 -mt-8" />
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl border bg-gradient-to-b from-emerald-50/80 to-emerald-100/30 border-emerald-200/90 shadow-xs relative overflow-hidden">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/90 text-emerald-600 flex items-center justify-center shadow-2xs shrink-0">
                 <CheckCircle className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Orders</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-0.5">{completedCount}</p>
+                <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Paid / Active Orders</p>
+                <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">{completedCount}</p>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 opacity-5 rounded-full -mr-8 -mt-8" />
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl border bg-gradient-to-b from-blue-50/80 to-indigo-50/30 border-blue-200/90 shadow-xs relative overflow-hidden">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/90 text-blue-600 flex items-center justify-center shadow-2xs shrink-0">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Orders</p>
-                <p className="text-2xl font-bold text-amber-600 mt-0.5">{pendingCount}</p>
+                <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Pending Orders</p>
+                <p className="text-xl sm:text-2xl font-black text-blue-700 mt-0.5">{pendingCount}</p>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="border-0 bg-white/90 backdrop-blur-sm shadow-sm rounded-2xl p-4 md:p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-400 to-rose-600 opacity-5 rounded-full -mr-8 -mt-8" />
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl border bg-gradient-to-b from-rose-50/80 to-red-100/30 border-rose-200/90 shadow-xs relative overflow-hidden">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/90 text-rose-600 flex items-center justify-center shadow-2xs shrink-0">
                 <XCircle className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Failed / Incomplete</p>
-                <p className="text-2xl font-bold text-rose-600 mt-0.5">{failedCount}</p>
+                <p className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">Failed / Unpaid</p>
+                <p className="text-xl sm:text-2xl font-black text-rose-700 mt-0.5">{failedCount}</p>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* Search & Filter Bar */}
@@ -1240,12 +1268,12 @@ const StudentManagement = () => {
               placeholder="Search student, WhatsApp, Razorpay payment ID or order ID..."
               value={transactionSearch}
               onChange={(e) => setTransactionSearch(e.target.value)}
-              className="pl-11 h-12 rounded-xl bg-white border-slate-200 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="pl-11 h-11 rounded-2xl bg-white border-slate-200/90 shadow-2xs focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
 
           {/* Status Filter */}
-          <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 overflow-x-auto">
+          <div className="flex bg-white p-1 rounded-2xl border border-slate-200/90 shadow-2xs shrink-0 overflow-x-auto">
             {[
               { key: "all", label: "All Status" },
               { key: "completed", label: "Completed" },
@@ -1255,9 +1283,9 @@ const StudentManagement = () => {
               <button
                 key={item.key}
                 onClick={() => setTransactionStatusFilter(item.key)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   transactionStatusFilter === item.key
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1267,7 +1295,7 @@ const StudentManagement = () => {
           </div>
 
           {/* Type Filter */}
-          <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 overflow-x-auto">
+          <div className="flex bg-white p-1 rounded-2xl border border-slate-200/90 shadow-2xs shrink-0 overflow-x-auto">
             {[
               { key: "all", label: "All Items" },
               { key: "subscription", label: "PRO PASS" },
@@ -1277,9 +1305,9 @@ const StudentManagement = () => {
               <button
                 key={item.key}
                 onClick={() => setTransactionTypeFilter(item.key)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   transactionTypeFilter === item.key
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1291,26 +1319,26 @@ const StudentManagement = () => {
 
         {/* Transactions List */}
         {filteredTransactions.length === 0 ? (
-          <Card className="border-0 bg-white rounded-2xl">
+          <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl shadow-xs">
             <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-                <CreditCard className="w-8 h-8 text-blue-600" />
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3 text-blue-600">
+                <CreditCard className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-1">No Transactions Found</h3>
-              <p className="text-slate-500 text-sm">
+              <h3 className="text-base font-bold text-slate-900 mb-1">No Transactions Found</h3>
+              <p className="text-slate-500 text-xs">
                 {transactionSearch || transactionStatusFilter !== "all" || transactionTypeFilter !== "all"
-                  ? "Try adjusting your search query or filters"
+                  ? "Try adjusting your search query or filter chips"
                   : "No payment transactions recorded in the system yet"}
               </p>
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-0 bg-white rounded-2xl overflow-hidden shadow-sm">
+          <Card className="border border-slate-200/90 bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
             {/* Table Header for Desktop */}
-            <div className="hidden lg:grid lg:grid-cols-[1.8fr_1.2fr_1fr_1.8fr_1fr_80px] gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              <span>Student</span>
+            <div className="hidden lg:grid lg:grid-cols-[1.8fr_1.2fr_1fr_1.8fr_1fr_80px] gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <span>Student Details</span>
               <span>Purchased Item</span>
-              <span>Amount</span>
+              <span>Amount Paid</span>
               <span>Payment / Order ID</span>
               <span>Date & Status</span>
               <span className="text-center">Action</span>
@@ -1322,20 +1350,20 @@ const StudentManagement = () => {
                 const phone = student?.whatsapp_number || (student?.email?.includes("@whatsapp") ? student.email.split("@")[0] : null);
 
                 return (
-                  <div key={tx.id} className="p-4 lg:p-0 hover:bg-slate-50/50 transition-colors">
+                  <div key={tx.id} className="p-4 lg:p-0 hover:bg-blue-50/30 transition-colors">
                     {/* Desktop Row */}
-                    <div className="hidden lg:grid lg:grid-cols-[1.8fr_1.2fr_1fr_1.8fr_1fr_80px] gap-4 px-5 py-4 items-center">
+                    <div className="hidden lg:grid lg:grid-cols-[1.8fr_1.2fr_1fr_1.8fr_1fr_80px] gap-4 px-5 py-3.5 items-center">
                       {/* Student Details */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
                           {student?.avatar_url ? (
-                            <img src={student.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                            <img src={student.avatar_url} alt="" className="w-full h-full object-cover rounded-2xl" />
                           ) : (
                             student?.full_name?.[0]?.toUpperCase() || "?"
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 text-sm truncate">{student?.full_name || "Unknown Student"}</p>
+                          <p className="font-bold text-slate-900 text-sm truncate">{student?.full_name || "Unknown Student"}</p>
                           {phone && (
                             <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                               <Phone className="w-3 h-3 text-slate-400" />
@@ -1348,15 +1376,15 @@ const StudentManagement = () => {
                       {/* Purchased Item */}
                       <div>
                         {tx.content_type === 'subscription' ? (
-                          <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 text-xs px-2.5 py-0.5 shadow-sm font-semibold">
+                          <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-2xs">
                             <Sparkles className="w-3 h-3 mr-1" /> PRO PASS (Yearly)
                           </Badge>
                         ) : tx.content_type === 'test' ? (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5 font-semibold">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
                             <FileText className="w-3 h-3 mr-1" /> Mock Test
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-0.5 font-semibold">
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
                             <FileText className="w-3 h-3 mr-1" /> Study Note
                           </Badge>
                         )}
@@ -1364,14 +1392,14 @@ const StudentManagement = () => {
 
                       {/* Amount */}
                       <div>
-                        <span className="font-bold text-slate-900 text-base">₹{tx.amount}</span>
+                        <span className="font-black text-slate-900 text-base">₹{tx.amount}</span>
                       </div>
 
                       {/* Razorpay IDs */}
                       <div className="space-y-1 min-w-0">
                         {tx.razorpay_payment_id ? (
                           <div className="flex items-center gap-1.5 text-xs text-slate-700">
-                            <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[140px]" title={tx.razorpay_payment_id}>
+                            <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[140px]" title={tx.razorpay_payment_id}>
                               {tx.razorpay_payment_id}
                             </span>
                             <button
@@ -1380,9 +1408,9 @@ const StudentManagement = () => {
                               title="Copy Payment ID"
                             >
                               {copiedPaymentId === tx.razorpay_payment_id ? (
-                                <Check className="w-3 h-3 text-emerald-600" />
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
                               ) : (
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-3.5 h-3.5" />
                               )}
                             </button>
                           </div>
@@ -1401,7 +1429,7 @@ const StudentManagement = () => {
                       <div className="space-y-1">
                         <Badge
                           variant="secondary"
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                             tx.status === 'completed'
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               : tx.status === 'pending'

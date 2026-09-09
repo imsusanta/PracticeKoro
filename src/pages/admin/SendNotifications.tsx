@@ -462,340 +462,334 @@ const SendNotifications = () => {
 
     return (
         <AdminLayout title="Send Notifications" subtitle="Notify students about new content">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Send Notification Form */}
-                <Card className="border-0 rounded-2xl overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100/50">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-                                <Send className="w-5 h-5 text-white" />
-                            </div>
-                            Send Notification
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        {/* Notification Type Selection */}
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 mb-3 block">Notification Type</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { id: "mock_test", label: "Mock Test", icon: TestTube2, color: "emerald" },
-                                    { id: "notes", label: "Notes", icon: FileText, color: "blue" },
-                                    { id: "custom", label: "Custom", icon: MessageSquare, color: "purple" },
-                                ].map((type) => {
-                                    const Icon = type.icon;
-                                    const isSelected = notificationType === type.id;
-                                    return (
-                                        <button
-                                            key={type.id}
-                                            onClick={() => setNotificationType(type.id as any)}
-                                            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${isSelected
-                                                ? `border-${type.color}-500 bg-${type.color}-50`
-                                                : "border-gray-200 hover:border-gray-300"
-                                                }`}
-                                        >
-                                            <Icon
-                                                className={`w-5 h-5 ${isSelected ? `text-${type.color}-600` : "text-gray-400"
-                                                    }`}
-                                            />
-                                            <span
-                                                className={`text-xs font-medium ${isSelected ? `text-${type.color}-700` : "text-gray-600"
-                                                    }`}
-                                            >
-                                                {type.label}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+            <div className="space-y-6 max-w-7xl mx-auto">
+                {/* Modern Executive Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <Bell className="w-5 h-5" />
                         </div>
-
-                        {/* Dynamic Form Based on Type */}
-                        <AnimatePresence mode="wait">
-                            {notificationType === "mock_test" && (
-                                <motion.div
-                                    key="mock_test"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="space-y-4"
-                                >
-                                    <label className="text-sm font-medium text-gray-700 block">Select Mock Test</label>
-                                    <select
-                                        value={selectedTestId}
-                                        onChange={(e) => setSelectedTestId(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                    >
-                                        <option value="">-- Select a mock test --</option>
-                                        {mockTests.map((test) => (
-                                            <option key={test.id} value={test.id}>
-                                                {test.title} {test.exam_name && `(${test.exam_name})`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {selectedTestId && (
-                                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                            <p className="text-xs text-emerald-700 font-medium mb-1">Preview:</p>
-                                            <p className="text-sm text-emerald-800 font-semibold">New Mock Test Available! 📝</p>
-                                            <p className="text-xs text-emerald-600 mt-1">
-                                                {mockTests.find((t) => t.id === selectedTestId)?.title} is now live. Start practicing now!
-                                            </p>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-
-                            {notificationType === "notes" && (
-                                <motion.div
-                                    key="notes"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="space-y-4"
-                                >
-                                    <label className="text-sm font-medium text-gray-700 block">Select Notes</label>
-                                    <select
-                                        value={selectedNoteId}
-                                        onChange={(e) => setSelectedNoteId(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">-- Select a note --</option>
-                                        {notes.map((note) => (
-                                            <option key={note.id} value={note.id}>
-                                                {note.title} {note.subject_name && `(${note.subject_name})`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {selectedNoteId && (
-                                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                                            <p className="text-xs text-blue-700 font-medium mb-1">Preview:</p>
-                                            <p className="text-sm text-blue-800 font-semibold">New Study Notes Uploaded! 📚</p>
-                                            <p className="text-xs text-blue-600 mt-1">
-                                                {notes.find((n) => n.id === selectedNoteId)?.title} is now available for you to read.
-                                            </p>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-
-                            {notificationType === "custom" && (
-                                <motion.div
-                                    key="custom"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="space-y-4"
-                                >
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-700 block mb-2">Title</label>
-                                        <Input
-                                            value={customTitle}
-                                            onChange={(e) => setCustomTitle(e.target.value)}
-                                            placeholder="Enter notification title..."
-                                            className="rounded-xl"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-700 block mb-2">Message</label>
-                                        <Textarea
-                                            value={customMessage}
-                                            onChange={(e) => setCustomMessage(e.target.value)}
-                                            placeholder="Enter notification message..."
-                                            className="rounded-xl min-h-[100px]"
-                                        />
-                                    </div>
-                                    {customTitle && customMessage && (
-                                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-100">
-                                            <p className="text-xs text-purple-700 font-medium mb-1">Preview:</p>
-                                            <p className="text-sm text-purple-800 font-semibold">{customTitle}</p>
-                                            <p className="text-xs text-purple-600 mt-1">{customMessage}</p>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
                         <div>
-                            <label className="text-sm font-medium text-gray-700 mb-2 block">Recipients</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {(Object.keys(AUDIENCE_LABELS) as NotificationAudience[]).map((key) => {
-                                    const selected = audience === key;
-                                    return (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            onClick={() => setAudience(key)}
-                                            className={`p-2.5 rounded-xl border-2 text-left transition-all ${selected
-                                                ? "border-indigo-500 bg-indigo-50"
-                                                : "border-gray-200 hover:border-gray-300"
-                                                }`}
-                                        >
-                                            <p className={`text-xs font-semibold ${selected ? "text-indigo-700" : "text-gray-700"}`}>
-                                                {AUDIENCE_LABELS[key]}
-                                            </p>
-                                        </button>
-                                    );
-                                })}
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Notification Dispatch Center</h1>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                <Users className="w-3.5 h-3.5" />
-                                {audienceCount == null ? "Counting recipients..." : `${audienceCount} student${audienceCount === 1 ? "" : "s"} will receive this`}
-                            </p>
+                            <p className="text-xs text-slate-500 font-medium">Broadcast alerts, mock test announcements, and reminders to candidates</p>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50/50 text-blue-700 border-blue-200">
+                            {studentCount ?? "..."} Registered Students
+                        </Badge>
+                    </div>
+                </div>
 
-                        {/* Send Button */}
-                        <Button
-                            onClick={requestSendNotification}
-                            disabled={sending}
-                            className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold"
-                        >
-                            {sending ? (
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <Send className="w-4 h-4 mr-2" />
-                                    Review & send
-                                </>
-                            )}
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                {/* Recent Notifications */}
-                <Card className="border-0 rounded-2xl overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100/50">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-500 to-slate-600 flex items-center justify-center">
-                                    <Bell className="w-5 h-5 text-white" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Send Notification Form */}
+                    <Card className="border border-slate-200/90 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs bg-white">
+                        <CardHeader className="bg-slate-50/80 border-b border-slate-100 p-4 sm:p-5">
+                            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                                    <Send className="w-4 h-4" />
                                 </div>
-                                Recent Notifications
-                                <Badge variant="secondary" className="ml-2 bg-slate-100 text-slate-600">
-                                    {recentNotifications.length}
-                                </Badge>
+                                Compose Notification
                             </CardTitle>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => loadNotifications()}
-                                    className="h-8 w-8 p-0 rounded-lg hover:bg-white"
-                                    title="Refresh List"
-                                >
-                                    <RefreshCw className="w-4 h-4 text-gray-400" />
-                                </Button>
-                                {recentNotifications.length > 0 && (
+                        </CardHeader>
+                        <CardContent className="p-5 sm:p-6 space-y-6">
+                            {/* Notification Type Selection */}
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2.5 block">Category Type</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: "mock_test", label: "Mock Test", icon: TestTube2, color: "blue" },
+                                        { id: "notes", label: "Notes", icon: FileText, color: "indigo" },
+                                        { id: "custom", label: "Custom Alert", icon: MessageSquare, color: "purple" },
+                                    ].map((type) => {
+                                        const Icon = type.icon;
+                                        const isSelected = notificationType === type.id;
+                                        return (
+                                            <button
+                                                key={type.id}
+                                                onClick={() => setNotificationType(type.id as any)}
+                                                className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 ${
+                                                    isSelected
+                                                        ? "border-blue-600 bg-blue-50/70 text-blue-700 font-bold shadow-xs"
+                                                        : "border-slate-200/90 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                                }`}
+                                            >
+                                                <Icon className={`w-5 h-5 ${isSelected ? "text-blue-600" : "text-slate-400"}`} />
+                                                <span className="text-xs font-bold">{type.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Dynamic Form Based on Type */}
+                            <AnimatePresence mode="wait">
+                                {notificationType === "mock_test" && (
+                                    <motion.div
+                                        key="mock_test"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="space-y-4"
+                                    >
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block">Select Mock Test</label>
+                                        <select
+                                            value={selectedTestId}
+                                            onChange={(e) => setSelectedTestId(e.target.value)}
+                                            className="w-full h-11 px-4 rounded-2xl border border-slate-200/90 bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+                                        >
+                                            <option value="">-- Select a mock test --</option>
+                                            {mockTests.map((test) => (
+                                                <option key={test.id} value={test.id}>
+                                                    {test.title} {test.exam_name && `(${test.exam_name})`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {selectedTestId && (
+                                            <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/80">
+                                                <p className="text-[11px] text-blue-700 font-bold mb-1">Preview Notification:</p>
+                                                <p className="text-sm text-blue-900 font-bold">New Mock Test Available! 📝</p>
+                                                <p className="text-xs text-blue-700 mt-0.5">
+                                                    {mockTests.find((t) => t.id === selectedTestId)?.title} is now live. Start practicing now!
+                                                </p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+
+                                {notificationType === "notes" && (
+                                    <motion.div
+                                        key="notes"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="space-y-4"
+                                    >
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block">Select Notes</label>
+                                        <select
+                                            value={selectedNoteId}
+                                            onChange={(e) => setSelectedNoteId(e.target.value)}
+                                            className="w-full h-11 px-4 rounded-2xl border border-slate-200/90 bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+                                        >
+                                            <option value="">-- Select a note --</option>
+                                            {notes.map((note) => (
+                                                <option key={note.id} value={note.id}>
+                                                    {note.title} {note.subject_name && `(${note.subject_name})`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {selectedNoteId && (
+                                            <div className="p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-200/80">
+                                                <p className="text-[11px] text-indigo-700 font-bold mb-1">Preview Notification:</p>
+                                                <p className="text-sm text-indigo-900 font-bold">New Study Notes Uploaded! 📚</p>
+                                                <p className="text-xs text-indigo-700 mt-0.5">
+                                                    {notes.find((n) => n.id === selectedNoteId)?.title} is now available for you to read.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+
+                                {notificationType === "custom" && (
+                                    <motion.div
+                                        key="custom"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="space-y-4"
+                                    >
+                                        <div>
+                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-1.5">Notification Title</label>
+                                            <Input
+                                                value={customTitle}
+                                                onChange={(e) => setCustomTitle(e.target.value)}
+                                                placeholder="e.g. Special Practice Session Live!"
+                                                className="h-11 rounded-2xl border-slate-200/90 shadow-2xs text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-1.5">Notification Message</label>
+                                            <Textarea
+                                                value={customMessage}
+                                                onChange={(e) => setCustomMessage(e.target.value)}
+                                                placeholder="Write your broadcast announcement for students..."
+                                                className="rounded-2xl border-slate-200/90 shadow-2xs min-h-[100px] text-sm"
+                                            />
+                                        </div>
+                                        {customTitle && customMessage && (
+                                            <div className="p-3.5 bg-purple-50/60 rounded-2xl border border-purple-200/80">
+                                                <p className="text-[11px] text-purple-700 font-bold mb-1">Preview Notification:</p>
+                                                <p className="text-sm text-purple-900 font-bold">{customTitle}</p>
+                                                <p className="text-xs text-purple-700 mt-0.5">{customMessage}</p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 block">Target Audience</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(Object.keys(AUDIENCE_LABELS) as NotificationAudience[]).map((key) => {
+                                        const selected = audience === key;
+                                        return (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => setAudience(key)}
+                                                className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                                                    selected
+                                                        ? "border-blue-600 bg-blue-50/60 text-blue-700 font-bold shadow-xs"
+                                                        : "border-slate-200/90 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                                                }`}
+                                            >
+                                                <p className={`text-xs font-bold ${selected ? "text-blue-700" : "text-slate-700"}`}>
+                                                    {AUDIENCE_LABELS[key]}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <p className="text-xs text-slate-500 font-medium mt-2.5 flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-blue-600" />
+                                    {audienceCount == null ? "Counting target candidates..." : `${audienceCount} candidate${audienceCount === 1 ? "" : "s"} will receive this`}
+                                </p>
+                            </div>
+
+                            {/* Send Button */}
+                            <Button
+                                onClick={requestSendNotification}
+                                disabled={sending}
+                                className="w-full h-11 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold shadow-md shadow-blue-500/20"
+                            >
+                                {sending ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4 mr-2" />
+                                        Review & Dispatch Notification
+                                    </>
+                                )}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Recent Notifications */}
+                    <Card className="border border-slate-200/90 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs bg-white flex flex-col">
+                        <CardHeader className="bg-slate-50/80 border-b border-slate-100 p-4 sm:p-5">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2.5">
+                                    <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                                        <Bell className="w-4 h-4" />
+                                    </div>
+                                    Recent Notifications
+                                    <Badge variant="secondary" className="ml-2 bg-blue-50 text-blue-700 rounded-full font-bold px-2 py-0.5 text-xs">
+                                        {recentNotifications.length}
+                                    </Badge>
+                                </CardTitle>
+                                <div className="flex gap-1.5">
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={handleClearAll}
-                                        className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
-                                    >
-                                        <Trash2 className="w-3 h-3 mr-1" />
-                                        Clear All
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {recentNotifications.length === 0 ? (
-                            <div className="text-center py-12 px-4">
-                                <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                                    <Bell className="w-8 h-8 text-gray-300" />
-                                </div>
-                                <p className="text-gray-500 font-medium">No notifications sent yet</p>
-                                <p className="text-gray-400 text-sm mt-1">
-                                    Send your first notification to students
-                                </p>
-
-                                <div className="mt-8 p-5 bg-indigo-50 rounded-2xl border border-indigo-100/50 text-left">
-                                    <p className="text-sm font-bold text-indigo-900 flex items-center gap-2 mb-3">
-                                        <Sparkles className="w-4 h-4 text-indigo-600" /> System Upgrade
-                                    </p>
-                                    <p className="text-[11px] text-indigo-700 leading-relaxed mb-4">
-                                        Previously, notifications were only saved in your browser. Now they are saved in the **Database** (Supabase) so your students can see them on their phones and computers!
-                                    </p>
-                                    <ul className="text-[11px] text-indigo-700 space-y-2 border-t border-indigo-100/50 pt-4">
-                                        <li className="flex justify-between font-medium">
-                                            <span>Students found:</span>
-                                            <span className="text-indigo-900">{studentCount ?? "..."}</span>
-                                        </li>
-                                        <li className="text-[10px] leading-relaxed italic opacity-80">
-                                            If count &gt; 0 but this box is empty, it means you need to run the **SQL Migration** to give Admin permission to view the database.
-                                        </li>
-                                    </ul>
-                                    <Button
                                         onClick={() => loadNotifications()}
-                                        variant="default"
-                                        size="sm"
-                                        className="w-full mt-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                                        className="h-8 w-8 p-0 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                        title="Refresh List"
                                     >
-                                        <RefreshCw className="w-3 h-3 mr-2" /> Refresh Dashboard
+                                        <RefreshCw className="w-4 h-4" />
                                     </Button>
+                                    {recentNotifications.length > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleClearAll}
+                                            className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl font-bold h-8 px-2.5"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                            Clear All
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
-                                {recentNotifications.map((notif) => (
-                                    <div
-                                        key={notif.id}
-                                        className="p-4 hover:bg-gray-50 transition-colors group"
-                                    >
-                                        <div className="flex gap-3">
-                                            <div
-                                                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.type === "new_test"
-                                                    ? "bg-emerald-100"
-                                                    : notif.type === "reminder"
-                                                        ? "bg-amber-100"
-                                                        : "bg-blue-100"
-                                                    }`}
-                                            >
-                                                {getTypeIcon(notif.type)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <p className="text-sm font-medium text-gray-900 truncate">
-                                                        {notif.title}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => handleDeleteNotification(notif)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
-                                                    >
-                                                        <Trash2 className="w-3 h-3 text-red-500" />
-                                                    </button>
-                                                </div>
-                                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                                                    {notif.message}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <Badge
-                                                        className={`text-[10px] border-0 ${notif.type === "new_test"
-                                                            ? "bg-emerald-100 text-emerald-700"
+                        </CardHeader>
+                        <CardContent className="p-0 flex-1">
+                            {recentNotifications.length === 0 ? (
+                                <div className="text-center py-14 px-4">
+                                    <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+                                        <Bell className="w-7 h-7" />
+                                    </div>
+                                    <p className="text-slate-900 font-bold text-sm">No notifications sent yet</p>
+                                    <p className="text-slate-500 text-xs mt-1">
+                                        Send your first broadcast notification to candidates
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100 max-h-[520px] overflow-y-auto">
+                                    {recentNotifications.map((notif) => (
+                                        <div
+                                            key={notif.id}
+                                            className="p-4 hover:bg-blue-50/30 transition-colors group"
+                                        >
+                                            <div className="flex gap-3">
+                                                <div
+                                                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                                                        notif.type === "new_test"
+                                                            ? "bg-emerald-50 text-emerald-600"
                                                             : notif.type === "reminder"
-                                                                ? "bg-amber-100 text-amber-700"
-                                                                : "bg-blue-100 text-blue-700"
+                                                            ? "bg-amber-50 text-amber-600"
+                                                            : "bg-blue-50 text-blue-600"
+                                                    }`}
+                                                >
+                                                    {getTypeIcon(notif.type)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <p className="text-sm font-bold text-slate-900 truncate">
+                                                            {notif.title}
+                                                        </p>
+                                                        <button
+                                                            onClick={() => handleDeleteNotification(notif)}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-rose-50 rounded-lg text-rose-500"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                                        {notif.message}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className={`text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${
+                                                                notif.type === "new_test"
+                                                                    ? "bg-emerald-50 text-emerald-700"
+                                                                    : notif.type === "reminder"
+                                                                    ? "bg-amber-50 text-amber-700"
+                                                                    : "bg-blue-50 text-blue-700"
                                                             }`}
-                                                    >
-                                                        {notif.type.replace("_", " ")}
-                                                    </Badge>
-                                                    <span className="text-[10px] text-gray-400">
-                                                        {formatTime(notif.createdAt)}
-                                                    </span>
-                                                    {typeof notif.recipientCount === "number" && (
-                                                        <span className="text-[10px] text-gray-400">
-                                                            {notif.readCount || 0}/{notif.recipientCount} read
+                                                        >
+                                                            {notif.type.replace("_", " ")}
+                                                        </Badge>
+                                                        <span className="text-[10px] text-slate-400 font-medium">
+                                                            {formatTime(notif.createdAt)}
                                                         </span>
-                                                    )}
+                                                        {typeof notif.recipientCount === "number" && (
+                                                            <span className="text-[10px] text-slate-400 font-medium">
+                                                                • {notif.readCount || 0}/{notif.recipientCount} read
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             <DeleteAlertDialog
