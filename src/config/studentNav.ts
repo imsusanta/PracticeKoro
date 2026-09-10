@@ -25,7 +25,7 @@ export const studentFullNav = [
   { name: "Practice", path: "/student/practice", icon: Target },
   { name: "Test Results", path: "/student/results", icon: BarChart3 },
   { name: "Study Notes", path: "/student/notes", icon: BookOpen },
-  { name: "Mistakes Notebook", path: "/student/mistakes", icon: RotateCcw },
-  { name: "State Leaderboard", path: "/student/leaderboard", icon: Trophy },
+  { name: "Mistakes", path: "/student/mistakes", icon: RotateCcw },
+  { name: "Rank", path: "/student/leaderboard", icon: Trophy },
   { name: "My Profile", path: "/student/profile", icon: UserRound },
 ];

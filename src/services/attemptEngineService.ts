@@ -271,6 +271,17 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
         ? testData.passing_marks
         : Math.round(totalMarks * 0.4);
     } else {
+      // RLS lockdown: students have no direct test_questions SELECT, so an
+      // empty read for a REAL seeded test means the paper is unreachable
+      // (RLS or RPC outage) — never disguise the local bank as the real paper.
+      // Local bank fallback stays ONLY for topic-practice / placeholder tests.
+      const isTopicFallback = isTopicId || !testData;
+      if (!isTopicFallback) {
+        throw new Error(
+          "Question paper unavailable (server attempt RPC failed and direct reads are locked down). " +
+          "Please check connection and retry — do not attempt against placeholder questions."
+        );
+      }
       // ONLY fallback when 0 questions are uploaded to test_questions (e.g. unseeded/placeholder mock test)
       const fullMockQuestions = getFullMockQuestions(targetQuestions, req.testId || testTitle);
       sanitizedQuestions = fullMockQuestions.map((fq, idx) => ({
@@ -474,11 +485,29 @@ export async function submitAttempt(
     ? 15
     : (presetMeta?.questions || (testMeta?.total_marks && testMeta.total_marks >= 10 ? testMeta.total_marks : 100));
 
+  // RLS lockdown: server submit_exam_attempt is authoritative for real tests.
+  // Direct correct_answer reads are revoked; this fallback only serves
+  // topic-practice tests (client-scored by design). For real test UUIDs
+  // without server grading + without DB answer keys, fail loudly instead
+  // of persisting a mis-scored local-bank result.
+  const isTopicTest = !resolvedTestId ||
+    resolvedTestId.startsWith("topic-") ||
+    resolvedTestId.length < 30;
+
   if (resolvedTestId && (rules.length === 0 || !rules.some(r => r.correctAnswer))) {
     const { data: tqData } = await supabase
       .from("test_questions")
       .select("question_id, marks, questions(id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, subject, topic)")
       .eq("test_id", resolvedTestId);
+
+    if (!tqData || tqData.length === 0) {
+      if (!isTopicTest && !topicData) {
+        throw new Error(
+          "Server grading unavailable and answer keys are not readable client-side (RLS lockdown). " +
+          "Please retry submission — do not trust a locally computed score for this test."
+        );
+      }
+    }
 
     if (tqData && tqData.length > 0) {
       rules = tqData.map((tq: any) => {

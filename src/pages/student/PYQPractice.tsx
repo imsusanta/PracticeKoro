@@ -113,7 +113,7 @@ export const PYQPractice = () => {
   const toggleBookmark = async (questionId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      toast.info("Please sign in to bookmark questions");
+      toast.info("Please sign in to save questions");
       return;
     }
 
@@ -130,7 +130,7 @@ export const PYQPractice = () => {
         next.delete(questionId);
         return next;
       });
-      toast.info("Removed from Bookmarks");
+      toast.info("Removed from Saved Questions");
     } else {
       await supabase
         .from("student_bookmarks")
@@ -140,7 +140,7 @@ export const PYQPractice = () => {
         });
 
       setBookmarkedIds(prev => new Set(prev).add(questionId));
-      toast.success("Saved to Bookmarks ⭐");
+      toast.success("Saved to Saved Questions ⭐");
     }
   };
 
@@ -515,7 +515,7 @@ export const PYQPractice = () => {
                     <button
                       onClick={() => toggleBookmark(q.id)}
                       className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-amber-500 transition-colors"
-                      title={isBookmarked ? "Remove Bookmark" : "Save Question"}
+                      title={isBookmarked ? "Remove from Saved Questions" : "Save Question"}
                     >
                       {isBookmarked ? (
                         <BookmarkCheck className="w-5 h-5 text-amber-500 fill-amber-500" />

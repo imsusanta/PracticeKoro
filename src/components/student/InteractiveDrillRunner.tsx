@@ -90,7 +90,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
 
   const toggleBookmark = async (qId: string) => {
     if (!user) {
-      toast.info("Please log in to save bookmarks");
+      toast.info("Please log in to save questions");
       return;
     }
     const isBookmarked = bookmarkedIds.has(qId);
@@ -101,11 +101,11 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
         next.delete(qId);
         return next;
       });
-      toast.info("Removed from Bookmarks");
+      toast.info("Removed from Saved Questions");
     } else {
       await supabase.from("student_bookmarks").insert({ user_id: user.id, question_id: qId });
       setBookmarkedIds((prev) => new Set(prev).add(qId));
-      toast.success("Saved to Bookmarks ⭐");
+      toast.success("Saved to Saved Questions ⭐");
     }
   };
 
@@ -274,7 +274,7 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
                   <button
                     onClick={() => toggleBookmark(currentQ.id)}
                     className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-amber-500 transition-colors"
-                    title={bookmarkedIds.has(currentQ.id) ? "Remove Bookmark" : "Save Question"}
+                    title={bookmarkedIds.has(currentQ.id) ? "Remove from Saved Questions" : "Save Question"}
                   >
                     {bookmarkedIds.has(currentQ.id) ? (
                       <BookmarkCheck className="w-5 h-5 text-amber-500 fill-amber-500" />

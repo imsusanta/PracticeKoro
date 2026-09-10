@@ -21,7 +21,8 @@ void main() async {
     ),
   );
 
-  // Initialize Supabase
+  // Initialize Supabase (fails fast if --dart-define missing)
+  SupabaseConfig.assertConfigured();
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,

@@ -632,7 +632,7 @@ export const DailyPractice = () => {
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 font-display">Challenge Completed!</h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Mistakes have been saved to your Mistakes Notebook for focused revision.
+                  Mistakes have been saved to Mistakes for focused revision.
                 </p>
               </div>
 
@@ -658,14 +658,14 @@ export const DailyPractice = () => {
                   className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-10 px-4 flex items-center gap-1.5 shadow-sm"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Review Mistakes Notebook
+                  Review Mistakes
                 </Button>
                 <Button
                   onClick={() => navigate("/student/leaderboard")}
                   className="rounded-xl bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black text-xs h-10 px-4 flex items-center gap-1.5 shadow-sm"
                 >
                   <Trophy className="w-3.5 h-3.5" />
-                  View Leaderboard
+                  View Rank
                 </Button>
                 <Button
                   variant="outline"

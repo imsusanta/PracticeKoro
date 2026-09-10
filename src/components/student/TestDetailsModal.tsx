@@ -34,11 +34,21 @@ export interface TestDetailsModalProps {
     isPyq?: boolean;
     year?: number;
     sections?: { id: number; name: string; count: string }[];
+    testType?: "full_mock" | "topic_wise" | string;
+    subjectName?: string;
   } | null;
 }
 
-function getTestSections(title: string, examName?: string, totalQuestions: number = 100) {
+function getTestSections(title: string, examName?: string, totalQuestions: number = 100, testType?: string, subjectName?: string) {
   const combined = `${title} ${examName || ""}`.toLowerCase();
+
+  // Topic-wise tests: single section with the topic/subject name
+  if (testType === "topic_wise") {
+    const sectionName = subjectName || title || "Topic Practice";
+    return [
+      { id: 1, name: sectionName, count: `${totalQuestions} Qs` },
+    ];
+  }
 
   if (combined.includes("cgl") || combined.includes("ssc") || combined.includes("chsl")) {
     const qPerSection = Math.round(totalQuestions / 4);
@@ -90,7 +100,7 @@ function getTestSections(title: string, examName?: string, totalQuestions: numbe
     ];
   }
 
-  // Default balanced 4 sections matching official SSC / WB exam blueprint
+  // WBSSC / Panchayat style: balanced 4 sections
   const qPerSection = Math.max(1, Math.round(totalQuestions / 4));
   return [
     { id: 1, name: "General Intelligence & Reasoning", count: `${qPerSection} Qs` },
@@ -125,7 +135,7 @@ export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
   const rawNeg = test.negativeMarking ?? "-0.5";
   const negative = String(rawNeg).startsWith("-") ? String(rawNeg) : `-${rawNeg}`;
 
-  const sections = test.sections || getTestSections(test.title, test.examName, totalQ);
+  const sections = test.sections || getTestSections(test.title, test.examName, totalQ, (test as any).testType, (test as any).subjectName);
 
   const handleStart = () => {
     onClose();
@@ -164,7 +174,7 @@ export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
             {/* Badges Row */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200/80">
-                {test.isPyq ? "Previous Year" : "Full Mock"}
+                {test.isPyq ? "Previous Year" : (test as any).testType === "topic_wise" ? "Topic Test" : "Full Mock"}
               </span>
               <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
                 Bilingual (EN/BN)

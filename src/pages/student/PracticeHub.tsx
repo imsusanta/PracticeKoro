@@ -1217,21 +1217,21 @@ export const PracticeHub = () => {
                 path: "/student/daily",
               },
               {
-                label: "Resume Practice",
+                label: "Continue Practice",
                 icon: Play,
                 style: "bg-emerald-50/80 hover:bg-emerald-100/80 border-emerald-200 text-emerald-700 hover:border-emerald-300",
                 iconColor: "text-emerald-600 fill-emerald-600",
                 path: "/student/practice/subject",
               },
               {
-                label: "View Performance",
+                label: "View Results",
                 icon: BarChart3,
                 style: "bg-purple-50/80 hover:bg-purple-100/80 border-purple-200 text-purple-700 hover:border-purple-300",
                 iconColor: "text-purple-600",
                 path: "/student/results",
               },
               {
-                label: "Mistakes Notebook",
+                label: "Mistakes",
                 icon: RotateCcw,
                 style: "bg-rose-50/80 hover:bg-rose-100/80 border-rose-200 text-rose-700 hover:border-rose-300",
                 iconColor: "text-rose-600",
@@ -1269,8 +1269,8 @@ export const PracticeHub = () => {
           <div className="grid grid-cols-2 gap-2 sm:gap-3 py-1">
             {[
               {
-                title: "Bookmarks",
-                desc: "Quickly revise your starred questions",
+                title: "Save Questions",
+                desc: "Quickly revise your saved questions",
                 icon: Bookmark,
                 iconBg: "bg-emerald-50 text-emerald-600 border-emerald-100",
                 hoverBorder: "hover:border-emerald-300",
@@ -1287,7 +1287,7 @@ export const PracticeHub = () => {
                 path: "/student/current-affairs",
               },
               {
-                title: "Mistakes Notebook",
+                title: "Mistakes",
                 desc: "Review and master your weak areas",
                 icon: RotateCcw,
                 iconBg: "bg-rose-50 text-rose-600 border-rose-100",

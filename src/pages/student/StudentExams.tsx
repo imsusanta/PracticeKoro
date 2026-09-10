@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -35,6 +35,7 @@ import { initRazorpayPayment } from "@/utils/payment";
 import { useStudentAuth } from "@/contexts/StudentContext";
 import { useExams, useSubjects, useMockTests, useUserAttempts } from "@/hooks/useStudentData";
 import { Exam, Subject, MockTest, TestAttemptInfo } from "@/services/examService";
+import { EXAM_CATALOG } from "@/data/examCatalog";
 
 export interface ExamPYQ {
   id: string;
@@ -82,6 +83,214 @@ function getPyqsForExam(examId: string, examName?: string): ExamPYQ[] {
   return [
     { id: `${examId}-pyq-2024`, title: `${examName || "Exam"} Official PYQ (2024)`, year: 2024, questions: 85, duration: 60, marks: 85, negative: "-0.25", subtitle: "Official Exam Paper", isPaid: false },
     { id: `${examId}-pyq-2023`, title: `${examName || "Exam"} Solved Paper (2023)`, year: 2023, questions: 85, duration: 60, marks: 85, negative: "-0.25", subtitle: "Solved with Detailed Explanations", isPaid: false },
+  ];
+}
+
+function getFullMockTestsForExam(examId: string, examName?: string, dbTests: MockTest[] = []): MockTest[] {
+  // 1. Direct DB match by exam_id
+  const fromDb = dbTests.filter(t => t.exam_id === examId && t.test_type === "full_mock");
+  if (fromDb.length > 0) return fromDb;
+
+  // 2. Name match in DB
+  if (examName) {
+    const byName = dbTests.filter(t =>
+      t.test_type === "full_mock" &&
+      t.exams?.name &&
+      (t.exams.name.toLowerCase().includes(examName.toLowerCase()) || examName.toLowerCase().includes(t.exams.name.toLowerCase()))
+    );
+    if (byName.length > 0) return byName;
+  }
+
+  // 3. High-yield full mock tests for each target competitive examination
+  const clean = examId.toLowerCase();
+  const nameClean = (examName || "").toLowerCase();
+
+  if (clean.includes("panchayat") || nameClean.includes("panchayat")) {
+    return [
+      {
+        id: "panchayat-mock-1",
+        title: "Panchayat Full Mock Test 1",
+        description: "Comprehensive 100-mark full mock test with timer and negative marking.",
+        test_type: "full_mock",
+        duration_minutes: 90,
+        total_marks: 100,
+        passing_marks: 40,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "WB Panchayat Recruitment" },
+      },
+      {
+        id: "panchayat-mock-2",
+        title: "Panchayat Full Mock Test 2",
+        description: "Advanced full syllabus mock exam for Panchayat recruitment.",
+        test_type: "full_mock",
+        duration_minutes: 90,
+        total_marks: 100,
+        passing_marks: 40,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: true,
+        price: 49,
+        exams: { id: examId, name: examName || "WB Panchayat Recruitment" },
+      },
+    ];
+  }
+
+  if (clean.includes("constable") || nameClean.includes("constable")) {
+    return [
+      {
+        id: "wbp-mock-1",
+        title: "WBP Constable Full Mock 1 (Prelims)",
+        description: "Exact 85-question simulation of WBP Constable Prelims examination.",
+        test_type: "full_mock",
+        duration_minutes: 60,
+        total_marks: 85,
+        passing_marks: 35,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "WBP Constable" },
+      },
+      {
+        id: "wbp-mock-2",
+        title: "WBP Constable Pro Mock 2",
+        description: "High-yield full test with negative marking for Constable aspirants.",
+        test_type: "full_mock",
+        duration_minutes: 60,
+        total_marks: 85,
+        passing_marks: 35,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: true,
+        price: 49,
+        exams: { id: examId, name: examName || "WBP Constable" },
+      },
+    ];
+  }
+
+  if (clean.includes("si") || nameClean.includes("si") || clean.includes("sub-inspector")) {
+    return [
+      {
+        id: "kp-si-mock-1",
+        title: "KP & WBP SI Prelims Full Mock 1",
+        description: "Full mock test for Sub-Inspector prelims with 200 marks scoring.",
+        test_type: "full_mock",
+        duration_minutes: 90,
+        total_marks: 200,
+        passing_marks: 80,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "KP & WBP Sub-Inspector" },
+      },
+    ];
+  }
+
+  if (clean.includes("clerkship") || nameClean.includes("clerkship")) {
+    return [
+      {
+        id: "psc-clerkship-mock-1",
+        title: "WBPSC Clerkship Part-I Full Mock 1",
+        description: "Complete 100-question simulated exam for WBPSC Clerkship Part-I.",
+        test_type: "full_mock",
+        duration_minutes: 90,
+        total_marks: 100,
+        passing_marks: 40,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "WBPSC Clerkship" },
+      },
+    ];
+  }
+
+  if (clean.includes("wbcs") || nameClean.includes("wbcs")) {
+    return [
+      {
+        id: "wbcs-mock-1",
+        title: "WBCS Executive Prelims Full Mock 1",
+        description: "Comprehensive 200-question full mock test for WBCS Executive Prelims.",
+        test_type: "full_mock",
+        duration_minutes: 150,
+        total_marks: 200,
+        passing_marks: 90,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "WBCS Executive" },
+      },
+    ];
+  }
+
+  if (clean.includes("tet") || nameClean.includes("tet")) {
+    return [
+      {
+        id: "wb-tet-mock-1",
+        title: "WB Primary TET Full Mock 1",
+        description: "Full length simulated test for WB Primary TET examination (150 Marks).",
+        test_type: "full_mock",
+        duration_minutes: 150,
+        total_marks: 150,
+        passing_marks: 90,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "WB Primary TET" },
+      },
+    ];
+  }
+
+  if (clean.includes("railway") || clean.includes("group-d") || clean.includes("rrb") || nameClean.includes("railway")) {
+    return [
+      {
+        id: "rrb-gd-mock-1",
+        title: "Railway Group D Full Mock 1",
+        description: "100-question full CBT exam simulation with negative marking.",
+        test_type: "full_mock",
+        duration_minutes: 90,
+        total_marks: 100,
+        passing_marks: 40,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "Railway Group D" },
+      },
+    ];
+  }
+
+  if (clean.includes("ssc-gd") || nameClean.includes("ssc gd")) {
+    return [
+      {
+        id: "ssc-gd-mock-1",
+        title: "SSC GD Constable Full Mock 1",
+        description: "80-question / 160-mark full simulation for SSC GD Constable.",
+        test_type: "full_mock",
+        duration_minutes: 60,
+        total_marks: 160,
+        passing_marks: 64,
+        exam_id: examId,
+        subject_id: null,
+        is_paid: false,
+        exams: { id: examId, name: examName || "SSC GD Constable" },
+      },
+    ];
+  }
+
+  return [
+    {
+      id: `${examId}-full-mock-1`,
+      title: `${examName || "Target Exam"} Full Mock Test 1`,
+      description: "Standard simulated full mock test with timer and real negative marking.",
+      test_type: "full_mock",
+      duration_minutes: 90,
+      total_marks: 100,
+      passing_marks: 40,
+      exam_id: examId,
+      subject_id: null,
+      is_paid: false,
+      exams: { id: examId, name: examName || "Competitive Exam" },
+    },
   ];
 }
 
@@ -145,15 +354,47 @@ const StudentExams = () => {
     }
   };
 
-  // Filter tests strictly aligned with DB data
+  const currentExamObj =
+    exams.find(e => e.id === selectedExam) ||
+    EXAM_CATALOG.find(e => e.id === selectedExam) || (
+      selectedExam === "b6edc506-cceb-45cb-b91d-7d2444ffc85f" ? { id: selectedExam, name: "WBSSC Group D" } :
+      selectedExam === "22497a19-9a35-4bf0-ba7b-5a44bdd0d5aa" ? { id: selectedExam, name: "WBSSC Group C" } :
+      selectedExam === "d91dfc2e-a974-43a6-85c1-d601f41ab421" ? { id: selectedExam, name: "Railway Group D" } :
+      null
+    );
+
+  const examFullMockTests = selectedExam !== "all"
+    ? getFullMockTestsForExam(selectedExam, currentExamObj?.name, mockTests)
+    : [];
+
+  const displayExams = useMemo(() => {
+    const list: Array<{ id: string; name: string }> = [...exams];
+    EXAM_CATALOG.forEach(cat => {
+      if (!list.some(e => e.name.toLowerCase() === cat.name.toLowerCase() || e.id === cat.id)) {
+        list.push({ id: cat.id, name: cat.name });
+      }
+    });
+    return list;
+  }, [exams]);
+
+  // Filter tests strictly aligned with DB data and catalog mocks
   const getAllTests = () => {
+    if (selectedExam !== "all" && examTab === "full_mock") {
+      let mocks = [...examFullMockTests];
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        mocks = mocks.filter(t => t.title.toLowerCase().includes(q));
+      }
+      return mocks;
+    }
+
     let list = [...mockTests];
 
     if (filterType === "full_mock") {
-      list = list.filter(t => t.test_type === "full_mock");
       if (selectedExam !== "all") {
-        list = list.filter(t => t.exam_id === selectedExam);
+        return examFullMockTests;
       }
+      list = list.filter(t => t.test_type === "full_mock");
     } else if (filterType === "topic_wise") {
       list = list.filter(t => t.test_type === "topic_wise");
       if (selectedSubject !== "all") {
@@ -162,7 +403,7 @@ const StudentExams = () => {
     } else {
       // "all" tab
       if (selectedExam !== "all") {
-        list = list.filter(t => t.exam_id === selectedExam);
+        return examFullMockTests;
       }
     }
 
@@ -189,13 +430,6 @@ const StudentExams = () => {
     ? Math.round(Object.values(testAttempts).reduce((acc, curr) => acc + curr.best_percentage, 0) / completedTests)
     : 0;
 
-  const currentExamObj = exams.find(e => e.id === selectedExam) || (
-    selectedExam === "b6edc506-cceb-45cb-b91d-7d2444ffc85f" ? { id: selectedExam, name: "WBSSC Group D" } :
-    selectedExam === "22497a19-9a35-4bf0-ba7b-5a44bdd0d5aa" ? { id: selectedExam, name: "WBSSC Group C" } :
-    selectedExam === "d91dfc2e-a974-43a6-85c1-d601f41ab421" ? { id: selectedExam, name: "Railway Group D" } :
-    null
-  );
-  const examFullMockTests = mockTests.filter(t => t.exam_id === selectedExam && t.test_type === "full_mock");
   const currentExamPyqs = selectedExam !== "all" ? getPyqsForExam(selectedExam, currentExamObj?.name) : [];
 
   if (loading) {
@@ -423,11 +657,7 @@ const StudentExams = () => {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {(exams.length > 0 ? exams : [
-              { id: "b6edc506-cceb-45cb-b91d-7d2444ffc85f", name: "WBSSC Group D" },
-              { id: "22497a19-9a35-4bf0-ba7b-5a44bdd0d5aa", name: "WBSSC Group C" },
-              { id: "d91dfc2e-a974-43a6-85c1-d601f41ab421", name: "Railway Group D" },
-            ])
+            {displayExams
               .filter(item => {
                 if (selectedCategory === "All") return true;
                 const isCentral = item.name.toLowerCase().includes("railway") || item.name.toLowerCase().includes("rrb") || item.name.toLowerCase().includes("ssc");
@@ -436,7 +666,7 @@ const StudentExams = () => {
                 return true;
               })
               .map((item, idx) => {
-                const examMocks = mockTests.filter(t => t.exam_id === item.id && t.test_type === "full_mock");
+                const examMocks = getFullMockTestsForExam(item.id, item.name, mockTests);
                 const fullMockCount = examMocks.length;
                 const freeMockCount = examMocks.filter(t => !t.is_paid).length;
                 const paidMockCount = examMocks.filter(t => t.is_paid).length;
@@ -601,8 +831,8 @@ const StudentExams = () => {
             </div>
           )}
 
-          {/* All & Full Mock: Show Exams from DB without test counts */}
-          {(filterType === "all" || filterType === "full_mock") && exams.length > 0 && (
+          {/* All & Full Mock: Show Exams without test counts */}
+          {(filterType === "all" || filterType === "full_mock") && displayExams.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 md:flex-wrap">
               <button
                 onClick={() => {
@@ -618,7 +848,7 @@ const StudentExams = () => {
                 All Exams
               </button>
 
-              {exams.map((exam) => (
+              {displayExams.map((exam) => (
                 <button
                   key={exam.id}
                   onClick={() => {
@@ -972,14 +1202,16 @@ const StudentExams = () => {
                           id: test.id,
                           title: test.title,
                           examName: test.exams?.name || test.subjects?.name || "West Bengal Mock Test",
-                          totalQuestions: (test as any).total_questions || 100,
-                          durationMinutes: test.duration_minutes || 90,
-                          totalMarks: test.total_marks || 100,
+                          totalQuestions: test.total_marks || 20,
+                          durationMinutes: test.duration_minutes || 15,
+                          totalMarks: test.total_marks || 20,
                           negativeMarking: (test as any).negative_marks ? `-${(test as any).negative_marks}` : "-0.25",
                           isPaid: test.is_paid,
                           language: "Bengali & English",
-                          attemptsAllowed: "Unlimited",
+                          attemptsAllowed: test.test_type === "topic_wise" ? "Unlimited" : "Unlimited",
                           validity: "1 Year",
+                          testType: test.test_type,
+                          subjectName: test.subjects?.name || undefined,
                         });
                       }}
                     >
@@ -1049,14 +1281,16 @@ const StudentExams = () => {
                               id: test.id,
                               title: test.title,
                               examName: test.exams?.name || test.subjects?.name || "West Bengal Mock Test",
-                              totalQuestions: (test as any).total_questions || 100,
-                              durationMinutes: test.duration_minutes || 90,
-                              totalMarks: test.total_marks || 100,
+                              totalQuestions: test.total_marks || 20,
+                              durationMinutes: test.duration_minutes || 15,
+                              totalMarks: test.total_marks || 20,
                               negativeMarking: (test as any).negative_marks ? `-${(test as any).negative_marks}` : "-0.25",
                               isPaid: test.is_paid,
                               language: "Bengali & English",
                               attemptsAllowed: "Unlimited",
                               validity: "1 Year",
+                              testType: test.test_type,
+                              subjectName: test.subjects?.name || undefined,
                             });
                           }
                         }}

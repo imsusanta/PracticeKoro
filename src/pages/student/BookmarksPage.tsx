@@ -219,7 +219,7 @@ export const BookmarksPage = () => {
       }
     }
 
-    toast.success("Question removed from bookmarks");
+    toast.success("Question removed from saved questions");
   };
 
   const toggleReveal = (qId: string) => {
@@ -245,7 +245,7 @@ export const BookmarksPage = () => {
   });
 
   return (
-    <StudentLayout title="Bookmarks" subtitle="Saved Questions">
+    <StudentLayout title="Save Questions" subtitle="Review your saved questions">
       <div className="w-full max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 md:py-4 pb-24 md:pb-8 space-y-4 md:space-y-6">
         {/* Top Brand Header */}
         <div className="flex items-center justify-between gap-2 pb-1">
@@ -259,7 +259,7 @@ export const BookmarksPage = () => {
                   Practice<span className="text-blue-600">Koro</span>
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                  Bookmarks
+                  Saved Questions
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">Saved Questions For Instant Revision</p>
@@ -280,7 +280,7 @@ export const BookmarksPage = () => {
                 Quick Revision
               </div>
               <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display text-white">
-                <span className="text-[#FBBF24]">Bookmarks</span>
+                <span className="text-[#FBBF24]">Saved Questions</span>
               </h1>
               <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
                 Review all the high-yield questions you flagged during test series and practice sessions before your actual exam day.
@@ -308,7 +308,7 @@ export const BookmarksPage = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search bookmarked questions or syllabus topics..."
+              placeholder="Search saved questions or syllabus topics..."
               className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
@@ -367,15 +367,15 @@ export const BookmarksPage = () => {
         ) : filteredBookmarks.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-200 p-8 text-center bg-white">
             <Bookmark className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <h3 className="text-base font-bold text-slate-900">No Bookmarked Questions</h3>
+            <h3 className="text-base font-bold text-slate-900">No saved questions yet</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Whenever you take a test or practice questions, click the bookmark icon (🔖) to store tough or important questions here.
+              Save questions while taking mock tests or practicing to review them anytime.
             </p>
             <Button
               onClick={() => navigate("/student/exam")}
               className="mt-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
             >
-              Browse Mock Tests
+              Explore Tests
             </Button>
           </div>
         ) : (
@@ -433,16 +433,11 @@ export const BookmarksPage = () => {
                       <button
                         onClick={() => removeBookmark(item.id, item.question_id)}
                         className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                        title="Remove Bookmark"
+                        title="Remove from Saved Questions"
                       >
                         <Bookmark className="w-4 h-4 fill-blue-600" />
                       </button>
                     </div>
-                  </div>
-
-                  {/* Question Text */}
-                  <div className="text-slate-900 font-bold text-base leading-relaxed font-bengali">
-                    <MathText text={item.questions.question_text} />
                   </div>
 
                   {/* Options */}

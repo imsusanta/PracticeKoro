@@ -1,5 +1,20 @@
+// Inject via: flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+// Hardcoded values removed (P0-2). Fallbacks below are empty to fail fast in debug
+// if defines are missing. Rotate the previously committed anon key in Supabase dashboard.
 class SupabaseConfig {
-  static const String supabaseUrl = 'https://xgovmpjthfkkwtqlxyzr.supabase.co';
-  static const String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhnb3ZtcGp0aGZra3d0cWx4eXpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0OTQ5NjEsImV4cCI6MjA4MDA3MDk2MX0.zOo08dZLhgiYyiud_GfLVf8p1XHnyp_RqLxrJtNceIM';
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
+
+  static void assertConfigured() {
+    assert(
+      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty,
+      'Missing --dart-define SUPABASE_URL / SUPABASE_ANON_KEY',
+    );
+  }
 }

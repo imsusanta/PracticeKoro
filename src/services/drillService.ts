@@ -25,10 +25,70 @@ function normalizeQuestion(raw: any): DrillQuestion {
 }
 
 /**
+ * RPC-first practice fetch (RLS lockdown: direct questions SELECT is
+ * revoked except own attempted/bookmarked; practice answers come via
+ * get_practice_questions RPC). Falls back to direct query (admin /
+ * pre-migration DBs) then local bank.
+ */
+async function fetchPracticeViaRpc(args: {
+  subject?: string | null;
+  topic?: string | null;
+  difficulty?: string | null;
+  year?: number | null;
+  limit: number;
+}): Promise<DrillQuestion[] | null> {
+  try {
+    const { data, error } = await supabase.rpc("get_practice_questions", {
+      p_subject: args.subject ?? null,
+      p_topic: args.topic ?? null,
+      p_difficulty: args.difficulty ?? null,
+      p_year: args.year ?? null,
+      p_limit: args.limit,
+    });
+    if (error || !data) return null;
+    const rows = data as any[];
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    return rows.map(normalizeQuestion);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetches Previous Year Questions matching the filter.
  */
 export async function fetchPYQQuestions(filter: Partial<DrillConfig>): Promise<DrillQuestion[]> {
   try {
+    // RPC-first (RLS lockdown path)
+    const rpcYear =
+      filter.year && filter.year !== "all" ? Number(filter.year) : null;
+    const rpcRows = await fetchPracticeViaRpc({
+      subject: filter.subject && filter.subject !== "all" ? filter.subject : null,
+      topic: null,
+      difficulty: filter.difficulty && filter.difficulty !== "all" ? filter.difficulty : null,
+      year: rpcYear,
+      limit: filter.questionCount || 100,
+    });
+    if (rpcRows && rpcRows.length > 0) {
+      const pyq = rpcRows.filter((q) => q.year !== null);
+      const pool = pyq.length > 0 ? pyq : rpcRows;
+      const results = pool.slice(0, filter.questionCount || 10);
+      if (results.length >= (filter.questionCount || 10) || results.length > 0) {
+        // Top-up from fallback bank if RPC returned fewer than requested
+        if (results.length < (filter.questionCount || 10)) {
+          const existingIds = new Set(results.map((r) => r.id));
+          for (const fb of FALLBACK_DRILL_QUESTIONS) {
+            if (results.length >= (filter.questionCount || 10)) break;
+            if (!existingIds.has(fb.id)) {
+              if (rpcYear && fb.year !== rpcYear) continue;
+              results.push(fb);
+            }
+          }
+        }
+        return results;
+      }
+    }
+
     let query = supabase
       .from("questions")
       .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, subject, topic, difficulty, year, source")
@@ -100,6 +160,26 @@ export async function fetchTopicQuestions(
   limit: number = 20
 ): Promise<DrillQuestion[]> {
   try {
+    // RPC-first (RLS lockdown path): practice answers via SECURITY DEFINER
+    const rpcRows = await fetchPracticeViaRpc({
+      subject: subject && subject !== "all" ? subject : null,
+      topic: topic && topic !== "All Topics" && topic !== "all" ? topic : null,
+      difficulty: difficulty && difficulty !== "all" ? difficulty : null,
+      year: null,
+      limit: limit * 2,
+    });
+    if (rpcRows && rpcRows.length > 0) {
+      const existingRpcIds = new Set(rpcRows.map((r) => r.id));
+      const matchingFallback = FALLBACK_DRILL_QUESTIONS.filter((fb) => {
+        if (existingRpcIds.has(fb.id)) return false;
+        if (subject && subject !== "all" && fb.subject?.toLowerCase() !== subject.toLowerCase()) return false;
+        if (topic && topic !== "All Topics" && topic !== "all" && fb.topic?.toLowerCase() !== topic.toLowerCase()) return false;
+        return true;
+      });
+      const shuffled = [...rpcRows, ...matchingFallback].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, limit);
+    }
+
     let query = supabase
       .from("questions")
       .select("id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, subject, topic, difficulty, year, source");

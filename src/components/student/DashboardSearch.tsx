@@ -87,7 +87,7 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-mistakes-book",
     category: "practice",
-    title: "Mistakes Notebook",
+    title: "Mistakes",
     subtitle: "Review past mistakes, classify root causes & achieve zero negative marking",
     badge: "Revision",
     badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
@@ -107,8 +107,8 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-bookmarks",
     category: "practice",
-    title: "Bookmarks",
-    subtitle: "Questions you bookmarked for later review",
+    title: "Save Questions",
+    subtitle: "Review your saved questions anytime",
     badge: "Saved",
     badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
     icon: Zap,
@@ -127,9 +127,9 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
     id: "tool-leaderboard",
     category: "study",
-    title: "State Level Aspirant Leaderboard",
-    subtitle: "Rank against thousands of fellow government job aspirants",
-    badge: "Rank",
+    title: "Rank - Overall Aspirant Position",
+    subtitle: "Your overall position among all mock test participants",
+    badge: "Overall Rank",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     icon: Award,
     url: "/student/leaderboard",

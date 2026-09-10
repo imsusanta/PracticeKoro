@@ -269,7 +269,7 @@ export function computeReadinessMetrics(inputs: RawReadinessInputs): ExamReadine
     title: `Take ${targetExamName} Full Mock`,
     bengaliTitle: `${targetExamName} ফুল মক টেস্ট দাও`,
     subtitle: `Real exam simulation with timer, negative marking, and live percentile rank.`,
-    actionUrl: `/student/exams?exam=${targetExamId}`,
+    actionUrl: `/student/exam?exam=${targetExamId}`,
     impactLabel: "+6% Readiness",
     type: "mock_test",
   });

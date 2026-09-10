@@ -25,6 +25,7 @@ import {
   Lock,
   FileText,
   Newspaper,
+  Trophy,
 } from "lucide-react";
 import StudentLayout from "@/components/student/StudentLayout";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ import {
   useUnreadNotificationsCount,
   useRecentAttempts,
   useUserAttempts,
+  useStudentOverallRank,
 } from "@/hooks/useStudentData";
 import { formatDistanceToNow } from "date-fns";
 import { fetchStudentReadiness } from "@/services/readinessService";
@@ -105,7 +107,7 @@ const HeroBannerCarousel = ({
           <span className="text-[#FBBF24]">Selection 🔥</span>
         </>
       ),
-      subtitle: `${greeting}, ${firstName}! Smart Practice • Mistakes Notebook • Speed Test • Selection`,
+      subtitle: `${greeting}, ${firstName}! Smart Practice • Mistakes • Speed Test • Selection`,
       buttonText: "Start Practice 🚀",
       buttonLink: "/student/practice",
       buttonStyle: "bg-[#FBBF24] hover:bg-amber-400 text-slate-950 font-black shadow-amber-500/25",
@@ -346,6 +348,12 @@ const StudentDashboard = () => {
     refetch: refetchAttempts,
   } = useUserAttempts(user?.id);
 
+  const {
+    data: rankData,
+    refetch: refetchRank,
+  } = useStudentOverallRank(user?.id);
+  const overallRank = rankData?.rank ?? null;
+
   const [selectedTestForModal, setSelectedTestForModal] = useState<any | null>(null);
 
   // Overall Loading & Error States - resilient against secondary metric failures
@@ -363,6 +371,7 @@ const StudentDashboard = () => {
     refetchNotifs();
     refetchRecent();
     refetchAttempts();
+    refetchRank();
   };
 
   const [readiness, setReadiness] = useState<ExamReadinessResult | null>(null);
@@ -720,6 +729,34 @@ const StudentDashboard = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION: RANK (Overall Rank among all mock test participants)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-200/60 flex items-center justify-center shrink-0 shadow-2xs">
+              <Trophy className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rank</h4>
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">
+                {overallRank ? `#${overallRank}` : "--"}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate("/student/leaderboard")}
+            className="text-xs font-bold text-[#0066FF] hover:text-blue-700 flex items-center gap-1 transition-all group shrink-0 active:opacity-70 cursor-pointer"
+          >
+            <span>View</span>
+            <ArrowRight className="w-3.5 h-3.5 stroke-[2.2] group-hover:translate-x-0.5 transition-transform" />
+          </button>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -1184,7 +1221,7 @@ const StudentDashboard = () => {
                 path: "/student/current-affairs",
               },
               {
-                title: "Mistakes Notebook",
+                title: "Mistakes",
                 icon: RotateCcw,
                 bg: "bg-rose-50 border-rose-200/80 text-rose-600",
                 path: "/student/mistakes",
@@ -1196,7 +1233,7 @@ const StudentDashboard = () => {
                 path: "/student/notes",
               },
               {
-                title: "Bookmarks",
+                title: "Save Questions",
                 icon: Bookmark,
                 bg: "bg-cyan-50 border-cyan-200/80 text-cyan-600",
                 path: "/student/bookmarks",

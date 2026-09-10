@@ -19,7 +19,8 @@ import {
   Flame,
   Calendar,
   Search,
-  X
+  X,
+  Target
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StudentLayout from "@/components/student/StudentLayout";
@@ -111,7 +112,7 @@ const StudentResults = () => {
           `)
           .eq("user_id", session.user.id)
           .eq("is_active", false)
-          .order("completed_at", { ascending: false })
+          .order("completed_at", { ascending: false }),
       ]);
 
       setHasSubscription(!!purchaseRes.data);
@@ -367,7 +368,7 @@ const StudentResults = () => {
                     Performance <span className="text-[#FBBF24]">Overview</span>
                   </h2>
                   <p className="hidden sm:block text-[11px] sm:text-xs text-blue-100 font-medium leading-relaxed mt-1.5">
-                    Real-time accuracy, score distribution, and state rank evaluation.
+                    Real-time accuracy, score distribution, and overall rank.
                   </p>
                 </div>
 
@@ -376,7 +377,7 @@ const StudentResults = () => {
                   className="bg-[#FBBF24] hover:bg-[#F59E0B] active:scale-95 text-slate-950 font-extrabold text-[11px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer"
                 >
                   <Trophy className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-                  <span className="whitespace-nowrap">Leaderboard</span>
+                  <span className="whitespace-nowrap">Rank</span>
                   <ArrowRight className="w-3 h-3 stroke-[2.8] shrink-0" />
                 </button>
               </div>
@@ -579,7 +580,7 @@ const StudentResults = () => {
                     filter === "failed" ? "bg-white text-rose-700 shadow-xs" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  Needs Retake
+                  Needs Practice
                 </button>
               </div>
             </div>
@@ -593,15 +594,15 @@ const StudentResults = () => {
                     className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-10 text-center shadow-xs space-y-3"
                   >
                     <Award className="w-12 h-12 text-slate-300 mx-auto" />
-                    <h4 className="font-bold text-slate-900 text-base">No test attempts found</h4>
+                    <h4 className="font-bold text-slate-900 text-base">You haven’t taken any tests yet</h4>
                     <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                      Take mock tests or practice tests to review your scorecards, answer keys, and detailed explanations.
+                      Take a mock test or practice test to see your score, accuracy, and answers here.
                     </p>
                     <button
                       onClick={() => navigate("/student/exam")}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
                     >
-                      Browse Mock Tests
+                      Explore Tests
                     </button>
                   </motion.div>
                 ) : (
@@ -657,7 +658,7 @@ const StudentResults = () => {
                           className="px-3 py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Retake</span>
+                          <span>Try Again</span>
                         </button>
                         <button
                           onClick={() => navigate(`/student/test-review/${attempt.id}`)}

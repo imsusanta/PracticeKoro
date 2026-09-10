@@ -21,7 +21,8 @@ import {
   ExternalLink,
   ShieldCheck,
   Check,
-  Target
+  Target,
+  Gauge
 } from "lucide-react";
 import {
   Sidebar,
@@ -101,9 +102,10 @@ const navGroups = [
   {
     category: "Practice & Revision",
     items: [
-      { name: "Mistakes Notebook", path: "/student/mistakes", icon: RotateCcw },
-      { name: "State Leaderboard", path: "/student/leaderboard", icon: Trophy },
-      { name: "Bookmarks", path: "/student/bookmarks", icon: Bookmark },
+      { name: "My Readiness", path: "/student/performance", icon: Gauge },
+      { name: "Mistakes", path: "/student/mistakes", icon: RotateCcw },
+      { name: "Rank", path: "/student/leaderboard", icon: Trophy },
+      { name: "Save Questions", path: "/student/bookmarks", icon: Bookmark },
       { name: "Study Notes", path: "/student/notes", icon: BookOpen },
     ],
   },

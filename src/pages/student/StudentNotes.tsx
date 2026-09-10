@@ -192,7 +192,7 @@ const SubjectsView = ({
             },
             {
               title: "Revision & Saved",
-              desc: "Saved Notes & Bookmarks",
+              desc: "Save Questions for Revision",
               icon: Bookmark,
               color: "text-rose-600",
               bg: "bg-rose-50 border-rose-200/80",

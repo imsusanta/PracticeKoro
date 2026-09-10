@@ -148,7 +148,7 @@ export const SubjectPractice = () => {
 
   const toggleBookmark = async (qId: string) => {
     if (!user) {
-      toast.info("Please log in to save bookmarks");
+      toast.info("Please log in to save questions");
       return;
     }
     const isBookmarked = bookmarkedIds.has(qId);
@@ -159,11 +159,11 @@ export const SubjectPractice = () => {
         next.delete(qId);
         return next;
       });
-      toast.info("Removed from Bookmarks");
+      toast.info("Removed from Saved Questions");
     } else {
       await supabase.from("student_bookmarks").insert({ user_id: user.id, question_id: qId });
       setBookmarkedIds(prev => new Set(prev).add(qId));
-      toast.success("Saved to Bookmarks ⭐");
+      toast.success("Saved to Saved Questions ⭐");
     }
   };
 
@@ -201,7 +201,7 @@ export const SubjectPractice = () => {
             className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Practice Hub</span>
+            <span>Back to Practice</span>
           </button>
           <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
@@ -456,7 +456,7 @@ export const SubjectPractice = () => {
                     <button
                       onClick={() => toggleBookmark(q.id)}
                       className="p-1 rounded-lg text-slate-400 hover:text-amber-500 transition-colors"
-                      title={isBookmarked ? "Remove Bookmark" : "Save Question"}
+                      title={isBookmarked ? "Remove from Saved Questions" : "Save Question"}
                     >
                       {isBookmarked ? (
                         <BookmarkCheck className="w-4 h-4 text-amber-500 fill-amber-500" />

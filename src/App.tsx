@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { PWALogic } from "./components/PWALogic";
@@ -15,6 +15,11 @@ const StudentProviderRoute = () => (
     <Outlet />
   </StudentProvider>
 );
+
+const ExamsRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`/student/exam${location.search}`} replace />;
+};
 
 // Lazy loaded pages
 const Landing = lazy(() => import("./pages/Landing"));
@@ -152,8 +157,8 @@ const AppContent = () => {
             <Route path="/student/dashboard" element={<ProtectedRoute requireRole="student"><StudentDashboard /></ProtectedRoute>} />
             <Route path="/student/exam" element={<ProtectedRoute requireRole="student"><StudentExams /></ProtectedRoute>} />
             <Route path="/student/exam/:examId" element={<ProtectedRoute requireRole="student"><ExamDetail /></ProtectedRoute>} />
-            <Route path="/student/exams" element={<Navigate to="/student/exam" replace />} />
-            <Route path="/student/mocktest" element={<Navigate to="/student/exam" replace />} />
+            <Route path="/student/exams" element={<ExamsRedirect />} />
+            <Route path="/student/mocktest" element={<ExamsRedirect />} />
             <Route path="/student/results" element={<ProtectedRoute requireRole="student"><StudentResults /></ProtectedRoute>} />
             <Route path="/student/take-test/:testId" element={<ProtectedRoute requireRole="student"><TakeTest /></ProtectedRoute>} />
             <Route path="/student/test-review/:attemptId" element={<ProtectedRoute requireRole="student"><ReviewTest /></ProtectedRoute>} />

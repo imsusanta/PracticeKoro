@@ -1228,7 +1228,7 @@ const StudentProfile = () => {
                             <AlertCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                           </div>
                           <div>
-                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-rose-600">Mistakes Notebook</h4>
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-rose-600">Mistakes</h4>
                             <p className="text-[10.5px] sm:text-[11px] text-slate-500 mt-0.5">Review incorrect questions</p>
                           </div>
                         </div>
@@ -1244,8 +1244,8 @@ const StudentProfile = () => {
                             <Bookmark className="w-5 h-5 group-hover:scale-110 transition-transform" />
                           </div>
                           <div>
-                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-amber-600">Bookmarks</h4>
-                            <p className="text-[10.5px] sm:text-[11px] text-slate-500 mt-0.5">Access marked questions</p>
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-amber-600">Save Questions</h4>
+                            <p className="text-[10.5px] sm:text-[11px] text-slate-500 mt-0.5">Access saved questions</p>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-400 sm:hidden shrink-0" />

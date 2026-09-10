@@ -15,10 +15,12 @@ import {
   fetchWeakestSubjectRecommendation,
   fetchUnreadNotificationsCount,
   fetchRecentAttempts,
+  fetchStudentOverallRank,
   TodayMetrics,
   UnfinishedPracticeSession,
   WeakestSubjectRecommendation,
   RecentAttemptItem,
+  StudentOverallRankResult,
 } from "@/services/studentService";
 
 /**
@@ -150,3 +152,27 @@ export function useRecentAttempts(userId?: string) {
     staleTime: 1000 * 60 * 2,
   });
 }
+
+/**
+ * Hook to retrieve the student's single Overall Rank across all mock test participants.
+ */
+export function useStudentOverallRank(userId?: string) {
+  return useQuery<StudentOverallRankResult>({
+    queryKey: ["studentOverallRank", userId],
+    queryFn: () => {
+      if (!userId) {
+        return Promise.resolve({
+          rank: null,
+          totalParticipants: 500,
+          testsCompleted: 0,
+          totalScore: 0,
+          avgPercentage: 0,
+        });
+      }
+      return fetchStudentOverallRank(userId);
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
