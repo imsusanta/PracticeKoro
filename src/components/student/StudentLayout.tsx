@@ -93,7 +93,7 @@ const navGroups = [
     category: "Main Menu",
     items: [
       { name: "Home", path: "/student/dashboard", icon: Home },
-      { name: "Test Series", path: "/student/test-series", icon: ClipboardList },
+      { name: "Exams", path: "/student/exam", icon: ClipboardList },
       { name: "Practice", path: "/student/practice", icon: Target },
       { name: "Test Results", path: "/student/results", icon: BarChart3 },
       { name: "My Profile", path: "/student/profile", icon: UserRound },
@@ -242,10 +242,7 @@ const StudentLayout = ({
                   <SidebarMenu className="space-y-1">
                     {group.items.map((item) => {
                       const Icon = item.icon;
-                      const isActive =
-                        location.pathname === item.path ||
-                        (item.path === "/student/test-series" &&
-                          location.pathname.startsWith("/student/test-series/"));
+                      const isActive = location.pathname === item.path;
 
                       return (
                         <SidebarMenuItem key={item.path}>
@@ -373,9 +370,7 @@ const StudentLayout = ({
                 const Icon = item.icon;
                 const isActive = (
                   (item.path === "/student/dashboard" && (location.pathname === "/student/dashboard" || location.pathname === "/student")) ||
-                  (item.path === "/student/test-series" && (
-                    location.pathname === "/student/test-series" ||
-                    location.pathname.startsWith("/student/test-series/") ||
+                  (item.path === "/student/exam" && (
                     location.pathname === "/student/exam" ||
                     location.pathname === "/student/exams" ||
                     location.pathname === "/student/mocktest" ||

@@ -58,7 +58,7 @@ async function fetchPracticeViaRpc(args: {
       p_limit: args.limit,
     });
     if (error || !data) return null;
-    const rows = data as DrillQuestion[];
+    const rows = data as any[];
     if (!Array.isArray(rows) || rows.length === 0) return null;
     return rows.map(normalizeQuestion);
   } catch {
@@ -175,7 +175,7 @@ export async function fetchTopicQuestions(
     // RPC-first (RLS lockdown path): practice answers via SECURITY DEFINER
     const rpcRows = await fetchPracticeViaRpc({
       subject: subject && subject !== "all" ? subject : null,
-      topic: topic && topic !== "All Topics" && topic !== "All Chapters" && topic !== "all" ? topic : null,
+      topic: topic && topic !== "All Topics" && topic !== "all" ? topic : null,
       difficulty: difficulty && difficulty !== "all" ? difficulty : null,
       year: null,
       limit: limit * 2,
@@ -185,7 +185,7 @@ export async function fetchTopicQuestions(
       const matchingFallback = FALLBACK_DRILL_QUESTIONS.filter((fb) => {
         if (existingRpcIds.has(fb.id)) return false;
         if (subject && subject !== "all" && fb.subject?.toLowerCase() !== subject.toLowerCase()) return false;
-        if (topic && topic !== "All Topics" && topic !== "All Chapters" && topic !== "all" && fb.topic?.toLowerCase() !== topic.toLowerCase()) return false;
+        if (topic && topic !== "All Topics" && topic !== "all" && fb.topic?.toLowerCase() !== topic.toLowerCase()) return false;
         return true;
       });
       const shuffled = [...rpcRows, ...matchingFallback].sort(() => 0.5 - Math.random());
@@ -200,7 +200,7 @@ export async function fetchTopicQuestions(
       query = query.eq("subject", subject);
     }
 
-    if (topic && topic !== "All Topics" && topic !== "All Chapters" && topic !== "all") {
+    if (topic && topic !== "All Topics" && topic !== "all") {
       query = query.eq("topic", topic);
     }
 
@@ -219,7 +219,7 @@ export async function fetchTopicQuestions(
     // Merge with matching fallback questions
     const matchingFallback = FALLBACK_DRILL_QUESTIONS.filter((fb) => {
       if (subject && subject !== "all" && fb.subject?.toLowerCase() !== subject.toLowerCase()) return false;
-      if (topic && topic !== "All Topics" && topic !== "All Chapters" && topic !== "all" && fb.topic?.toLowerCase() !== topic.toLowerCase()) return false;
+      if (topic && topic !== "All Topics" && topic !== "all" && fb.topic?.toLowerCase() !== topic.toLowerCase()) return false;
       return true;
     });
 

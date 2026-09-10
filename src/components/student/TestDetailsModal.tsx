@@ -42,9 +42,9 @@ export interface TestDetailsModalProps {
 function getTestSections(title: string, examName?: string, totalQuestions: number = 100, testType?: string, subjectName?: string) {
   const combined = `${title} ${examName || ""}`.toLowerCase();
 
-  // Chapter-wise tests: single section with the chapter/subject name
+  // Topic-wise tests: single section with the topic/subject name
   if (testType === "topic_wise") {
-    const sectionName = subjectName || title || "Chapter Practice";
+    const sectionName = subjectName || title || "Topic Practice";
     return [
       { id: 1, name: sectionName, count: `${totalQuestions} Qs` },
     ];
@@ -174,7 +174,7 @@ export const TestDetailsModal: React.FC<TestDetailsModalProps> = ({
             {/* Badges Row */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200/80">
-                {test.isPyq ? "Previous Year" : (test as any).testType === "topic_wise" ? "Chapter Test" : "Full Mock"}
+                {test.isPyq ? "Previous Year" : (test as any).testType === "topic_wise" ? "Topic Test" : "Full Mock"}
               </span>
               <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
                 Bilingual (EN/BN)

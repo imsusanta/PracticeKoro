@@ -296,7 +296,7 @@ export const PracticeHub = () => {
       .sort((a, b) => (a.order_index ?? 999) - (b.order_index ?? 999));
   }, [allTopics, activeSubject]);
 
-  // Chapter-wise mock tests in the database
+  // Topic-wise mock tests in the database
   const topicWiseTests = useMemo(() => {
     return mockTests.filter((t) => t.test_type === "topic_wise");
   }, [mockTests]);
@@ -706,7 +706,7 @@ export const PracticeHub = () => {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════
-            4. CHAPTERS LIST (Subject ➔ Chapters ➔ Mock Tests)
+            4. CHAPTERS / TOPICS LIST (Subject ➔ Topics ➔ Mock Tests)
             ═══════════════════════════════════════════════════════════════ */}
         <div id="practice-topics-container" className="space-y-3">
           {filteredTopics.length === 0 ? (
@@ -1199,37 +1199,37 @@ export const PracticeHub = () => {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            5. PRACTICE MENU (Practice → By Subject / Saved / Current Affairs / Mistakes)
+            5. QUICK ACTIONS (Horizontal Side-Scrollable Row)
             ═══════════════════════════════════════════════════════════════ */}
         <div className="space-y-2 pt-1">
           <div className="flex items-center justify-between px-0.5">
             <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight">
-              Practice Menu
+              Quick Actions
             </h3>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
             {[
               {
-                label: "Practice by Subject",
-                icon: Target,
+                label: "Take a Random Test",
+                icon: Zap,
                 style: "bg-blue-50/80 hover:bg-blue-100/80 border-blue-200 text-blue-700 hover:border-blue-300",
-                iconColor: "text-blue-600",
+                iconColor: "text-blue-600 fill-blue-600",
+                path: "/student/daily",
+              },
+              {
+                label: "Continue Practice",
+                icon: Play,
+                style: "bg-emerald-50/80 hover:bg-emerald-100/80 border-emerald-200 text-emerald-700 hover:border-emerald-300",
+                iconColor: "text-emerald-600 fill-emerald-600",
                 path: "/student/practice/subject",
               },
               {
-                label: "Saved Questions",
-                icon: Bookmark,
-                style: "bg-emerald-50/80 hover:bg-emerald-100/80 border-emerald-200 text-emerald-700 hover:border-emerald-300",
-                iconColor: "text-emerald-600",
-                path: "/student/bookmarks",
-              },
-              {
-                label: "Current Affairs",
-                icon: Newspaper,
+                label: "View Results",
+                icon: BarChart3,
                 style: "bg-purple-50/80 hover:bg-purple-100/80 border-purple-200 text-purple-700 hover:border-purple-300",
                 iconColor: "text-purple-600",
-                path: "/student/current-affairs",
+                path: "/student/results",
               },
               {
                 label: "Mistakes",
@@ -1258,7 +1258,93 @@ export const PracticeHub = () => {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            6. TEST DETAILS INSTRUCTION MODAL
+            6. REVISION & QUICK ACCESS (Horizontal Side-Scrollable Row)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between px-0.5">
+            <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight">
+              Revision & Quick Access
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 py-1">
+            {[
+              {
+                title: "Save Questions",
+                desc: "Quickly revise your saved questions",
+                icon: Bookmark,
+                iconBg: "bg-emerald-50 text-emerald-600 border-emerald-100",
+                hoverBorder: "hover:border-emerald-300",
+                arrowColor: "group-hover:text-emerald-600",
+                path: "/student/bookmarks",
+              },
+              {
+                title: "Current Affairs",
+                desc: "Daily exam-focused updates",
+                icon: Newspaper,
+                iconBg: "bg-teal-50 text-teal-600 border-teal-100",
+                hoverBorder: "hover:border-teal-300",
+                arrowColor: "group-hover:text-teal-600",
+                path: "/student/current-affairs",
+              },
+              {
+                title: "Mistakes",
+                desc: "Review and master your weak areas",
+                icon: RotateCcw,
+                iconBg: "bg-rose-50 text-rose-600 border-rose-100",
+                hoverBorder: "hover:border-rose-300",
+                arrowColor: "group-hover:text-rose-600",
+                path: "/student/mistakes",
+              },
+              {
+                title: "Previous Year Papers",
+                desc: "Practice authentic official papers",
+                icon: Calendar,
+                iconBg: "bg-blue-50 text-blue-600 border-blue-100",
+                hoverBorder: "hover:border-blue-300",
+                arrowColor: "group-hover:text-blue-600",
+                path: "/student/pyq",
+              },
+            ].map((card, idx) => {
+              const CardIcon = card.icon;
+              return (
+                <motion.div
+                  key={idx}
+                  whileHover={{ y: -2, scale: 1.01 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 24 }}
+                  onClick={() => navigate(card.path)}
+                  className={`w-full bg-white rounded-2xl border border-slate-200/90 ${card.hoverBorder} p-2.5 sm:p-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2.5 select-none`}
+                >
+                  <div className="flex sm:flex-row flex-col sm:items-center gap-2 sm:gap-2.5 min-w-0 w-full">
+                    <div className="flex items-center justify-between w-full sm:w-auto">
+                      <div
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl border ${card.iconBg} flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-200 shadow-2xs`}
+                      >
+                        <CardIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
+                      </div>
+                      <ChevronRight className={`w-3.5 h-3.5 text-slate-300 ${card.arrowColor} sm:hidden transition-all shrink-0`} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-blue-600 transition-colors leading-snug line-clamp-1">
+                        {card.title}
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-slate-400 font-medium line-clamp-1 mt-0.5 leading-tight">
+                        {card.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ChevronRight className={`w-3.5 h-3.5 text-slate-400 ${card.arrowColor} group-hover:translate-x-0.5 transition-all shrink-0 hidden sm:block`} />
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            5. TEST DETAILS INSTRUCTION MODAL
             ═══════════════════════════════════════════════════════════════ */}
         <TestDetailsModal
           isOpen={!!selectedTestForModal}

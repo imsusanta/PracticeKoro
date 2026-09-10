@@ -901,7 +901,7 @@ const StudentProfile = () => {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1 sm:pt-2">
                             {[
                               "Unlimited Full-Length Mock Tests & Real Percentile Ranks",
-                              "Chapter Tests with Instant Solutions",
+                              "Chapter-Wise Topic Tests with Instant Solutions",
                               "Previous Year Question (PYQ) Vault & Speed Tests",
                               "Detailed Answer Explanations in Bengali & English",
                               "Automatic Mistakes Notebook & Targeted Revision",
@@ -1183,7 +1183,7 @@ const StudentProfile = () => {
                           <span className="hidden sm:inline">Total Attempts</span>
                         </span>
                         <p className="text-xl sm:text-3xl font-black text-slate-900 mt-0.5 sm:mt-1">{statistics.totalTests}</p>
-                        <p className="hidden sm:block text-[11px] text-slate-500 mt-1">Full Mocks & Chapter Tests</p>
+                        <p className="hidden sm:block text-[11px] text-slate-500 mt-1">Full Mocks & Topic Tests</p>
                       </div>
                       <div className="bg-white rounded-xl sm:rounded-3xl p-3 sm:p-5 border border-slate-200/90 shadow-xs text-center sm:text-left">
                         <span className="text-[9px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">

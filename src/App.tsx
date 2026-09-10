@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Outlet, Navigate, useLocation, useParams } from "react-router-dom";
+import { Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { PWALogic } from "./components/PWALogic";
@@ -16,14 +16,9 @@ const StudentProviderRoute = () => (
   </StudentProvider>
 );
 
-const TestSeriesRedirect = () => {
+const ExamsRedirect = () => {
   const location = useLocation();
-  return <Navigate to={`/student/test-series${location.search}`} replace />;
-};
-
-const ExamDetailRedirect = () => {
-  const { examId } = useParams();
-  return <Navigate to={`/student/test-series/${examId || ""}`} replace />;
+  return <Navigate to={`/student/exam${location.search}`} replace />;
 };
 
 // Lazy loaded pages
@@ -46,15 +41,8 @@ const CookiePolicy = lazy(() => import("./pages/legal/CookiePolicy"));
 
 // Student Pages
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard"));
-
-// Test Series (SUBJECT → CHAPTER → TEST)
-const TestSeriesHome = lazy(() => import("./pages/student/test-series/TestSeriesHome"));
-const ExamOverview = lazy(() => import("./pages/student/test-series/ExamOverview"));
-const FullMockTests = lazy(() => import("./pages/student/test-series/FullMockTests"));
-const PreviousYearPapers = lazy(() => import("./pages/student/test-series/PreviousYearPapers"));
-const SubjectTests = lazy(() => import("./pages/student/test-series/SubjectTests"));
-const Chapters = lazy(() => import("./pages/student/test-series/Chapters"));
-const ChapterTests = lazy(() => import("./pages/student/test-series/ChapterTests"));
+const StudentExams = lazy(() => import("./pages/student/StudentExams"));
+const ExamDetail = lazy(() => import("./pages/student/ExamDetail"));
 const StudentResults = lazy(() => import("./pages/student/StudentResults"));
 const TakeTest = lazy(() => import("./pages/student/TakeTest"));
 const ReviewTest = lazy(() => import("./pages/student/ReviewTest"));
@@ -167,19 +155,10 @@ const AppContent = () => {
           <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
           <Route element={<StudentProviderRoute />}>
             <Route path="/student/dashboard" element={<ProtectedRoute requireRole="student"><StudentDashboard /></ProtectedRoute>} />
-            {/* Test Series: Exam → Full Mocks / PYQ / Subjects → Chapters → Tests */}
-            <Route path="/student/test-series" element={<ProtectedRoute requireRole="student"><TestSeriesHome /></ProtectedRoute>} />
-            <Route path="/student/test-series/:examId" element={<ProtectedRoute requireRole="student"><ExamOverview /></ProtectedRoute>} />
-            <Route path="/student/test-series/:examId/full-mocks" element={<ProtectedRoute requireRole="student"><FullMockTests /></ProtectedRoute>} />
-            <Route path="/student/test-series/:examId/pyq" element={<ProtectedRoute requireRole="student"><PreviousYearPapers /></ProtectedRoute>} />
-            <Route path="/student/test-series/:examId/subjects" element={<ProtectedRoute requireRole="student"><SubjectTests /></ProtectedRoute>} />
-            <Route path="/student/test-series/:examId/subjects/:subjectId/chapters" element={<ProtectedRoute requireRole="student"><Chapters /></ProtectedRoute>} />
-            <Route path="/student/test-series/:examId/subjects/:subjectId/chapters/:chapterId" element={<ProtectedRoute requireRole="student"><ChapterTests /></ProtectedRoute>} />
-            {/* Legacy aliases */}
-            <Route path="/student/exam" element={<TestSeriesRedirect />} />
-            <Route path="/student/exam/:examId" element={<ExamDetailRedirect />} />
-            <Route path="/student/exams" element={<TestSeriesRedirect />} />
-            <Route path="/student/mocktest" element={<TestSeriesRedirect />} />
+            <Route path="/student/exam" element={<ProtectedRoute requireRole="student"><StudentExams /></ProtectedRoute>} />
+            <Route path="/student/exam/:examId" element={<ProtectedRoute requireRole="student"><ExamDetail /></ProtectedRoute>} />
+            <Route path="/student/exams" element={<ExamsRedirect />} />
+            <Route path="/student/mocktest" element={<ExamsRedirect />} />
             <Route path="/student/results" element={<ProtectedRoute requireRole="student"><StudentResults /></ProtectedRoute>} />
             <Route path="/student/take-test/:testId" element={<ProtectedRoute requireRole="student"><TakeTest /></ProtectedRoute>} />
             <Route path="/student/test-review/:attemptId" element={<ProtectedRoute requireRole="student"><ReviewTest /></ProtectedRoute>} />

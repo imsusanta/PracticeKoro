@@ -84,7 +84,7 @@ const StudentNotifications = () => {
         {
           id: "notif-2",
           title: "Your Test Result is Ready",
-          message: "General Awareness - Chapter Test performance evaluation has been generated. View accuracy and solutions.",
+          message: "General Awareness - Topic Test performance evaluation has been generated. View accuracy and solutions.",
           type: "result",
           is_read: false,
           link: "/student/results",

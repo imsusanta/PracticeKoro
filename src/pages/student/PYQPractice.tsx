@@ -203,7 +203,7 @@ export const PYQPractice = () => {
                   PYQ Vault
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with chapter tests</p>
+              <p className="text-[11px] text-slate-500 font-medium">10 years of authentic previous year exam questions with topic tests</p>
             </div>
           </div>
         </div>
@@ -346,7 +346,7 @@ export const PYQPractice = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by chapter, formula, or question keywords (e.g. LCM, Constitution, Governor)..."
+              placeholder="Search by topic, formula, or question keywords (e.g. LCM, Constitution, Governor)..."
               className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>

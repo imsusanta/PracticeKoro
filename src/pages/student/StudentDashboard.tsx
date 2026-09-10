@@ -910,7 +910,7 @@ const StudentDashboard = () => {
                 const attempt = testAttempts[test.id];
                 const isTopic = test.test_type === "topic_wise";
                 const tagLabel = isTopic
-                  ? (test.subjects?.name || "Chapter Test")
+                  ? (test.subjects?.name || "Topic Test")
                   : (test.exams?.name || "Full Mock");
 
                 return (
@@ -1209,7 +1209,7 @@ const StudentDashboard = () => {
                 path: "/student/daily",
               },
               {
-                title: "Chapter Test",
+                title: "Topic Test",
                 icon: Target,
                 bg: "bg-purple-50 border-purple-200/80 text-purple-600",
                 path: "/student/practice/subject",

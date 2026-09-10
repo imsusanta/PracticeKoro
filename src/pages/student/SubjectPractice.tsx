@@ -60,7 +60,7 @@ export const SubjectPractice = () => {
 
   // Configuration States
   const [selectedSubject, setSelectedSubject] = useState<string>("Mathematics");
-  const [selectedTopic, setSelectedTopic] = useState<string>("All Chapters");
+  const [selectedTopic, setSelectedTopic] = useState<string>("All Topics");
   const [selectedDifficulty, setSelectedDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [drillMode, setDrillMode] = useState<"instant_feedback" | "timed_quiz">("instant_feedback");
@@ -171,12 +171,12 @@ export const SubjectPractice = () => {
   };
 
   const handleStartDrill = () => {
-    const topicLabel = selectedTopic !== "All Chapters" ? ` • ${selectedTopic}` : "";
+    const topicLabel = selectedTopic !== "All Topics" ? ` • ${selectedTopic}` : "";
     setActiveDrillConfig({
       title: `${selectedSubject}${topicLabel}`,
       subtitle: `${questionCount} Questions • ${drillMode === "instant_feedback" ? "Instant Solutions" : "Timed Test"}`,
       subject: selectedSubject,
-      topic: selectedTopic !== "All Chapters" ? selectedTopic : undefined,
+      topic: selectedTopic !== "All Topics" ? selectedTopic : undefined,
       difficulty: selectedDifficulty,
       questionCount,
       marksPerQuestion: 1,
@@ -187,14 +187,14 @@ export const SubjectPractice = () => {
   };
 
   const currentPreset = STANDARD_SUBJECT_PRESETS.find(p => p.id === selectedSubject) || STANDARD_SUBJECT_PRESETS[0];
-  const availableTopics = ["All Chapters", ...(topicsBySubject[selectedSubject] || [])];
+  const availableTopics = ["All Topics", ...(topicsBySubject[selectedSubject] || [])];
 
   const filteredTopics = availableTopics.filter(t => 
     searchTopicQuery.trim() === "" || t.toLowerCase().includes(searchTopicQuery.toLowerCase())
   );
 
   return (
-    <StudentLayout title="Subject Practice" subtitle="Chapter-wise Smart Practice & Chapter Tests">
+    <StudentLayout title="Subject Practice" subtitle="Chapter-wise Smart Practice & Topic Tests">
       <div className="w-full max-w-5xl lg:max-w-6xl mx-auto px-3 sm:px-6 py-4 md:py-6 pb-24 md:pb-12 space-y-6">
 
         {/* Header Ribbon */}
@@ -236,7 +236,7 @@ export const SubjectPractice = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setSelectedSubject(item.id);
-                    setSelectedTopic("All Chapters");
+                    setSelectedTopic("All Topics");
                   }}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 shadow-2xs ${
                     isSelected

@@ -323,7 +323,7 @@ export const BookmarksPage = () => {
 
           {/* Screen 18 Filter Chips: All, Subject, Topic, Difficulty */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 border-t border-slate-100">
-            {["All", "Subject", "Chapter", "Difficulty"].map((chip) => (
+            {["All", "Subject", "Topic", "Difficulty"].map((chip) => (
               <button
                 key={chip}
                 onClick={() => {

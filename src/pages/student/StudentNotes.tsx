@@ -117,7 +117,7 @@ const SubjectsView = ({
               Smart Study Hub
             </span>
             <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-display leading-tight">
-              Master Every Chapter With <span className="text-[#FBBF24]">Handcrafted Notes</span>
+              Master Every Topic With <span className="text-[#FBBF24]">Handcrafted Notes</span>
             </h1>
             <p className="hidden sm:block text-slate-200 text-xs sm:text-sm font-medium leading-relaxed">
               Read concise summaries, syllabus breakdowns, and exam-focused revision notes prepared by expert educators for West Bengal competitive exams.
@@ -237,7 +237,7 @@ const SubjectsView = ({
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            placeholder="Search subjects or syllabus chapters..."
+            placeholder="Search subjects, chapters, or syllabus topics..."
             className="w-full h-12 pl-11 pr-4 rounded-2xl bg-white border border-slate-200/90 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
