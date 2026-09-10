@@ -476,8 +476,15 @@ const QuestionBank = () => {
 
     // SECURITY: Use buildSafeUpdateData to prevent accidental cross-contamination
     const safeData = buildSafeUpdateData(
-      { subject_name: formData.subject_name, topic_name: formData.topic_name, subject_id: finalSubjectId, topic_id: finalTopicId },
-      selectedQuestion
+      { subject_name: formData.subject_name ?? undefined, topic_name: formData.topic_name ?? undefined, subject_id: finalSubjectId, topic_id: finalTopicId },
+      {
+        subject: selectedQuestion.subject ?? undefined,
+        topic: selectedQuestion.topic ?? undefined,
+        subject_id: selectedQuestion.subject_id ?? undefined,
+        topic_id: selectedQuestion.topic_id ?? undefined,
+        subjects: selectedQuestion.subjects,
+        topics: selectedQuestion.topics,
+      }
     );
 
     // STRICT: Only update question content, subject/topic, and enhanced DB columns

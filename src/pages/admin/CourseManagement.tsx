@@ -110,7 +110,12 @@ export default function CourseManagement() {
         variant: "destructive",
       });
     } else {
-      setCourses(data || []);
+      setCourses((data || []).map((c) => ({
+        ...c,
+        description: c.description ?? "",
+        is_active: c.is_active ?? false,
+        created_at: c.created_at ?? "",
+      })));
     }
   };
 
@@ -141,7 +146,14 @@ export default function CourseManagement() {
         variant: "destructive",
       });
     } else {
-      setMaterials(data || []);
+      setMaterials((data || []).map((m) => ({
+        id: m.id,
+        title: m.title,
+        file_path: m.file_path,
+        file_type: m.file_type ?? null,
+        file_size: m.file_size ?? null,
+        created_at: m.created_at ?? "",
+      })));
     }
   };
 

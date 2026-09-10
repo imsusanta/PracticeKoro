@@ -50,7 +50,11 @@ const AdminChatInbox = () => {
             .select("id, full_name, whatsapp_number")
             .order("full_name");
         if (data) {
-            setAllStudents(data);
+            setAllStudents(data.map((s) => ({
+                id: s.id,
+                full_name: s.full_name ?? "",
+                whatsapp_number: s.whatsapp_number ?? undefined,
+            })));
         }
     }, []);
 

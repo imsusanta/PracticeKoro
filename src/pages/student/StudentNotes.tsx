@@ -34,7 +34,7 @@ interface Topic {
   id: string;
   subject_id: string;
   name: string;
-  content?: string;
+  content?: string | null;
 }
 
 type Screen = "subjects" | "topics" | "article";
@@ -237,7 +237,7 @@ const SubjectsView = ({
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-              placeholder="Search subjects or syllabus chapters..."
+            placeholder="Search subjects or syllabus chapters..."
             className="w-full h-12 pl-11 pr-4 rounded-2xl bg-white border border-slate-200/90 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}

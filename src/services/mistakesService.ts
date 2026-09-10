@@ -14,6 +14,18 @@ import type {
 
 const CACHE_KEY = "pk_student_mistakes_v2";
 
+// TODO(types): regenerate supabase types via supabase gen types —
+// classify_student_mistake and record_mistake_reattempt are missing from the
+// generated Database functions, and student_mistakes is missing from the tables.
+const staleRpc = supabase.rpc as unknown as (
+  fn: string,
+  args?: Record<string, unknown>
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+function mistakesTable() {
+  return supabase.from("student_mistakes" as unknown as "questions");
+}
+
 /**
  * Persists mistakes snapshot locally for instant rendering and offline resilience.
  */
@@ -178,8 +190,7 @@ export function filterMistakes(mistakes: MistakeItem[], filter: RevisionDrillFil
  * Fetches all student mistakes from Supabase.
  */
 export async function fetchStudentMistakes(userId: string): Promise<MistakeItem[]> {
-  const { data, error } = await supabase
-    .from("student_mistakes")
+  const { data, error } = await mistakesTable()
     .select(`
       id,
       question_id,
@@ -269,7 +280,7 @@ export async function classifyStudentMistake(
   studentNotes?: string | null
 ): Promise<boolean> {
   // Try RPC first
-  const { error: rpcErr } = await supabase.rpc("classify_student_mistake", {
+  const { error: rpcErr } = await staleRpc("classify_student_mistake", {
     p_mistake_id: mistakeId,
     p_error_type: errorType,
     p_student_notes: studentNotes || null,
@@ -278,13 +289,12 @@ export async function classifyStudentMistake(
   if (!rpcErr) return true;
 
   // Fallback direct table update
-  const { error: updateErr } = await supabase
-    .from("student_mistakes")
+  const { error: updateErr } = await mistakesTable()
     .update({
       error_type: errorType,
       student_notes: studentNotes ?? null,
       updated_at: new Date().toISOString(),
-    })
+    } as unknown as never)
     .eq("id", mistakeId);
 
   return !updateErr;
@@ -298,7 +308,7 @@ export async function recordMistakeReattempt(
   isCorrect: boolean
 ): Promise<{ success: boolean; isMastered: boolean }> {
   // Try RPC
-  const { data, error } = await supabase.rpc("record_mistake_reattempt", {
+  const { data, error } = await staleRpc("record_mistake_reattempt", {
     p_mistake_id: mistakeId,
     p_is_correct: isCorrect,
   });
@@ -308,14 +318,13 @@ export async function recordMistakeReattempt(
   }
 
   // Fallback direct table update
-  const { error: updateErr } = await supabase
-    .from("student_mistakes")
+  const { error: updateErr } = await mistakesTable()
     .update({
       is_mastered: isCorrect,
       mastered_at: isCorrect ? new Date().toISOString() : null,
       last_retry_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
+    } as unknown as never)
     .eq("id", mistakeId);
 
   return { success: !updateErr, isMastered: isCorrect };
@@ -328,13 +337,12 @@ export async function toggleMistakeMastered(
   mistakeId: string,
   nextMastered: boolean
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("student_mistakes")
+  const { error } = await mistakesTable()
     .update({
       is_mastered: nextMastered,
       mastered_at: nextMastered ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
-    })
+    } as unknown as never)
     .eq("id", mistakeId);
 
   return !error;

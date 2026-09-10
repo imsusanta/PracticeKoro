@@ -56,7 +56,8 @@ const BlogList = () => {
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
-            setBlogs(data as BlogPost[] || []);
+            // TODO(types): regenerate supabase types via supabase gen types (blog_posts.slug missing in generated types)
+            setBlogs((data as unknown as BlogPost[]) || []);
         } catch (error) {
             console.error("Error fetching blogs:", error);
         } finally {

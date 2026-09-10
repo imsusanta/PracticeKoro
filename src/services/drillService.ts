@@ -3,6 +3,18 @@ import { DrillConfig, DrillQuestion, DrillResult } from "@/types/drills";
 import { FALLBACK_DRILL_QUESTIONS, EXAM_CATALOG } from "@/data/examCatalog";
 import { calculateAttemptScore } from "@/services/attemptScoring";
 
+// TODO(types): regenerate supabase types via supabase gen types —
+// get_practice_questions is missing from the generated Database functions,
+// and student_mistakes is missing from the generated Database tables.
+const staleRpc = supabase.rpc as unknown as (
+  fn: string,
+  args?: Record<string, unknown>
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+function mistakesTable() {
+  return supabase.from("student_mistakes" as unknown as "questions");
+}
+
 /**
  * Normalizes question entity from Supabase or fallback.
  */
@@ -38,7 +50,7 @@ async function fetchPracticeViaRpc(args: {
   limit: number;
 }): Promise<DrillQuestion[] | null> {
   try {
-    const { data, error } = await supabase.rpc("get_practice_questions", {
+    const { data, error } = await staleRpc("get_practice_questions", {
       p_subject: args.subject ?? null,
       p_topic: args.topic ?? null,
       p_difficulty: args.difficulty ?? null,
@@ -354,7 +366,7 @@ export async function syncDrillMistakesToVault(
       updated_at: new Date().toISOString(),
     }));
 
-    await supabase.from("student_mistakes").upsert(payload, { onConflict: "user_id,question_id" });
+    await mistakesTable().upsert(payload as unknown as never, { onConflict: "user_id,question_id" });
   } catch (err) {
     console.warn("Supabase mistakes sync failed (cached locally):", err);
   }

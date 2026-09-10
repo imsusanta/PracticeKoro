@@ -257,10 +257,12 @@ const StudentProfile = () => {
 
     if (profileResult.data) {
       setProfile(profileResult.data);
+      // TODO(types): regenerate supabase types via supabase gen types (profiles.target_exam missing in generated types)
+      const storedTargetExam = (profileResult.data as unknown as { target_exam?: string | null }).target_exam;
       setFormData({
         full_name: profileResult.data.full_name || "",
         whatsapp_number: profileResult.data.whatsapp_number || "",
-        target_exam: profileResult.data.target_exam || "WBP Constable / Lady Constable"
+        target_exam: storedTargetExam || "WBP Constable / Lady Constable"
       });
       if (profileResult.data.created_at) {
         setAccountDays(differenceInDays(new Date(), new Date(profileResult.data.created_at)));

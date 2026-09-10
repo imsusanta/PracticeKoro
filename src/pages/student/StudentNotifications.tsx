@@ -60,7 +60,15 @@ const StudentNotifications = () => {
       .order("created_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
-      setNotifications(data);
+      setNotifications(data.map((n) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        type: n.type ?? "general",
+        is_read: n.is_read ?? false,
+        link: n.link ?? null,
+        created_at: n.created_at ?? new Date().toISOString(),
+      })));
     } else {
       // Fallback matching Screen 19 of blueprint
       setNotifications([

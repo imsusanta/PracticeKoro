@@ -8,6 +8,7 @@ import {
     Image as ImageIcon, Calendar, User, MoreVertical, ExternalLink
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
 import {

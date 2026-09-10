@@ -46,8 +46,8 @@ interface TopicItem {
   id: string;
   name: string;
   subject_id: string;
-  category?: string;
-  order_index?: number;
+  category?: string | null;
+  order_index?: number | null;
 }
 
 // Visual metadata for subjects
@@ -209,6 +209,7 @@ function matchesTopic(testTitle: string, topicName: string): boolean {
 }
 
 export const PracticeHub = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, hasSubscription, subscriptionFee, refreshSubscription } = useStudentAuth();
 

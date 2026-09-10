@@ -681,8 +681,8 @@ export default function CurrentAffairsManagement() {
 
       {/* Delete Confirmation */}
       <DeleteAlertDialog
-        open={!!articleToDelete}
-        onOpenChange={open => !open && setArticleToDelete(null)}
+        isOpen={!!articleToDelete}
+        onClose={() => setArticleToDelete(null)}
         onConfirm={confirmDelete}
         title="Delete Current Affairs Article"
         description={`Are you sure you want to delete "${articleToDelete?.titleEn}"? This action cannot be undone.`}

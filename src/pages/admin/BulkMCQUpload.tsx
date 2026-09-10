@@ -416,9 +416,10 @@ Short Notes:
         }
       });
 
+      // TODO(types): regenerate supabase types via supabase gen types (questions.exam_id is nullable for subject-bank uploads)
       const { data: insertedQuestions, error } = await supabase
         .from("questions")
-        .insert(questionsToInsert)
+        .insert(questionsToInsert as unknown as never)
         .select("id");
 
       if (error) throw error;

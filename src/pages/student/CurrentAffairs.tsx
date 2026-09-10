@@ -222,7 +222,7 @@ export default function CurrentAffairs() {
   };
 
   return (
-    <StudentLayout>
+    <StudentLayout title="Current Affairs" subtitle="Daily Updates & Mock Tests">
       <div className="space-y-5 sm:space-y-6 pb-20 max-w-4xl mx-auto px-1 sm:px-2">
         {/* Top Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">

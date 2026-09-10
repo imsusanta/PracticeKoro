@@ -19,13 +19,12 @@ const LottieViewer: React.FC<{
   className?: string;
   style?: React.CSSProperties;
 }> = ({ animationData, loop = true, autoplay = true, className, style }) => {
-  const options = {
-    animationData,
+  const instance = useLottie({
+    src: animationData,
     loop,
     autoplay,
-  };
-  const { View } = useLottie(options, { className, style });
-  return View;
+  });
+  return <div ref={instance.setDisplayRef} className={className} style={style} />;
 };
 
 export const LottieAnimation: React.FC<LottieAnimationProps> = ({

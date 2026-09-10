@@ -78,7 +78,7 @@ const AdminSettings = () => {
                         if (item.key === "auto_approve_students") {
                             newSettings.auto_approve_students = item.value === "true";
                         } else if (item.key === "yearly_subscription_fee") {
-                            newSettings.yearly_subscription_fee = parseFloat(item.value) || 0;
+                            newSettings.yearly_subscription_fee = parseFloat(item.value ?? "") || 0;
                         }
                     });
                     return newSettings;

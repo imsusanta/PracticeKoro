@@ -63,7 +63,8 @@ const LatestBlogs = () => {
             if (error) throw error;
 
             if (data && data.length > 0) {
-                setBlogs(data as BlogPost[]);
+                // TODO(types): regenerate supabase types via supabase gen types (blog_posts.slug missing in generated types)
+                setBlogs(data as unknown as BlogPost[]);
             } else {
                 // Use fallback if no published blogs
                 setBlogs(fallbackBlogs);

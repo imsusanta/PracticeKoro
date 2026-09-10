@@ -200,7 +200,7 @@ export async function fetchTodayMetrics(userId: string): Promise<TodayMetrics> {
           const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, "0")}-${String(checkDate.getDate()).padStart(2, "0")}`;
           if (uniqueDates.includes(dateStr)) {
             streakDays++;
-            const prevDay = new Date(checkDate);
+            const prevDay: Date = new Date(checkDate);
             prevDay.setDate(prevDay.getDate() - 1);
             checkDate = prevDay;
           } else {

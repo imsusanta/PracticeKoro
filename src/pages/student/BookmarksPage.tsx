@@ -57,8 +57,9 @@ export const BookmarksPage = () => {
         return;
       }
 
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
       const { data, error } = await supabase
-        .from("student_bookmarks")
+        .from("student_bookmarks" as never)
         .select(`
           id,
           question_id,
@@ -99,7 +100,9 @@ export const BookmarksPage = () => {
           .in("id", localQIds);
 
         if (questionsData && questionsData.length > 0) {
-          const fallbackItems: BookmarkItem[] = questionsData.map(q => ({
+          // TODO(types): regenerate supabase types via supabase gen types (questions.year missing in generated types)
+          const questionRows = questionsData as unknown as BookmarkItem["questions"][];
+          const fallbackItems: BookmarkItem[] = questionRows.map((q) => ({
             id: `local_${q.id}`,
             question_id: q.id,
             notes: null,
@@ -128,7 +131,8 @@ export const BookmarksPage = () => {
             correct_answer: "A",
             explanation: "রক্তের প্রায় ৫৫ শতাংশই হলো প্লাজমা বা রক্তরস।",
             subject: "Biology",
-            topic: "Circulatory System"
+            topic: "Circulatory System",
+            year: null
           }
         },
         {
@@ -146,7 +150,8 @@ export const BookmarksPage = () => {
             correct_answer: "B",
             explanation: "পশ্চিমবঙ্গের রাজধানী ও প্রধান বাণিজ্যিক কেন্দ্র কলকাতা।",
             subject: "West Bengal GK",
-            topic: "Basic Facts"
+            topic: "Basic Facts",
+            year: null
           }
         },
         {
@@ -164,7 +169,8 @@ export const BookmarksPage = () => {
             correct_answer: "B",
             explanation: "প্রতিভা পাটিল ২০০৭ থেকে ২০১২ সাল পর্যন্ত ভারতের দ্বাদশ ও প্রথম মহিলা রাষ্ট্রপতি হিসেবে দায়িত্ব পালন করেন।",
             subject: "General Knowledge",
-            topic: "Indian Polity"
+            topic: "Indian Polity",
+            year: null
           }
         },
         {
@@ -182,7 +188,8 @@ export const BookmarksPage = () => {
             correct_answer: "A",
             explanation: "অ্যান্টিবডি শরীরের রোগ প্রতিরোধ ব্যবস্থার অংশ হিসেবে ক্ষতিকর ব্যাকটেরিয়া ও ভাইরাসকে নিষ্ক্রিয় করে।",
             subject: "Science",
-            topic: "Immunology"
+            topic: "Immunology",
+            year: null
           }
         }
       ]);
@@ -210,8 +217,9 @@ export const BookmarksPage = () => {
 
     if (!bookmarkId.startsWith("local_")) {
       try {
+        // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
         await supabase
-          .from("student_bookmarks")
+          .from("student_bookmarks" as never)
           .delete()
           .eq("id", bookmarkId);
       } catch (e) {
@@ -308,7 +316,7 @@ export const BookmarksPage = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search saved questions or syllabus chapters..."
+              placeholder="Search saved questions or syllabus topics..."
               className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>

@@ -126,8 +126,9 @@ export const ReviewTest = () => {
           .select(`*, questions (*)`)
           .eq("attempt_id", attemptId)
           .order("created_at", { ascending: true }),
+        // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
         supabase
-          .from("student_bookmarks")
+          .from("student_bookmarks" as never)
           .select("question_id")
           .eq("user_id", session.user.id),
         supabase
@@ -137,14 +138,15 @@ export const ReviewTest = () => {
           .eq("status", "completed")
           .limit(1)
           .maybeSingle(),
+        // TODO(types): regenerate supabase types via supabase gen types (student_mistakes missing from generated types)
         supabase
-          .from("student_mistakes")
+          .from("student_mistakes" as never)
           .select("id, question_id, error_type, student_notes, is_mastered, retry_count")
           .eq("user_id", session.user.id),
       ]);
 
       if (attemptResult.error || !attemptResult.data) {
-        // Fallback: check localStorage for chapter-wise tests or offline attempts
+        // Fallback: check localStorage for topic-wise tests or offline attempts
         const localAttRaw = localStorage.getItem(`pk_completed_attempt_${attemptId}`);
         if (localAttRaw) {
           try {
@@ -245,8 +247,9 @@ export const ReviewTest = () => {
     if (!session) return;
 
     if (bookmarkedIds.has(questionId)) {
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
       await supabase
-        .from("student_bookmarks")
+        .from("student_bookmarks" as never)
         .delete()
         .eq("user_id", session.user.id)
         .eq("question_id", questionId);
@@ -258,9 +261,10 @@ export const ReviewTest = () => {
       });
       sonnerToast.info("Removed from Saved Questions");
     } else {
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
       await supabase
-        .from("student_bookmarks")
-        .insert({ user_id: session.user.id, question_id: questionId });
+        .from("student_bookmarks" as never)
+        .insert({ user_id: session.user.id, question_id: questionId } as never);
 
       setBookmarkedIds(prev => new Set(prev).add(questionId));
       sonnerToast.success("Saved to Saved Questions ⭐");
@@ -289,7 +293,8 @@ export const ReviewTest = () => {
         await classifyStudentMistake(existing.id, errorType, notes);
       } else {
         const targetAnswer = answers.find(a => a.question_id === qId);
-        const { data: newMistake } = await supabase.from("student_mistakes").upsert({
+        // TODO(types): regenerate supabase types via supabase gen types (student_mistakes missing from generated types)
+        const { data: newMistakeData } = await supabase.from("student_mistakes" as never).upsert({
           user_id: session.user.id,
           question_id: qId,
           attempt_id: attemptId,
@@ -299,8 +304,9 @@ export const ReviewTest = () => {
           error_type: errorType,
           student_notes: notes,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id,question_id" }).select("id").single();
+        } as never, { onConflict: "user_id,question_id" }).select("id").single();
 
+        const newMistake = newMistakeData as unknown as { id: string } | null;
         if (newMistake?.id) {
           setMistakeMetaMap(prev => ({
             ...prev,
@@ -576,7 +582,7 @@ export const ReviewTest = () => {
           </div>
         </div>
 
-        {/* Subject & Chapter Breakdown Grid */}
+        {/* Subject & Topic Breakdown Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-3xl border border-slate-100/90 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
             <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">

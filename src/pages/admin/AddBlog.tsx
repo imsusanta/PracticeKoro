@@ -419,7 +419,7 @@ Examples:
             excerpt: data.excerpt || "",
             content: data.content || "",
             category: data.author || "General",
-            is_published: data.is_published,
+            is_published: data.is_published ?? false,
         });
 
         setHasSyncedContent(false);

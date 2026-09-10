@@ -58,13 +58,15 @@ export const PYQPractice = () => {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
         const { data: bookmarks } = await supabase
-          .from("student_bookmarks")
+          .from("student_bookmarks" as never)
           .select("question_id")
           .eq("user_id", session.user.id);
 
-        if (bookmarks) {
-          setBookmarkedIds(new Set(bookmarks.map(b => b.question_id)));
+        const bookmarkRows = bookmarks as unknown as Array<{ question_id: string }> | null;
+        if (bookmarkRows) {
+          setBookmarkedIds(new Set(bookmarkRows.map((b) => b.question_id)));
         }
       }
 
@@ -119,8 +121,9 @@ export const PYQPractice = () => {
 
     const isBookmarked = bookmarkedIds.has(questionId);
     if (isBookmarked) {
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
       await supabase
-        .from("student_bookmarks")
+        .from("student_bookmarks" as never)
         .delete()
         .eq("user_id", session.user.id)
         .eq("question_id", questionId);
@@ -132,12 +135,13 @@ export const PYQPractice = () => {
       });
       toast.info("Removed from Saved Questions");
     } else {
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
       await supabase
-        .from("student_bookmarks")
+        .from("student_bookmarks" as never)
         .insert({
           user_id: session.user.id,
           question_id: questionId
-        });
+        } as never);
 
       setBookmarkedIds(prev => new Set(prev).add(questionId));
       toast.success("Saved to Saved Questions ⭐");

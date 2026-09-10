@@ -88,6 +88,17 @@ interface MockTest {
   negative_marks_per_question?: number | null;
 }
 
+// SubmitAttemptRequest omits the optional testId fallback hint that the attempt
+// engine still reads (see submitAttempt); keep it via a narrow local extension.
+interface EngineSubmitPayload {
+  attemptId: string;
+  testId?: string;
+  finalAnswers?: Record<string, string | null>;
+  timeTakenSeconds?: number;
+  tabViolations?: number;
+  fullscreenViolations?: number;
+}
+
 const TakeTest = () => {
   const navigate = useNavigate();
   const { testId } = useParams();
@@ -190,14 +201,15 @@ const TakeTest = () => {
     try {
       const activeAttemptId = attemptIdRef.current || `att_${testId}_${session.user.id}_${Date.now()}`;
 
-      const result = await engineSubmitAttempt({
+      const submitPayload: EngineSubmitPayload = {
         attemptId: activeAttemptId,
         testId: testId,
         finalAnswers: currentAnswers,
         timeTakenSeconds,
         tabViolations,
         fullscreenViolations,
-      });
+      };
+      const result = await engineSubmitAttempt(submitPayload);
 
       localStorage.removeItem(`pk_answers_${testId}`);
       clearLocalDraft(activeAttemptId);
@@ -398,7 +410,7 @@ const TakeTest = () => {
           option_b: sq.optionB,
           option_c: sq.optionC,
           option_d: sq.optionD,
-          subject: sq.subject,
+          subject: sq.subject ?? null,
           topic: sq.topic || null,
           difficulty: sq.difficulty || null,
           year: sq.year || null,

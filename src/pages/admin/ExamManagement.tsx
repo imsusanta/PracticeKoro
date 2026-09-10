@@ -322,7 +322,8 @@ const ExamManagement = () => {
                 } else throw error;
             }
 
-            const loaded = (data as Exam[]) || [];
+            // TODO(types): regenerate supabase types via supabase gen types (exams row missing is_paid/price/category columns)
+            const loaded = (data as unknown as Exam[]) || [];
             const ids = loaded.map((exam) => exam.id);
             let testCounts = new Map<string, number>();
             let questionCounts = new Map<string, number>();
@@ -437,7 +438,7 @@ const ExamManagement = () => {
             action: editingExam ? "update_exam" : "create_exam",
             tableName: "exams",
             recordId: editingExam?.id || savedData?.id,
-            oldData: editingExam || undefined,
+            oldData: editingExam as unknown as Record<string, unknown> | undefined,
             newData: payload,
         });
 
@@ -458,7 +459,7 @@ const ExamManagement = () => {
                 action: "delete_exam",
                 tableName: "exams",
                 recordId: examToDelete,
-                oldData: deleted,
+                oldData: deleted as unknown as Record<string, unknown> | undefined,
             });
             toast({ title: "Success", description: "Exam deleted successfully" });
             if (selectedExamId === examToDelete) setSelectedExamId(null);

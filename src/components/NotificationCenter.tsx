@@ -44,7 +44,15 @@ export function NotificationCenter() {
       return;
     }
 
-    setNotifications(data || []);
+    setNotifications((data || []).map((n) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type ?? "",
+      is_read: n.is_read ?? false,
+      link: n.link ?? null,
+      created_at: n.created_at ?? "",
+    })));
     setUnreadCount(data?.filter(n => !n.is_read).length || 0);
   }, []);
 

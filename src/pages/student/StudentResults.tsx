@@ -156,8 +156,9 @@ const StudentResults = () => {
       }
 
       // Fetch Subject Breakdown
+      // TODO(types): regenerate supabase types via supabase gen types (user_answers missing from generated types)
       const { data: answersData } = await supabase
-        .from("user_answers")
+        .from("user_answers" as never)
         .select(`
           is_correct,
           questions (

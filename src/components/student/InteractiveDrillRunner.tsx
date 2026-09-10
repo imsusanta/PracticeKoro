@@ -57,8 +57,9 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
   // Load bookmarks
   useEffect(() => {
     if (!user) return;
+    // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
     supabase
-      .from("student_bookmarks")
+      .from("student_bookmarks" as never)
       .select("question_id")
       .eq("user_id", user.id)
       .then(({ data }) => {
@@ -95,7 +96,8 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
     }
     const isBookmarked = bookmarkedIds.has(qId);
     if (isBookmarked) {
-      await supabase.from("student_bookmarks").delete().eq("user_id", user.id).eq("question_id", qId);
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
+      await supabase.from("student_bookmarks" as never).delete().eq("user_id", user.id).eq("question_id", qId);
       setBookmarkedIds((prev) => {
         const next = new Set(prev);
         next.delete(qId);
@@ -103,7 +105,8 @@ export const InteractiveDrillRunner: React.FC<InteractiveDrillRunnerProps> = ({
       });
       toast.info("Removed from Saved Questions");
     } else {
-      await supabase.from("student_bookmarks").insert({ user_id: user.id, question_id: qId });
+      // TODO(types): regenerate supabase types via supabase gen types (student_bookmarks missing from generated types)
+      await supabase.from("student_bookmarks" as never).insert({ user_id: user.id, question_id: qId } as never);
       setBookmarkedIds((prev) => new Set(prev).add(qId));
       toast.success("Saved to Saved Questions ⭐");
     }

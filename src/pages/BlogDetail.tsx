@@ -9,6 +9,7 @@ import { Helmet } from "react-helmet-async";
 
 interface BlogPost {
     id: string;
+    slug?: string | null;
     title: string;
     excerpt: string | null;
     content: string | null;
@@ -75,7 +76,8 @@ const BlogDetail = () => {
                 .order("created_at", { ascending: false })
                 .limit(3);
 
-            setRecommendedBlogs(recommendations as BlogPost[] || []);
+            // TODO(types): regenerate supabase types via supabase gen types (blog_posts.slug missing in generated types)
+            setRecommendedBlogs((recommendations as unknown as BlogPost[]) || []);
         } catch (e) {
             console.error("Error fetching blog:", e);
             setError(true);

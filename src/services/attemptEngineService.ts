@@ -22,6 +22,37 @@ import type {
 
 const LOCAL_DRAFT_PREFIX = "pk_draft_";
 
+// TODO(types): regenerate supabase types via supabase gen types —
+// start_exam_attempt, save_exam_progress, submit_exam_attempt and get_attempt_results
+// are missing from the generated Database functions, and student_mistakes is missing
+// from the generated Database tables.
+const staleRpc = supabase.rpc as unknown as (
+  fn: string,
+  args?: Record<string, unknown>
+) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+function mistakesTable() {
+  return supabase.from("student_mistakes" as unknown as "questions");
+}
+
+interface TopicInfo {
+  id: string;
+  name: string;
+  subject_id: string | null;
+  subjects: { name: string | null } | { name: string | null }[] | null;
+}
+
+function subjectNameOf(rel: TopicInfo["subjects"]): string {
+  return (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "General";
+}
+
+/** Drops unanswered (null) entries so local drafts fit Record<string, string> state. */
+function stringAnswers(answers: Record<string, string | null>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(answers).filter((entry): entry is [string, string] => entry[1] !== null)
+  );
+}
+
 /**
  * Persists answer draft locally to IndexedDB/localStorage for resilient crash recovery.
  */
@@ -64,7 +95,7 @@ export function clearLocalDraft(attemptId: string): void {
  * and returns sanitized questions with ZERO correct_answer or explanation leakage.
  */
 export async function startAttempt(req: StartAttemptRequest): Promise<StartAttemptResponse> {
-  const { data, error } = await supabase.rpc("start_exam_attempt", {
+  const { data, error } = await staleRpc("start_exam_attempt", {
     p_test_id: req.testId,
     p_mode: req.mode || "simulation",
   });
@@ -76,7 +107,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
       if (local && local.answers) {
         res.savedResponses = {
           ...res.savedResponses,
-          ...local.answers,
+          ...stringAnswers(local.answers),
         };
       }
       return res;
@@ -97,11 +128,17 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
     .eq("id", req.testId)
     .maybeSingle();
 
+  // mock_tests has no negative_marking columns in generated types (legacy runtime fields).
+  const legacyTestFlags = testData as unknown as {
+    negative_marking?: boolean | null;
+    negative_marks_per_question?: number | null;
+  } | null;
+
   const presetMeta = getMockTestPreset(req.testId);
 
   // Check if this is a topic-based chapter test
   const isTopicId = req.testId.startsWith("topic-") || (!testData && !presetMeta && req.testId.length < 30);
-  let topicInfo: any = null;
+  let topicInfo: TopicInfo | null = null;
   if (isTopicId) {
     const rawTopicId = req.testId.replace(/^topic-/, "");
     const { data: tData } = await supabase
@@ -109,7 +146,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
       .select("id, name, subject_id, subjects(name)")
       .eq("id", rawTopicId)
       .maybeSingle();
-    topicInfo = tData;
+    topicInfo = tData as unknown as TopicInfo | null;
   }
 
   const durationMinutes = topicInfo
@@ -124,11 +161,11 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
   const negativeMarking = Boolean(
     topicInfo
       ? true
-      : (testData ? testData.negative_marking : (presetMeta ? presetMeta.negative !== "No Negative" : true))
+      : (testData ? legacyTestFlags?.negative_marking : (presetMeta ? presetMeta.negative !== "No Negative" : true))
   );
   const negativeMarksPerQuestion = topicInfo
     ? 0.25
-    : (testData?.negative_marks_per_question ?? (presetMeta?.negative ? parseFloat(presetMeta.negative.replace(/[^0-9.]/g, "")) || 0.25 : 0.25));
+    : (legacyTestFlags?.negative_marks_per_question ?? (presetMeta?.negative ? parseFloat(presetMeta.negative.replace(/[^0-9.]/g, "")) || 0.25 : 0.25));
   const testTitle = topicInfo
     ? `${topicInfo.name} অধ্যায় মক টেস্ট 01`
     : (testData?.title || presetMeta?.title || "Panchayat Full Mock Test 1");
@@ -143,7 +180,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
   let savedResponses: Record<string, string> = {};
   let savedReviews: string[] = [];
 
-  if (testData && !isDemo) {
+  if (testData) {
     // Check if there is an active in-progress attempt to resume
     const { data: existingAttempt } = await supabase
       .from("test_attempts")
@@ -202,7 +239,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
   // Restore local draft backup
   const local = getLocalDraft(attemptId);
   if (local?.answers) {
-    savedResponses = { ...savedResponses, ...local.answers };
+    savedResponses = { ...savedResponses, ...stringAnswers(local.answers) };
   }
   if (local?.reviewFlags && local.reviewFlags.length > 0) {
     savedReviews = Array.from(new Set([...savedReviews, ...local.reviewFlags]));
@@ -212,7 +249,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
 
   if (topicInfo) {
     // Topic-wise mock test: dynamically fetch 15 questions for this chapter!
-    const subjectName = (topicInfo.subjects as any)?.name || "General";
+    const subjectName = subjectNameOf(topicInfo.subjects);
     const topicQuestions = await fetchTopicQuestions(subjectName, topicInfo.name, "all", 15);
     sanitizedQuestions = topicQuestions.map((tq, idx) => ({
       id: `tq-${tq.id}`,
@@ -228,7 +265,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
       subject: tq.subject || subjectName,
       topic: tq.topic || topicInfo.name,
       difficulty: tq.difficulty || "medium",
-      year: tq.year,
+      year: tq.year ?? undefined,
     }));
   } else {
     // Strictly sanitized query: NEVER query correct_answer or explanation
@@ -298,7 +335,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
         subject: fq.subject || "General Knowledge",
         topic: fq.topic || testTitle || "",
         difficulty: fq.difficulty || "medium",
-        year: fq.year,
+        year: fq.year ?? undefined,
       }));
       totalMarks = sanitizedQuestions.reduce((acc, q) => acc + (q.marks || 1), 0);
       passingMarks = Math.round(totalMarks * 0.4);
@@ -339,7 +376,7 @@ export async function saveAnswers(req: SaveAnswersRequest): Promise<SaveAnswersR
     serverExpiresAt: "",
   });
 
-  const { data, error } = await supabase.rpc("save_exam_progress", {
+  const { data, error } = await staleRpc("save_exam_progress", {
     p_attempt_id: req.attemptId,
     p_answers: req.answers as any,
     p_review_flags: (req.reviewFlags || []) as any,
@@ -406,7 +443,7 @@ export async function submitAttempt(
   req: SubmitAttemptRequest,
   scoringFallbackRules?: QuestionScoringRule[]
 ): Promise<SubmitAttemptResponse> {
-  const { data, error } = await supabase.rpc("submit_exam_attempt", {
+  const { data, error } = await staleRpc("submit_exam_attempt", {
     p_attempt_id: req.attemptId,
     p_final_answers: (req.finalAnswers || null) as any,
     p_time_taken_seconds: req.timeTakenSeconds || 0,
@@ -428,7 +465,7 @@ export async function submitAttempt(
   }
 
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(req.attemptId);
-  let resolvedTestId = req.testId || "";
+  let resolvedTestId = (req as SubmitAttemptRequest & { testId?: string }).testId || "";
 
   if (isUuid && !resolvedTestId) {
     const { data: attData } = await supabase
@@ -458,7 +495,7 @@ export async function submitAttempt(
   if (topicData) {
     testTitle = `${topicData.name} অধ্যায় মক টেস্ট 01`;
     passingMarks = 6;
-    const subjectName = (topicData.subjects as any)?.name || "General";
+    const subjectName = subjectNameOf((topicData as unknown as TopicInfo | null)?.subjects ?? null);
     candidateQuestions = await fetchTopicQuestions(subjectName, topicData.name, "all", 25);
   }
 
@@ -724,7 +761,7 @@ export async function submitAttempt(
       .map((r) => ({
         user_id: session.user.id,
         question_id: r.questionId,
-        selected_answer: req.finalAnswers[r.questionId],
+        selected_answer: req.finalAnswers?.[r.questionId] ?? null,
         correct_answer: r.correctAnswer,
         is_mastered: false,
         updated_at: new Date().toISOString(),
@@ -732,7 +769,7 @@ export async function submitAttempt(
 
     if (mistakeRecords.length > 0) {
       try {
-        await supabase.from("student_mistakes").upsert(mistakeRecords, {
+        await mistakesTable().upsert(mistakeRecords as unknown as never, {
           onConflict: "user_id,question_id",
         });
       } catch (mErr) {
@@ -773,7 +810,7 @@ export async function submitAttempt(
  * ONLY for completed attempts.
  */
 export async function getAttemptResults(attemptId: string): Promise<AttemptResultResponse> {
-  const { data, error } = await supabase.rpc("get_attempt_results", {
+  const { data, error } = await staleRpc("get_attempt_results", {
     p_attempt_id: attemptId,
   });
 

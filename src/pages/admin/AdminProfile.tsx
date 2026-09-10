@@ -39,7 +39,12 @@ const AdminProfile = () => {
       .single();
 
     if (!error && data) {
-      setProfile(data);
+      setProfile({
+        id: data.id,
+        email: data.email ?? "",
+        full_name: data.full_name ?? null,
+        created_at: data.created_at,
+      });
       setFullName(data.full_name || "");
     }
   }, []);

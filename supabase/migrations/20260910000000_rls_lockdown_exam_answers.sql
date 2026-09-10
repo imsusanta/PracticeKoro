@@ -218,7 +218,7 @@ BEGIN
     FROM public.questions q
     WHERE (q.status IS NULL OR q.status = 'published')
       AND (p_subject IS NULL OR p_subject = 'all' OR q.subject = p_subject)
-      AND (p_topic IS NULL OR p_topic = 'all' OR p_topic = 'All Topics' OR q.topic = p_topic)
+      AND (p_topic IS NULL OR p_topic = 'all' OR p_topic = 'All Topics' OR p_topic = 'All Chapters' OR q.topic = p_topic)
       AND (p_difficulty IS NULL OR p_difficulty = 'all' OR LOWER(COALESCE(q.difficulty, 'medium')) = LOWER(p_difficulty))
       AND (p_year IS NULL OR q.year = p_year)
     ORDER BY q.created_at DESC

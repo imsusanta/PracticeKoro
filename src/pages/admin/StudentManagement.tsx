@@ -201,7 +201,7 @@ const StudentManagement = () => {
 
     // Helper to check for active subscription
     const hasActiveSubscription = (s: any) => {
-      return s.purchases?.some(p => {
+      return s.purchases?.some((p: { content_type?: string; created_at?: string }) => {
         if (p.content_type !== 'subscription') return false;
         const expiryDate = new Date(p.created_at || "");
         expiryDate.setDate(expiryDate.getDate() + 365);

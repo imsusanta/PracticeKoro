@@ -197,14 +197,16 @@ export const DailyPractice = () => {
 
       // Check DB streak safely
       try {
-        const { data: streakData } = await supabase
-          .from("student_streaks")
+        // TODO(types): regenerate supabase types via supabase gen types (student_streaks missing from generated types)
+        const { data: streakDataRaw } = await supabase
+          .from("student_streaks" as never)
           .select("current_streak, last_activity_date")
           .eq("user_id", session.user.id)
           .maybeSingle();
 
+        const streakData = streakDataRaw as unknown as { current_streak?: number | null; last_activity_date?: string | null } | null;
         if (streakData && streakData.current_streak !== undefined) {
-          const dbStreak = streakData.current_streak || 0;
+          const dbStreak = streakData.current_streak ?? 0;
           const finalStreak = Math.max(localStreak, dbStreak);
           setStreak(finalStreak);
           localStorage.setItem("pk_daily_streak", finalStreak.toString());
@@ -219,8 +221,9 @@ export const DailyPractice = () => {
 
       // Check daily attempt in DB safely
       try {
+        // TODO(types): regenerate supabase types via supabase gen types (daily_practice_attempts missing from generated types)
         const { data: todayAttempt } = await supabase
-          .from("daily_practice_attempts")
+          .from("daily_practice_attempts" as never)
           .select("id, score, total_questions")
           .eq("user_id", session.user.id)
           .eq("practice_date", todayStr)
@@ -341,39 +344,42 @@ export const DailyPractice = () => {
     if (userId) {
       mistakesToLog.forEach(m => {
         try {
-          supabase.from("student_mistakes").upsert({
+          // TODO(types): regenerate supabase types via supabase gen types (student_mistakes missing from generated types)
+          supabase.from("student_mistakes" as never).upsert({
             user_id: userId,
             question_id: m.question_id,
             selected_answer: m.selected_answer,
             correct_answer: m.correct_answer,
             is_mastered: false,
             updated_at: new Date().toISOString()
-          }, { onConflict: "user_id,question_id" }).then();
+          } as never, { onConflict: "user_id,question_id" }).then();
         } catch (e) {
           // ignore
         }
       });
 
       try {
-        supabase.from("daily_practice_attempts").insert({
+        // TODO(types): regenerate supabase types via supabase gen types (daily_practice_attempts missing from generated types)
+        supabase.from("daily_practice_attempts" as never).insert({
           user_id: userId,
           practice_date: todayStr,
           score: correct,
           total_questions: questions.length,
           correct_count: correct,
           time_taken_seconds: timeSpent
-        }).then();
+        } as never).then();
       } catch (e) {
         // ignore
       }
 
       try {
-        supabase.from("student_streaks").upsert({
+        // TODO(types): regenerate supabase types via supabase gen types (student_streaks missing from generated types)
+        supabase.from("student_streaks" as never).upsert({
           user_id: userId,
           current_streak: newStreak,
           last_activity_date: todayStr,
           updated_at: new Date().toISOString()
-        }).then();
+        } as never).then();
       } catch (e) {
         // ignore
       }

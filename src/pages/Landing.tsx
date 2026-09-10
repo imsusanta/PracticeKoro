@@ -143,7 +143,10 @@ const Landing = () => {
         ]);
 
         if (roleResult.data && profileResult.data) {
-          setUserProfile(profileResult.data);
+          setUserProfile({
+            full_name: profileResult.data.full_name ?? undefined,
+            avatar_url: profileResult.data.avatar_url ?? undefined,
+          });
           setUserRole(roleResult.data.role as "student" | "admin");
           setIsLoggedIn(true);
         }

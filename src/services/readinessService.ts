@@ -8,6 +8,12 @@ import {
   RecommendedAction,
 } from "@/types/readiness";
 
+// TODO(types): regenerate supabase types via supabase gen types —
+// student_mistakes is missing from the generated Database tables.
+function mistakesTable() {
+  return supabase.from("student_mistakes" as unknown as "questions");
+}
+
 export const HISTORICAL_CUTOFFS: Record<string, CutoffBenchmark> = {
   "wb-panchayat": {
     examId: "wb-panchayat",
@@ -348,8 +354,7 @@ export async function fetchStudentReadiness(
         });
       }
 
-      const { data: mistakes } = await supabase
-        .from("student_mistakes")
+      const { data: mistakes } = await mistakesTable()
         .select("is_mastered")
         .eq("user_id", userId);
 

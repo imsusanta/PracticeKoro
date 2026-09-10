@@ -198,7 +198,12 @@ export function matchDbSubject(name: string, subjects: Subject[]): Subject | nul
  */
 export async function fetchChapterQuestionCounts(subjectName: string): Promise<Record<string, number>> {
   try {
-    const { data, error } = await supabase.rpc("get_practice_questions", {
+    // TODO(types): regenerate supabase types via supabase gen types
+    // (get_practice_questions exists in 20260910000000 migration, pending type regen)
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>)("get_practice_questions", {
       p_subject: subjectName,
       p_topic: null,
       p_difficulty: null,

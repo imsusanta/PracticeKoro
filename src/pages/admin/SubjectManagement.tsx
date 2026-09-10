@@ -39,14 +39,14 @@ interface Exam {
 
 interface Subject {
     id: string;
-    exam_id: string;
+    exam_id: string | null;
     name: string;
     description: string | null;
     icon?: string;
     color?: string;
     is_active?: boolean;
     created_at?: string;
-    order_index?: number;
+    order_index?: number | null;
 }
 
 interface Topic {
@@ -54,7 +54,7 @@ interface Topic {
     subject_id: string;
     name: string;
     description: string | null;
-    order_index?: number;
+    order_index?: number | null;
     is_active?: boolean;
     created_at?: string;
 }

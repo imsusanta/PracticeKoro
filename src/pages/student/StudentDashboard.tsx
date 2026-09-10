@@ -1364,17 +1364,11 @@ const StudentDashboard = () => {
           </div>
         )}
 
-        {/* Test Details Modal if clicked */}
+        {/* Test Details Modal if clicked (modal navigates internally; extra props are ignored) */}
         <TestDetailsModal
           test={selectedTestForModal}
           isOpen={!!selectedTestForModal}
           onClose={() => setSelectedTestForModal(null)}
-          onStartTest={(testId) => {
-            navigate(`/student/take-test/${testId}`);
-            setSelectedTestForModal(null);
-          }}
-          hasSubscription={hasSubscription}
-          onUpgrade={handleProPlanClick}
         />
 
       </div>
