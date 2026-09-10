@@ -1,6 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fetchStudentOverallRank } from '@/services/studentService';
 
+// Offline: service must resolve "0 completed tests" from empty rows,
+// never from a live round-trip (previously ~1300ms network call).
+vi.mock('@/integrations/supabase/client', () => {
+  const chain: Record<string, unknown> = { data: [], error: null };
+  for (const m of ['select', 'eq', 'not', 'neq', 'order', 'limit', 'maybeSingle', 'single', 'is', 'in', 'or']) {
+    (chain as Record<string, unknown>)[m] = () => chain;
+  }
+  return {
+    supabase: {
+      rpc: async () => ({ data: null, error: { message: 'mocked offline' } }),
+      from: () => chain,
+      auth: { getSession: async () => ({ data: { session: null } }) },
+    },
+  };
+});
+
 describe('Student Overall Rank Engine', () => {
   it('returns null rank when student has 0 completed tests', async () => {
     // Calling with empty/mocked user UUID

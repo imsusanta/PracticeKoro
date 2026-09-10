@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   evaluateDrill,
   fetchPYQQuestions,
@@ -8,6 +8,32 @@ import {
 } from "@/services/drillService";
 import { DrillQuestion } from "@/types/drills";
 import { FALLBACK_DRILL_QUESTIONS } from "@/data/examCatalog";
+
+// Offline: never hit live Supabase in unit tests. RPC returns deterministic
+// rows (exercises the RLS-lockdown RPC-first path); table queries fail over
+// to the local-bank path, exactly like a locked-down DB with no RPC.
+vi.mock("@/integrations/supabase/client", () => {
+  const rpcRows = [
+    { id: "q-1", question_text: "ভারতের সংবিধান কোন সালে কার্যকর হয়?", option_a: "1947", option_b: "1950", option_c: "1952", option_d: "1955", correct_answer: "B", explanation: "26 January 1950", subject: "Indian Polity", topic: "Constitution", difficulty: "easy", year: 2024, source: null },
+    { id: "q-2", question_text: "ক্রয়মূল্য ও বিক্রয়মূল্যের অনুপাত 4:5 হলে শতকরা লাভ কত?", option_a: "20%", option_b: "25%", option_c: "30%", option_d: "15%", correct_answer: "B", explanation: "25% profit", subject: "Mathematics", topic: "Profit and Loss", difficulty: "easy", year: 2024, source: null },
+    { id: "q-3", question_text: "সুন্দরবন কোন সালে UNESCO World Heritage Site হয়?", option_a: "1983", option_b: "1987", option_c: "1989", option_d: "1992", correct_answer: "B", explanation: "1987 UNESCO site", subject: "West Bengal GK", topic: "Geography", difficulty: "medium", year: 2023, source: null },
+    { id: "q-4", question_text: "Choose the correct collective noun: A _______ of lions.", option_a: "Pack", option_b: "Pride", option_c: "Herd", option_d: "Flock", correct_answer: "B", explanation: "Pride of lions", subject: "English", topic: "Nouns", difficulty: "easy", year: 2023, source: null },
+  ];
+  const chain: Record<string, unknown> = {
+    data: null,
+    error: { message: "mocked offline" },
+  };
+  for (const m of ["select", "eq", "not", "neq", "order", "limit", "maybeSingle", "single", "is", "in", "or", "upsert", "insert", "update", "delete"]) {
+    (chain as Record<string, unknown>)[m] = () => chain;
+  }
+  return {
+    supabase: {
+      rpc: async () => ({ data: rpcRows, error: null }),
+      from: () => chain,
+      auth: { getSession: async () => ({ data: { session: null } }) },
+    },
+  };
+});
 
 describe("drillService — Targeted Topic Practice & PYQ Drill Engine", () => {
   let storage: Record<string, string> = {};
