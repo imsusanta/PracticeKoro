@@ -6,13 +6,13 @@ import {
   UserRound,
   BarChart3,
   RotateCcw,
-  Trophy
+  Trophy,
 } from "lucide-react";
 
-// Mobile Bottom Navigation (Balanced 5 Core Pillars: Home, Exams, Practice, Results, Profile)
+// Mobile Bottom Navigation (Home, Test Series, Practice, Results, Profile)
 export const studentNav = [
   { name: "Home", path: "/student/dashboard", icon: Home },
-  { name: "Exams", path: "/student/exam", icon: ClipboardList },
+  { name: "Test Series", path: "/student/exam", icon: ClipboardList },
   { name: "Practice", path: "/student/practice", icon: Target },
   { name: "Results", path: "/student/results", icon: BarChart3 },
   { name: "Profile", path: "/student/profile", icon: UserRound },
@@ -21,7 +21,7 @@ export const studentNav = [
 // Desktop Sidebar Menu
 export const studentFullNav = [
   { name: "Dashboard", path: "/student/dashboard", icon: Home },
-  { name: "Exams & Mocks", path: "/student/exam", icon: ClipboardList },
+  { name: "Test Series", path: "/student/exam", icon: ClipboardList },
   { name: "Practice", path: "/student/practice", icon: Target },
   { name: "Test Results", path: "/student/results", icon: BarChart3 },
   { name: "Study Notes", path: "/student/notes", icon: BookOpen },
