@@ -144,7 +144,7 @@ export const ReviewTest = () => {
       ]);
 
       if (attemptResult.error || !attemptResult.data) {
-        // Fallback: check localStorage for topic-wise tests or offline attempts
+        // Fallback: check localStorage for chapter-wise tests or offline attempts
         const localAttRaw = localStorage.getItem(`pk_completed_attempt_${attemptId}`);
         if (localAttRaw) {
           try {
@@ -576,7 +576,7 @@ export const ReviewTest = () => {
           </div>
         </div>
 
-        {/* Subject & Topic Breakdown Grid */}
+        {/* Subject & Chapter Breakdown Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-3xl border border-slate-100/90 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-4">
             <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">

@@ -308,14 +308,14 @@ export const BookmarksPage = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search saved questions or syllabus topics..."
+              placeholder="Search saved questions or syllabus chapters..."
               className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
 
           {/* Screen 18 Filter Chips: All, Subject, Topic, Difficulty */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 border-t border-slate-100">
-            {["All", "Subject", "Topic", "Difficulty"].map((chip) => (
+            {["All", "Subject", "Chapter", "Difficulty"].map((chip) => (
               <button
                 key={chip}
                 onClick={() => {

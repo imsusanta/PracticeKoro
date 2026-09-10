@@ -45,7 +45,7 @@ const ROTATING_SEARCH_PROMPTS = [
   "Search 'Primary TET 2026'...",
   "Search 'WBCS Mock Tests'...",
   "Search 'Panchayat Clerkship'...",
-  "Search 'Topic Tests'...",
+  "Search 'Chapter Tests'...",
   "Search 'Math & Reasoning'...",
   "Search 'PYQ Vault'...",
   "Search 'Current Affairs'...",
@@ -65,9 +65,9 @@ const STATIC_SUBJECTS = [
 
 const STATIC_PRACTICE_TOOLS: SearchItem[] = [
   {
-    id: "tool-topic-drills",
+    id: "tool-chapter-drills",
     category: "practice",
-    title: "Chapter-wise Topic Tests",
+    title: "Chapter Tests",
     subtitle: "Customize MCQ tests by subject, chapter and difficulty",
     badge: "Test",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
@@ -140,7 +140,7 @@ const TRENDING_CHIPS = [
   { label: "WBP Constable", query: "Police", isHot: true },
   { label: "Primary TET 2026", query: "TET", isHot: true },
   { label: "Panchayat", query: "Panchayat", isHot: false },
-  { label: "Topic Test", query: "Test", isHot: true },
+  { label: "Chapter Test", query: "Test", isHot: true },
   { label: "PYQ Vault", query: "PYQ", isHot: false },
   { label: "Mathematics", query: "Math", isHot: false },
   { label: "Mistakes Book", query: "Mistakes", isHot: false },

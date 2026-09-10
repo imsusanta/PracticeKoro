@@ -342,7 +342,7 @@ export const StudentPerformance = () => {
 
                   {[
                     { label: "Full Mock Test Accuracy", value: readiness.mockAccuracy, weight: "40%", idx: 0 },
-                    { label: "PYQ Practice & Topic Tests", value: readiness.topicDrillAccuracy, weight: "25%", idx: 1 },
+                    { label: "PYQ Practice & Chapter Tests", value: readiness.topicDrillAccuracy, weight: "25%", idx: 1 },
                     { label: "Mistakes Revision Mastery", value: readiness.mistakeMasteryRate, weight: "20%", idx: 2 },
                     { label: "Daily Study Consistency", value: readiness.consistencyScore, weight: "15%", idx: 3 },
                   ].map((factor) => {
