@@ -10,6 +10,15 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     const [isExiting, setIsExiting] = useState(false);
 
     useEffect(() => {
+        // Respect reduced-motion: skip the animated splash quickly
+        const prefersReducedMotion =
+            typeof window !== "undefined" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (prefersReducedMotion) {
+            const t = setTimeout(onComplete, 200);
+            return () => clearTimeout(t);
+        }
+
         // Show splash screen for 1.8s then smoothly exit
         const exitTimer = setTimeout(() => {
             setIsExiting(true);
