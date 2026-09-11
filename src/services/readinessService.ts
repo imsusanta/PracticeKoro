@@ -340,11 +340,12 @@ export async function fetchStudentReadiness(
   // 2. Fetch from Supabase if authenticated
   if (userId) {
     try {
+      // Completed = server status OR legacy is_active flag (see studentService).
       const { data: attempts } = await supabase
         .from("test_attempts")
         .select("percentage, is_active")
         .eq("user_id", userId)
-        .eq("is_active", false)
+        .or("status.eq.completed,is_active.eq.false")
         .order("created_at", { ascending: false })
         .limit(10);
 

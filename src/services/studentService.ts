@@ -498,12 +498,14 @@ export interface StudentOverallRankResult {
  */
 export async function fetchStudentOverallRank(userId: string): Promise<StudentOverallRankResult> {
   try {
-    // 1. Fetch user's completed attempts
+    // 1. Fetch user's completed attempts.
+    // Completed = status='completed' (server engine, is_active NULL) OR
+    // legacy is_active=false (old rows backfilled status='in_progress').
     const { data: userAttempts, error: userError } = await supabase
       .from("test_attempts")
       .select("score, percentage")
       .eq("user_id", userId)
-      .eq("is_active", false);
+      .or("status.eq.completed,is_active.eq.false");
 
     if (userError) {
       console.warn("fetchStudentOverallRank user attempts error:", userError.message);

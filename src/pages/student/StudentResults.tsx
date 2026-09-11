@@ -111,7 +111,8 @@ const StudentResults = () => {
             mock_tests (title)
           `)
           .eq("user_id", session.user.id)
-          .eq("is_active", false)
+          // Completed = server status OR legacy is_active flag (see studentService).
+          .or("status.eq.completed,is_active.eq.false")
           .order("completed_at", { ascending: false }),
       ]);
 

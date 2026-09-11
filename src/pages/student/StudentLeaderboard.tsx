@@ -85,10 +85,11 @@ export const StudentLeaderboard = () => {
             is_current_user: row.user_id === uid,
           }));
         } else {
+          // Completed = server status OR legacy is_active flag (see studentService).
           const { data: directAttempts } = await supabase
             .from("test_attempts")
             .select("user_id, score, percentage, profiles (full_name)")
-            .eq("is_active", false)
+            .or("status.eq.completed,is_active.eq.false")
             .order("score", { ascending: false })
             .limit(50);
 

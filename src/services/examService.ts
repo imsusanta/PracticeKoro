@@ -69,15 +69,23 @@ export async function fetchActiveExams(): Promise<Exam[]> {
  * Fetches question subjects (questions category or null) ordered by order_index.
  */
 export async function fetchQuestionSubjects(): Promise<Subject[]> {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("subjects")
     .select("id, name, order_index, category")
     .or("category.eq.questions,category.is.null")
     .order("order_index", { ascending: true });
 
   if (error) {
-    console.error("fetchQuestionSubjects failed:", error.message);
-    throw error;
+    console.warn("fetchQuestionSubjects with category failed, falling back to all subjects:", error.message);
+    const fallback = await supabase
+      .from("subjects")
+      .select("id, name, order_index")
+      .order("order_index", { ascending: true });
+    if (fallback.error) {
+      console.error("fetchQuestionSubjects fallback failed:", fallback.error.message);
+      throw fallback.error;
+    }
+    data = fallback.data as any;
   }
   return (data as Subject[]) || [];
 }
@@ -122,7 +130,8 @@ export async function fetchUserAttempts(userId: string): Promise<Record<string, 
     .from("test_attempts")
     .select("id, test_id, percentage, passed")
     .eq("user_id", userId)
-    .eq("is_active", false);
+    // Completed = server status OR legacy is_active flag (see studentService).
+    .or("status.eq.completed,is_active.eq.false");
 
   if (error) {
     console.error("fetchUserAttempts failed:", error.message);
