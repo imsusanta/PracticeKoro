@@ -58,7 +58,7 @@ jobs:
       # Bundle budget ratchet (see scripts/check-bundle-budget.mjs).
       - run: node scripts/check-bundle-budget.mjs
       # Retain the bundle for instant rollback + audit.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-${{ github.sha }}
           path: dist/
