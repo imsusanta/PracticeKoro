@@ -67,9 +67,6 @@ const AdminDashboard = () => {
     activePassStudents: 0,
     pendingApprovals: 0,
     totalQuestions: 0,
-    easyQuestions: 0,
-    mediumQuestions: 0,
-    hardQuestions: 0,
     pyqQuestions: 0,
     totalTests: 0,
     totalExams: 0,
@@ -156,9 +153,6 @@ const AdminDashboard = () => {
       approvalsResult,
       activePassResult,
       questionsResult,
-      easyQResult,
-      medQResult,
-      hardQResult,
       pyqResult,
       testsResult,
       examsResult,
@@ -174,9 +168,6 @@ const AdminDashboard = () => {
       (supabase.from("approval_status") as any).select("id", { count: "exact", head: true }).eq("status", "pending"),
       (supabase.from("approval_status") as any).select("id", { count: "exact", head: true }).eq("status", "approved"),
       (supabase.from("questions") as any).select("id", { count: "exact", head: true }),
-      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).eq("difficulty", "easy"),
-      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).eq("difficulty", "medium"),
-      (supabase.from("questions") as any).select("id", { count: "exact", head: true }).eq("difficulty", "hard"),
       (supabase.from("questions") as any).select("id", { count: "exact", head: true }).not("year", "is", null),
       (supabase.from("mock_tests") as any).select("id", { count: "exact", head: true }),
       (supabase.from("exams") as any).select("id", { count: "exact", head: true }),
@@ -197,9 +188,6 @@ const AdminDashboard = () => {
       activePassStudents: activePassResult.count || 0,
       pendingApprovals: approvalsResult.count || 0,
       totalQuestions: questionsResult.count || 0,
-      easyQuestions: easyQResult.count || 0,
-      mediumQuestions: medQResult.count || 0,
-      hardQuestions: hardQResult.count || 0,
       pyqQuestions: pyqResult.count || 0,
       totalTests: testsResult.count || 0,
       totalExams: examsResult.count || 0,
@@ -432,14 +420,6 @@ const AdminDashboard = () => {
     return `https://wa.me/${number}`;
   };
 
-  const difficultyStats = useMemo(() => {
-    const total = (stats.easyQuestions + stats.mediumQuestions + stats.hardQuestions) || 1;
-    const easyPct = Math.round((stats.easyQuestions / total) * 100);
-    const medPct = Math.round((stats.mediumQuestions / total) * 100);
-    const hardPct = Math.max(0, 100 - easyPct - medPct);
-    return { easyPct, medPct, hardPct };
-  }, [stats]);
-
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -472,7 +452,7 @@ const AdminDashboard = () => {
       value: stats.totalQuestions.toLocaleString(),
       subLabel: `${stats.pyqQuestions} PYQ Papers Included`,
       icon: FileQuestion,
-      trend: `${stats.easyQuestions}E · ${stats.mediumQuestions}M · ${stats.hardQuestions}H`,
+      trend: "Curated MCQs",
       color: "indigo",
       badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200/80",
       iconBg: "bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-indigo-500/25",
@@ -677,17 +657,17 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Interactive Question Difficulty & Distribution Bar */}
+        {/* Question Bank & PYQ Repository Overview */}
         <Card className="border border-slate-200/90 bg-white rounded-2xl shadow-2xs overflow-hidden">
           <CardContent className="p-4 sm:p-5 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                   <FileQuestion className="w-4 h-4 text-blue-600" />
-                  Question Bank Difficulty & PYQ Distribution
+                  Question Bank & PYQ Repository
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Proportionate balance across syllabus tiers to guarantee competitive standard
+                  High-yield practice questions organized for comprehensive competitive exam prep
                 </p>
               </div>
               <Button
@@ -700,44 +680,20 @@ const AdminDashboard = () => {
               </Button>
             </div>
 
-            {/* Segmented Visual Progress Bar */}
-            <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-              <div
-                style={{ width: `${difficultyStats.easyPct}%` }}
-                className="bg-emerald-500 h-full transition-all duration-500"
-                title={`Easy: ${stats.easyQuestions} (${difficultyStats.easyPct}%)`}
-              />
-              <div
-                style={{ width: `${difficultyStats.medPct}%` }}
-                className="bg-amber-500 h-full transition-all duration-500"
-                title={`Medium: ${stats.mediumQuestions} (${difficultyStats.medPct}%)`}
-              />
-              <div
-                style={{ width: `${difficultyStats.hardPct}%` }}
-                className="bg-rose-500 h-full transition-all duration-500"
-                title={`Hard: ${stats.hardQuestions} (${difficultyStats.hardPct}%)`}
-              />
-            </div>
-
-            {/* Segment Labels */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  Easy: <strong className="text-slate-900">{stats.easyQuestions}</strong> ({difficultyStats.easyPct}%)
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="flex items-center gap-2 text-sm text-slate-700 font-semibold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                  Total Questions: <strong className="text-slate-900 font-black">{stats.totalQuestions}</strong>
                 </span>
-                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  Medium: <strong className="text-slate-900">{stats.mediumQuestions}</strong> ({difficultyStats.medPct}%)
-                </span>
-                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                  Hard: <strong className="text-slate-900">{stats.hardQuestions}</strong> ({difficultyStats.hardPct}%)
+                <span className="flex items-center gap-2 text-sm text-slate-700 font-semibold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+                  Previous Years Questions: <strong className="text-slate-900 font-black">{stats.pyqQuestions}</strong>
                 </span>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold">
                 <Calendar className="w-3 h-3 text-purple-600" />
-                PYQs: {stats.pyqQuestions} Questions
+                PYQ Share: {stats.totalQuestions > 0 ? Math.round((stats.pyqQuestions / stats.totalQuestions) * 100) : 0}%
               </span>
             </div>
           </CardContent>

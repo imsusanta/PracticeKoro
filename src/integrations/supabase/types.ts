@@ -297,30 +297,48 @@ export type Database = {
       }
       exams: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string
           description: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_paid: boolean | null
           name: string
+          order_index: number | null
+          price: number | null
+          slug: string | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_paid?: boolean | null
           name: string
+          order_index?: number | null
+          price?: number | null
+          slug?: string | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_paid?: boolean | null
           name?: string
+          order_index?: number | null
+          price?: number | null
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -345,6 +363,9 @@ export type Database = {
           is_paid: boolean
           price: number
           subject_id: string | null
+          negative_marks: number | null
+          status: string | null
+          total_questions: number | null
           updated_at: string
         }
         Insert: {
@@ -366,6 +387,9 @@ export type Database = {
           is_paid?: boolean
           price?: number
           subject_id?: string | null
+          negative_marks?: number | null
+          status?: string | null
+          total_questions?: number | null
           updated_at?: string
         }
         Update: {
@@ -387,6 +411,9 @@ export type Database = {
           is_paid?: boolean
           price?: number
           subject_id?: string | null
+          negative_marks?: number | null
+          status?: string | null
+          total_questions?: number | null
           updated_at?: string
         }
         Relationships: [

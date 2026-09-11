@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff, ChevronRight, GripVertical, Clock, Target, FileText, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, PowerOff, BookOpen, MoreVertical, Calendar, Eye, EyeOff, ChevronRight, GripVertical, Clock, Target, FileText, Search, Upload, Image as ImageIcon } from "lucide-react";
 import { logAdminAction } from "@/lib/adminAudit";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ interface Exam {
     name: string;
     description: string | null;
     category?: string | null;
+    image_url?: string | null;
     is_active: boolean;
     is_paid: boolean;
     price: number;
@@ -47,6 +48,50 @@ interface Exam {
     order_index?: number;
     test_count?: number;
     question_count?: number;
+}
+
+// Preset Authentic Exam Logos for Quick Selection
+const PRESET_EXAM_LOGOS = [
+    {
+        id: "wbp",
+        name: "WB Police",
+        desc: "West Bengal Police Crest",
+        url: "/images/exams/wbp_police.png",
+    },
+    {
+        id: "wbcs",
+        name: "WBCS / State",
+        desc: "National / State Emblem",
+        url: "/images/exams/wbcs_emblem.png",
+    },
+    {
+        id: "railway",
+        name: "Railways",
+        desc: "Indian Railways Seal",
+        url: "/images/exams/indian_railway.png",
+    },
+    {
+        id: "wbssc",
+        name: "WBSSC / School",
+        desc: "Biswa Bangla Blue Crest",
+        url: "/images/exams/wbssc_emblem.png",
+    },
+];
+
+// Helper to resolve an exam's effective logo (custom image_url or smart preset fallback)
+function getExamLogo(exam: { name: string; image_url?: string | null }): string {
+    if (exam.image_url && exam.image_url.trim()) return exam.image_url.trim();
+    const name = (exam.name || "").toLowerCase();
+    if (name.includes("police") || name.includes("constable") || name.includes("wbp") || name.includes("kp")) {
+        return "/images/exams/wbp_police.png";
+    }
+    if (name.includes("railway") || name.includes("rrb")) {
+        return "/images/exams/indian_railway.png";
+    }
+    if (name.includes("ssc") || name.includes("tet") || name.includes("school")) {
+        return "/images/exams/wbssc_emblem.png";
+    }
+    return "/images/exams/wbcs_emblem.png";
 }
 
 interface MockTest {
@@ -88,12 +133,15 @@ const SortableExamItem = ({
     visibility: boolean;
 }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: exam.id });
+    const [logoError, setLogoError] = useState(false);
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
         zIndex: isDragging ? 10 : 1,
     };
+
+    const effectiveLogo = getExamLogo(exam);
 
     return (
         <div
@@ -109,11 +157,17 @@ const SortableExamItem = ({
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-200/80 rounded-xl shrink-0 transition-colors" onClick={e => e.stopPropagation()}>
                     <GripVertical className="w-4 h-4 text-slate-400" />
                 </div>
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-all ${exam.is_active
-                    ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-400"
-                    }`}>
-                    <BookOpen className="w-5 h-5" />
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-all overflow-hidden p-1 bg-slate-50 border border-slate-200/80 shadow-2xs ${!exam.is_active ? "opacity-60" : ""}`}>
+                    {!logoError ? (
+                        <img
+                            src={effectiveLogo}
+                            alt={exam.name}
+                            className="w-full h-full object-contain select-none"
+                            onError={() => setLogoError(true)}
+                        />
+                    ) : (
+                        <BookOpen className="w-5 h-5 text-slate-400" />
+                    )}
                 </div>
                 <div className="min-w-0">
                     <p className="font-bold text-slate-900 text-sm truncate">{exam.name}</p>
@@ -254,10 +308,12 @@ const ExamManagement = () => {
         name: "",
         description: "",
         category: "State Govt.",
+        image_url: "",
         is_active: true,
         is_paid: false,
         price: 0
     });
+    const [uploadingIcon, setUploadingIcon] = useState(false);
 
     const [mockTestFormData, setMockTestFormData] = useState({
         title: "",
@@ -288,14 +344,16 @@ const ExamManagement = () => {
 
     const checkAuth = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { navigate("/admin/login"); return; }
-
+        if (!session) {
+            navigate("/admin/login");
+            return;
+        }
         const { data: roleData } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
             .eq("role", "admin")
-            .maybeSingle();
+            .single();
 
         if (!roleData) {
             await supabase.auth.signOut();
@@ -391,15 +449,59 @@ const ExamManagement = () => {
         loadMockTests(id);
     };
 
+    const handleUploadIcon = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast({ title: "File too large", description: "Icon image must be under 2MB", variant: "destructive" });
+            return;
+        }
+
+        setUploadingIcon(true);
+        try {
+            const ext = file.name.split('.').pop() || "png";
+            const fileName = `exam-icons/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+                .from("blog-images")
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) {
+                console.warn("Storage upload failed, falling back to base64 data URL", uploadError);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setExamFormData(prev => ({ ...prev, image_url: reader.result as string }));
+                    setUploadingIcon(false);
+                    toast({ title: "Icon attached", description: "Image attached successfully" });
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from("blog-images")
+                .getPublicUrl(fileName);
+
+            setExamFormData(prev => ({ ...prev, image_url: publicUrl }));
+            toast({ title: "Success", description: "Exam icon uploaded successfully" });
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            toast({ title: "Upload failed", description: err.message || "Failed to upload image", variant: "destructive" });
+        } finally {
+            setUploadingIcon(false);
+        }
+    };
+
     // Exam CRUD
     const handleSaveExam = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const payload = {
+        const payload: any = {
             name: examFormData.name,
             description: examFormData.description || null,
             category: examFormData.category || "State Govt.",
+            image_url: examFormData.image_url?.trim() || null,
             is_active: examFormData.is_active,
             is_paid: examFormData.is_paid,
             price: examFormData.price,
@@ -647,7 +749,7 @@ const ExamManagement = () => {
                         <Button
                             onClick={() => {
                                 setEditingExam(null);
-                                setExamFormData({ name: "", description: "", category: "State Govt.", is_active: true, is_paid: false, price: 0 });
+                                setExamFormData({ name: "", description: "", category: "State Govt.", image_url: "", is_active: true, is_paid: false, price: 0 });
                                 setExamDialogOpen(true);
                             }}
                             className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-4 h-10 shadow-sm shadow-blue-600/20 active:scale-[0.98]"
@@ -692,6 +794,7 @@ const ExamManagement = () => {
                                                             name: e.name,
                                                             description: e.description || "",
                                                             category: e.category || "State Govt.",
+                                                            image_url: e.image_url || "",
                                                             is_active: e.is_active,
                                                             is_paid: e.is_paid,
                                                             price: e.price
@@ -772,7 +875,7 @@ const ExamManagement = () => {
 
             {/* Exam Dialog */}
             <Dialog open={examDialogOpen} onOpenChange={setExamDialogOpen}>
-                <DialogContent className="sm:max-w-md rounded-2xl">
+                <DialogContent className="sm:max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingExam ? "Edit Exam" : "Create Exam"}</DialogTitle>
                     </DialogHeader>
@@ -803,6 +906,114 @@ const ExamManagement = () => {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {/* Exam Card Icon / Logo */}
+                        <div className="space-y-3 p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200/90">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Exam Card Icon (Popular Exams)</span>
+                                </Label>
+                                {examFormData.image_url && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setExamFormData(prev => ({ ...prev, image_url: "" }))}
+                                        className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                                    >
+                                        Reset to Default
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Card Live Preview */}
+                            <div className="flex items-center gap-3.5 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                                <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
+                                    <img
+                                        src={examFormData.image_url || getExamLogo({ name: examFormData.name, image_url: examFormData.image_url })}
+                                        alt="Preview"
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => {
+                                            (e.target as HTMLElement).style.display = 'none';
+                                        }}
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-slate-900 truncate">
+                                        {examFormData.name || "Exam Title Preview"}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                        {examFormData.image_url ? "Custom Icon Selected" : "Using Automatic Preset Icon"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Presets */}
+                            <div className="space-y-1.5">
+                                <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Quick Select Authentic Emblem Preset
+                                </span>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {PRESET_EXAM_LOGOS.map((preset) => {
+                                        const currentEffective = examFormData.image_url || getExamLogo({ name: examFormData.name, image_url: examFormData.image_url });
+                                        const isSelected = currentEffective === preset.url;
+                                        return (
+                                            <button
+                                                key={preset.id}
+                                                type="button"
+                                                onClick={() => setExamFormData(prev => ({ ...prev, image_url: preset.url }))}
+                                                className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                                                    isSelected
+                                                        ? "border-[#0066FF] bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs"
+                                                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                                                }`}
+                                            >
+                                                <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center p-1">
+                                                    <img src={preset.url} alt={preset.name} className="w-full h-full object-contain" />
+                                                </div>
+                                                <span className="text-[10.5px] font-bold text-slate-800 leading-tight">
+                                                    {preset.name}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Upload Custom Icon or Paste URL */}
+                            <div className="space-y-2 pt-1">
+                                <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Or Upload Custom Icon / Image
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        value={examFormData.image_url}
+                                        onChange={e => setExamFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                                        placeholder="Paste image URL (https://...)"
+                                        className="h-9 rounded-xl text-xs flex-1"
+                                    />
+                                    <label className="cursor-pointer shrink-0">
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                            onChange={handleUploadIcon}
+                                            className="hidden"
+                                            disabled={uploadingIcon}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 rounded-xl text-xs font-bold gap-1.5 cursor-pointer pointer-events-none"
+                                            disabled={uploadingIcon}
+                                        >
+                                            <Upload className="w-3.5 h-3.5" />
+                                            <span>{uploadingIcon ? "Uploading..." : "Upload File"}</span>
+                                        </Button>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label>Description</Label>
                             <Textarea

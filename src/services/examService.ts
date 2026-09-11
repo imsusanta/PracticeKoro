@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Exam {
   id: string;
   name: string;
+  image_url?: string | null;
   is_paid?: boolean;
   price?: number;
   order_index?: number;
@@ -47,9 +48,9 @@ export interface TestAttemptInfo {
 export async function fetchActiveExams(): Promise<Exam[]> {
   const { data, error } = await supabase
     .from("exams")
-    .select("id, name, is_active, created_at, description")
+    .select("id, name, is_active, created_at, description, image_url, order_index")
     .eq("is_active", true)
-    .order("created_at", { ascending: true });
+    .order("order_index", { ascending: true });
 
   if (error) {
     console.error("fetchActiveExams failed:", error.message);
@@ -58,10 +59,11 @@ export async function fetchActiveExams(): Promise<Exam[]> {
   return ((data || []).map((e: any) => ({
     id: e.id,
     name: e.name,
+    image_url: e.image_url || null,
     is_active: e.is_active,
     is_paid: false,
     price: 0,
-    order_index: 0,
+    order_index: e.order_index ?? 0,
   }))) as Exam[];
 }
 

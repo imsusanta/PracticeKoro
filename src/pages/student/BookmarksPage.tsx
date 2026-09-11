@@ -321,9 +321,9 @@ export const BookmarksPage = () => {
             />
           </div>
 
-          {/* Screen 18 Filter Chips: All, Subject, Topic, Difficulty */}
+          {/* Screen 18 Filter Chips: All, Subject, Topic */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 border-t border-slate-100">
-            {["All", "Subject", "Topic", "Difficulty"].map((chip) => (
+            {["All", "Subject", "Topic"].map((chip) => (
               <button
                 key={chip}
                 onClick={() => {
@@ -390,8 +390,6 @@ export const BookmarksPage = () => {
           <div className="space-y-4">
             {filteredBookmarks.map((item, idx) => {
               const isRevealed = revealedIds.has(item.question_id);
-              const difficultyLevels = ["Medium", "Easy", "Medium", "Hard"];
-              const currentDiff = difficultyLevels[idx % 4];
 
               return (
                 <motion.div
@@ -416,22 +414,13 @@ export const BookmarksPage = () => {
                           <MathText text={item.questions.question_text} />
                         </div>
 
-                        {/* Tags: Subject + Difficulty tag */}
+                        {/* Tags: Subject tag */}
                         <div className="flex items-center gap-2 flex-wrap">
                           {item.questions.subject && (
                             <span className="text-[11px] font-semibold text-slate-500">
                               {item.questions.subject}
                             </span>
                           )}
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                            currentDiff === "Easy"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : currentDiff === "Medium"
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : "bg-rose-50 text-rose-700 border-rose-200"
-                          }`}>
-                            {currentDiff}
-                          </span>
                         </div>
                       </div>
                     </div>

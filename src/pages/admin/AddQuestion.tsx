@@ -306,13 +306,13 @@ const AddQuestion = () => {
               <CardTitle className="text-sm sm:text-base font-bold text-slate-900">MCQ Parameters & Details</CardTitle>
             </div>
             <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-              {formData.difficulty.toUpperCase()} • {formData.language.toUpperCase()}
+              {formData.language.toUpperCase()}
             </span>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-6">
-              {/* Classification: Exam, Difficulty, PYQ Year */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200/90">
+              {/* Classification: Exam, PYQ Year */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200/90">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-700">Target Exam (Optional)</Label>
                   <Select value={formData.exam_id || "none"} onValueChange={(value) => setFormData({ ...formData, exam_id: value === "none" ? "" : value })}>
@@ -324,20 +324,6 @@ const AddQuestion = () => {
                       {exams.map((exam) => (
                         <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Difficulty Rating</Label>
-                  <Select value={formData.difficulty} onValueChange={(value: any) => setFormData({ ...formData, difficulty: value })}>
-                    <SelectTrigger className="rounded-2xl h-11 bg-white text-xs border-slate-200 shadow-2xs">
-                      <SelectValue placeholder="Difficulty" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                      <SelectItem value="easy">🟢 Easy (Beginner)</SelectItem>
-                      <SelectItem value="medium">🟡 Medium (Standard)</SelectItem>
-                      <SelectItem value="hard">🔴 Hard (Advanced)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

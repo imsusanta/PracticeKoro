@@ -1,14 +1,25 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, X, Smartphone, Sparkles, Share, Plus, ArrowRight, Chrome } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+
+// Never interrupt auth flows: the prompt must not cover form controls
+// or primary buttons on these routes.
+const SUPPRESSED_ROUTES = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+  "/admin/login",
+];
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const PWAInstallPrompt = () => {
+const PWAInstallPromptInner = () => {
     const navigate = useNavigate();
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showPrompt, setShowPrompt] = useState(false);
@@ -131,11 +142,12 @@ const PWAInstallPrompt = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 100, scale: 0.9 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="fixed bottom-6 left-3 right-3 md:left-auto md:right-4 md:bottom-4 md:max-w-sm z-[200]"
+                    className="fixed bottom-6 left-3 right-3 md:left-auto md:right-4 md:bottom-4 md:max-w-sm z-[200] mb-[env(safe-area-inset-bottom)]"
                 >
-                    <div className="relative overflow-hidden rounded-2xl bg-white p-5 shadow-2xl border border-slate-200">
+                    <div role="dialog" aria-label="Install Practice Koro app" className="relative overflow-hidden rounded-2xl bg-white p-5 shadow-2xl border border-slate-200">
                         <button
                             onClick={handleDismiss}
+                            aria-label="Dismiss install prompt"
                             className="absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors"
                         >
                             <X className="w-4 h-4 text-slate-500" />
@@ -195,15 +207,16 @@ const PWAInstallPrompt = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 100, scale: 0.9 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="fixed bottom-6 left-3 right-3 md:left-auto md:right-4 md:bottom-4 md:max-w-sm z-[200]"
+                    className="fixed bottom-6 left-3 right-3 md:left-auto md:right-4 md:bottom-4 md:max-w-sm z-[200] mb-[env(safe-area-inset-bottom)]"
                 >
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 p-4 shadow-2xl shadow-indigo-500/30 border border-white/10">
+                    <div role="dialog" aria-label="Install Practice Koro app" className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 p-4 shadow-2xl shadow-indigo-500/30 border border-white/10">
                         {/* Decorative Elements */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
                         <div className="absolute bottom-0 left-0 w-24 h-24 bg-violet-400/20 rounded-full blur-xl -ml-12 -mb-12" />
 
                         <button
                             onClick={handleDismiss}
+                            aria-label="Dismiss install prompt"
                             className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors z-50"
                         >
                             <X className="w-4 h-4 text-white" />
@@ -228,7 +241,7 @@ const PWAInstallPrompt = () => {
                                     )}
                                 </div>
                                 <h3 className="text-sm font-bold text-white mb-1">Install Practice Koro</h3>
-                                <p className="text-[11px] text-indigo-100 leading-relaxed">
+                                <p className="text-[11px] text-indigo-50 leading-relaxed">
                                     {isIOS || (browserInfo?.name === "Safari")
                                         ? "Add to home screen for the best experience!"
                                         : "Get instant access & native app experience!"
@@ -240,7 +253,7 @@ const PWAInstallPrompt = () => {
                         <div className="relative z-10 flex gap-2 mt-4">
                             <button
                                 onClick={handleLearnMore}
-                                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white/85 hover:text-white hover:bg-white/5 transition-all"
                             >
                                 Learn More
                             </button>
@@ -259,6 +272,14 @@ const PWAInstallPrompt = () => {
             )}
         </AnimatePresence>
     );
+};
+
+const PWAInstallPrompt = () => {
+    const { pathname } = useLocation();
+    if (SUPPRESSED_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))) {
+        return null;
+    }
+    return <PWAInstallPromptInner />;
 };
 
 export default PWAInstallPrompt;

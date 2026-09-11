@@ -68,7 +68,7 @@ const STATIC_PRACTICE_TOOLS: SearchItem[] = [
     id: "tool-topic-drills",
     category: "practice",
     title: "Chapter-wise Topic Tests",
-    subtitle: "Customize MCQ tests by subject, chapter and difficulty",
+    subtitle: "Customize MCQ tests by subject and chapter",
     badge: "Test",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
     icon: Zap,

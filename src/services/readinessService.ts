@@ -311,7 +311,7 @@ export async function fetchStudentReadiness(
 ): Promise<ExamReadinessResult> {
   const mockAttempts: Array<{ percentage: number; subject?: string }> = [];
   let drillsMetrics = { questions: 0, accuracy: 0, streakDays: 1 };
-  let mistakesStats = { totalMistakes: 0, masteredCount: 0 };
+  const mistakesStats = { totalMistakes: 0, masteredCount: 0 };
 
   // 1. Read local storage metrics
   try {
