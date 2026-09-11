@@ -33,6 +33,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// Shared bulk-import line parser (single instance avoids repeat regex literals).
+// eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
+const BULK_PREFIX_RE = /^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/;
+const parseBulkLines = (text: string): string[] =>
+  text.split("\n").map((l) => l.replace(BULK_PREFIX_RE, "").trim()).filter((l) => l);
+
 interface Exam {
     id: string;
     name: string;
@@ -560,7 +566,7 @@ const QuestionSubjectManagement = () => {
         if (!session) return;
 
         // Helper to strip list prefixes like "1.", "2)", "*", "-", "•"
-        const cleanBulkLine = (line: string) => line.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim();
+        const cleanBulkLine = (line: string) => parseBulkLines(line)[0] ?? "";
 
         const lines = bulkTopicText
             .split("\n")
@@ -854,10 +860,10 @@ const QuestionSubjectManagement = () => {
                                 {bulkTopicText.trim() && (
                                     <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
                                         <p className="text-xs font-semibold text-violet-700 mb-1">
-                                            📋 {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} topics will be added
+                                            📋 {parseBulkLines(bulkTopicText).length} topics will be added
                                         </p>
                                         <div className="max-h-24 overflow-y-auto space-y-0.5">
-                                            {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).map((line, i) => (
+                                            {parseBulkLines(bulkTopicText).map((line, i) => (
                                                 <p key={i} className="text-xs text-violet-600 truncate">
                                                     {i + 1}. {line}
                                                 </p>
@@ -902,7 +908,7 @@ const QuestionSubjectManagement = () => {
                                 {isSavingBulk ? (
                                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Adding...</>
                                 ) : (
-                                    <><ListPlus className="w-4 h-4 mr-2" /> Add {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} Topics</>
+                                    <><ListPlus className="w-4 h-4 mr-2" /> Add {parseBulkLines(bulkTopicText).length} Topics</>
                                 )}
                             </Button>
                         ) : (

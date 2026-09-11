@@ -5,7 +5,8 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  // Generated artifacts and non-app runtimes are not linted here.
+  { ignores: ["dist", "coverage", "android", "supabase/.temp", "practicekoro_student"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -21,6 +22,10 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Ratchet: warn (not error) until the legacy `any` baseline is gone.
+      // CI enforces `--max-warnings <floor>` (see ci.yml) so no NEW
+      // violations can land. Lower the floor as cleanups merge.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 );

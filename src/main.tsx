@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
+import { initMonitoring } from "./lib/monitoring";
+
+// Fire-and-forget: no-op without VITE_SENTRY_DSN, never blocks render.
+void initMonitoring();
 
 const queryClient = new QueryClient({
   defaultOptions: {

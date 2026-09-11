@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "happy-dom",
+    // Playwright specs live in e2e/ and run under `npm run test:e2e` only.
+    exclude: ["e2e/**", "node_modules", "dist"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],

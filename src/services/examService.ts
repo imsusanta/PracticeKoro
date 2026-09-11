@@ -71,6 +71,7 @@ export async function fetchActiveExams(): Promise<Exam[]> {
  * Fetches question subjects (questions category or null) ordered by order_index.
  */
 export async function fetchQuestionSubjects(): Promise<Subject[]> {
+  // eslint-disable-next-line prefer-const -- reassigned from fallback below
   let { data, error } = await supabase
     .from("subjects")
     .select("id, name, order_index, category")

@@ -178,9 +178,10 @@ const AIQuestionGenerator = () => {
     const ext = parts.length > 1 ? parts.pop() : "";
     const name = parts.join(".");
 
-    // Replace non-ascii and special characters with underscores
+    // Replace non-ascii and special characters with underscores.
+    // (The [^a-zA-Z0-9] pass below already covers non-ASCII, so no
+    // separate control-char range is needed.)
     const cleanName = name
-      .replace(/[^\x00-\x7F]/g, "_") // Replace non-ascii
       .replace(/[^a-zA-Z0-9]/g, "_") // Replace non-alphanumeric
       .replace(/_+/g, "_")            // Collapse multiple underscores
       .trim();

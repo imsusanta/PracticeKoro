@@ -1,0 +1,18 @@
+[build]
+  publish = "dist"
+  command = "npm ci && npx vite build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback: all routes serve index.html (React Router owns routing).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Long-cache hashed build assets.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
