@@ -217,7 +217,8 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
       const updated = [term.trim(), ...prev.filter((t) => t.toLowerCase() !== term.trim().toLowerCase())].slice(0, 5);
       try {
         localStorage.setItem("pk_recent_searches", JSON.stringify(updated));
-      } catch {}
+      } catch {
+        // Private-mode storage may throw; in-memory state still updates.
       return updated;
     });
   };
@@ -228,7 +229,8 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
       const updated = prev.filter((t) => t !== term);
       try {
         localStorage.setItem("pk_recent_searches", JSON.stringify(updated));
-      } catch {}
+      } catch {
+        // Private-mode storage may throw; in-memory state still updates.
       return updated;
     });
   };

@@ -284,6 +284,7 @@ const MockTestCreation = () => {
   const loadExams = async () => {
     try {
       // First try to load with order_index (new feature)
+      // eslint-disable-next-line prefer-const -- reassigned from fallback below
       let { data, error } = await supabase
         .from("exams")
         .select("id, name, is_active")

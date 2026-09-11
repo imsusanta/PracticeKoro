@@ -367,6 +367,7 @@ const ExamManagement = () => {
 
     const loadExams = async () => {
         try {
+            // eslint-disable-next-line prefer-const -- reassigned from fallback below
             let { data, error } = await supabase
                 .from("exams")
                 .select("*")
@@ -383,8 +384,8 @@ const ExamManagement = () => {
             // TODO(types): regenerate supabase types via supabase gen types (exams row missing is_paid/price/category columns)
             const loaded = (data as unknown as Exam[]) || [];
             const ids = loaded.map((exam) => exam.id);
-            let testCounts = new Map<string, number>();
-            let questionCounts = new Map<string, number>();
+            const testCounts = new Map<string, number>();
+            const questionCounts = new Map<string, number>();
 
             if (ids.length > 0) {
                 const [testsResult, questionsResult] = await Promise.all([
