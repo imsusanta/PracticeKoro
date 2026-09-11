@@ -497,7 +497,7 @@ const SubjectManagement = () => {
         if (!session) return;
 
         // Helper to strip list prefixes like "1.", "2)", "*", "-", "•"
-        const cleanBulkLine = (line: string) => line.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim();
+        const cleanBulkLine = (line: string) => parseBulkLines(line)[0] ?? "";
 
         const lines = bulkTopicText
             .split("\n")
