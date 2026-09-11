@@ -1,0 +1,71 @@
+name: CI
+
+# Blocking quality gates for PRs and main. Deploy (deploy.yml) only runs
+# after this workflow completes successfully on main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dummy values keep unit tests offline-safe (all network access is mocked).
+  # Real values are only needed in the deploy workflow's build step.
+  VITE_SUPABASE_URL: https://example.supabase.co
+  VITE_SUPABASE_PUBLISHABLE_KEY: ci-dummy-key
+  VITE_SUPABASE_PROJECT_ID: ci-dummy-ref
+  VITE_RAZORPAY_KEY: ci-dummy-key
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Coverage thresholds in vitest.config.ts act as the regression gate.
+      - run: npm run test:coverage
+
+  build:
+    needs: [typecheck, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Plain vite build (no Capacitor postbuild side effects in CI).
+      - run: npx vite build
+
+  lint:
+    runs-on: ubuntu-latest
+    # REPORT-ONLY until the no-explicit-any baseline is eliminated.
+    # Tracked follow-up: ratchet to blocking once clean.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx eslint .
