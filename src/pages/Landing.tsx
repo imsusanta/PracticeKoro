@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
-  BookOpen, Brain, FileText, TrendingUp, Sparkles, LogOut, User, Users, Clock, Award, PlayCircle, ChevronRight, CheckCircle, UserPlus, Library, LineChart, Target, FileQuestion, Zap, ArrowRight, Trophy, Download, Smartphone, Send, Mail, MapPin, Phone as PhoneIcon, Heart, Shield, Pen, Star
+  BookOpen, Brain, FileText, TrendingUp, Sparkles, LogOut, User, Users, Clock, Award, PlayCircle, ChevronRight, CheckCircle, UserPlus, Library, LineChart, Target, FileQuestion, Zap, ArrowRight, Trophy, Download, Smartphone, Send, Mail, MapPin, Phone as PhoneIcon, Heart, Shield, Pen, Star, Menu, X, Newspaper, IndianRupee
 } from "lucide-react";
 import HowItWorks from "@/components/landing/HowItWorks";
 import LatestBlogs from "@/components/landing/LatestBlogs";
@@ -59,6 +59,15 @@ const demoTests: MockTest[] = [
   { id: "demo-t6", title: "Quantitative Aptitude Mock", description: "Mathematics practice test", test_type: "topic_wise", duration_minutes: 45, total_marks: 75, exams: { name: "Banking" } },
 ];
 
+// Header nav links (desktop center nav + mobile hamburger share these)
+const NAV_LINKS = [
+  { label: "Mock Tests", path: "/student/exam", icon: FileText },
+  { label: "Practice", path: "/student/practice", icon: Target },
+  { label: "Current Affairs", path: "/student/current-affairs", icon: Newspaper },
+  { label: "Pricing", path: "/register", icon: IndianRupee },
+  { label: "Blog", path: "/blog", icon: BookOpen },
+];
+
 const isMobileDevice = () => {
   if (typeof window === "undefined") return false;
   if (Capacitor.isNativePlatform()) return true;
@@ -79,6 +88,7 @@ const Landing = () => {
   const [featuredTests, setFeaturedTests] = useState<MockTest[]>([]);
   const [filterType, setFilterType] = useState<"all" | "full_mock" | "topic_wise">("all");
   const [showSplash, setShowSplash] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleRefresh = async () => {
     try {
@@ -270,6 +280,19 @@ const Landing = () => {
                       <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">Practice Koro</h1>
                     </div>
 
+                  {/* Center Nav Menu */}
+                  <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
+                    {NAV_LINKS.map((link) => (
+                      <button
+                        key={link.label}
+                        onClick={() => navigate(link.path)}
+                        className="px-3.5 py-2 rounded-xl text-sm font-medium text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition-all"
+                      >
+                        {link.label}
+                      </button>
+                    ))}
+                  </nav>
+
                   {/* Right Side */}
                   {!loading && <div className="flex items-center gap-3">
                     {isLoggedIn && userProfile ? <>
@@ -302,7 +325,7 @@ const Landing = () => {
 
 
               {/* Mobile App Header - Enhanced Native Style */}
-              <div className="md:hidden">
+              <div className="md:hidden relative">
                 <div className="px-5 pt-4 pb-3 flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <motion.div
@@ -326,33 +349,81 @@ const Landing = () => {
                       </span>
                     </motion.div>
                   </div>
-                  {!isLoggedIn ? (
+                  <div className="flex items-center gap-2">
                     <motion.button
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3, delay: 0.3 }}
                       whileTap={{ scale: 0.92 }}
-                      onClick={() => navigate("/login")}
-                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-emerald-50 border border-emerald-100 min-w-[56px] min-h-[56px]"
+                      onClick={() => setMobileMenuOpen((v) => !v)}
+                      aria-label="Open menu"
+                      aria-expanded={mobileMenuOpen}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-white border border-gray-200 min-w-[56px] min-h-[56px] shadow-sm"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
+                        {mobileMenuOpen ? <X className="w-4 h-4 text-white" /> : <Menu className="w-4 h-4 text-white" />}
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700">Sign In</span>
+                      <span className="text-[10px] font-bold text-gray-700">Menu</span>
                     </motion.button>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.3 }}
-                      className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg cursor-pointer ring-2 ring-white"
-                      style={{ filter: 'drop-shadow(0 4px 10px rgba(16, 185, 129, 0.3))' }}
-                      onClick={() => navigate(userRole === "admin" ? "/admin/dashboard" : "/student/dashboard")}
-                    >
-                      {userProfile?.full_name?.[0]?.toUpperCase() || "U"}
-                    </motion.div>
-                  )}
+                    {!isLoggedIn ? (
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: 0.3 }}
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => navigate("/login")}
+                        className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-emerald-50 border border-emerald-100 min-w-[56px] min-h-[56px]"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-700">Sign In</span>
+                      </motion.button>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: 0.3 }}
+                        className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg cursor-pointer ring-2 ring-white"
+                        style={{ filter: 'drop-shadow(0 4px 10px rgba(16, 185, 129, 0.3))' }}
+                        onClick={() => navigate(userRole === "admin" ? "/admin/dashboard" : "/student/dashboard")}
+                      >
+                        {userProfile?.full_name?.[0]?.toUpperCase() || "U"}
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
+                {/* Mobile dropdown menu */}
+                <AnimatePresence>
+                  {mobileMenuOpen && (
+                    <motion.nav
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18 }}
+                      aria-label="Mobile"
+                      className="absolute top-full left-4 right-4 z-50 rounded-2xl bg-white border border-gray-200/80 p-2"
+                      style={{ boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12)' }}
+                    >
+                      {NAV_LINKS.map((link) => (
+                        <button
+                          key={link.label}
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            navigate(link.path);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left hover:bg-emerald-50 active:bg-emerald-50 transition-colors"
+                        >
+                          <span className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                            <link.icon className="w-4 h-4 text-emerald-700" />
+                          </span>
+                          <span className="text-sm font-semibold text-gray-800">{link.label}</span>
+                          <ChevronRight className="w-4 h-4 ml-auto text-gray-400" />
+                        </button>
+                      ))}
+                    </motion.nav>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Mobile App Content */}
