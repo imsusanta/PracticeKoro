@@ -561,7 +561,6 @@ const QuestionSubjectManagement = () => {
 
         // Helper to strip list prefixes like "1.", "2)", "*", "-", "•"
         // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
-        // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
         const cleanBulkLine = (line: string) => line.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim();
 
         const lines = bulkTopicText
@@ -855,11 +854,9 @@ const QuestionSubjectManagement = () => {
                                 </div>
                                 {bulkTopicText.trim() && (
                                     <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
-                                        // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
                                         <p className="text-xs font-semibold text-violet-700 mb-1">
                                             // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
                                             📋 {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} topics will be added
-                                        // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
                                         </p>
                                         <div className="max-h-24 overflow-y-auto space-y-0.5">
                                             // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
@@ -905,7 +902,6 @@ const QuestionSubjectManagement = () => {
                                 disabled={!bulkTopicText.trim() || isSavingBulk}
                                 className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600"
                             >
-                                // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
                                 {isSavingBulk ? (
                                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Adding...</>
                                 ) : (
