@@ -219,6 +219,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
         localStorage.setItem("pk_recent_searches", JSON.stringify(updated));
       } catch {
         // Private-mode storage may throw; in-memory state still updates.
+      }
       return updated;
     });
   };
@@ -231,6 +232,7 @@ export const DashboardSearch: React.FC<DashboardSearchProps> = ({
         localStorage.setItem("pk_recent_searches", JSON.stringify(updated));
       } catch {
         // Private-mode storage may throw; in-memory state still updates.
+      }
       return updated;
     });
   };
