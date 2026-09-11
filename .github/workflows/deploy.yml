@@ -37,6 +37,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate production environment
+        shell: bash
+        run: |
+          required_vars=(
+            VITE_SUPABASE_URL
+            VITE_SUPABASE_PUBLISHABLE_KEY
+            VITE_SUPABASE_PROJECT_ID
+            VITE_RAZORPAY_KEY
+          )
+          missing=0
+          for var in "${required_vars[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "::error::$var is missing — set it in repo Settings → Secrets → Actions"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Refusing to build a bundle with empty env (blank-page incident)."
+            exit 1
+          fi
+          echo "All required production env vars present."
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_RAZORPAY_KEY: ${{ secrets.VITE_RAZORPAY_KEY }}
+
       - name: Production build
         run: npx vite build
         env:
@@ -44,6 +71,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
           VITE_RAZORPAY_KEY: ${{ secrets.VITE_RAZORPAY_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
 
       - name: Deploy dist to Hostinger via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
