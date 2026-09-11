@@ -55,12 +55,18 @@ jobs:
       - run: npm ci
       # Plain vite build (no Capacitor postbuild side effects in CI).
       - run: npx vite build
+      # Bundle budget ratchet (see scripts/check-bundle-budget.mjs).
+      - run: node scripts/check-bundle-budget.mjs
+      # Retain the bundle for instant rollback + audit.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 30
 
-  lint:
+  e2e:
+    needs: [build]
     runs-on: ubuntu-latest
-    # REPORT-ONLY until the no-explicit-any baseline is eliminated.
-    # Tracked follow-up: ratchet to blocking once clean.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,4 +74,22 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx eslint .
+      - run: npx playwright install chromium
+      - run: sudo npx playwright install-deps chromium
+      - run: npx vite build
+      - run: node scripts/check-bundle-budget.mjs
+      - run: npx playwright test
+
+  lint:
+    runs-on: ubuntu-latest
+    # Blocking ratchet: 0 errors allowed; warnings capped at the current
+    # baseline (342, mostly legacy no-explicit-any). Lower the floor as
+    # cleanups merge — never raise it.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx eslint . --max-warnings 342

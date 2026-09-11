@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment -- Deno Edge runtime; type-checked by `supabase functions` tooling, not tsc */
 // @ts-nocheck
 // deno-lint-ignore-file
 // This file runs on Deno (Supabase Edge Functions), not Node.js

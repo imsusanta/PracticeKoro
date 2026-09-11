@@ -104,9 +104,8 @@ describe("readinessService — Exam Readiness Engine & Predictive Analytics", ()
     expect(result.subjectReadiness.length).toBe(9);
     expect(result.weakestSubject).not.toBeNull();
     expect(result.strongestSubject).not.toBeNull();
-    expect(result.weakestSubject?.scorePercent).toBeLessThanOrEqual(
-      result.strongestSubject?.scorePercent!
-    );
+    const strongestScore = result.strongestSubject?.scorePercent ?? 100;
+    expect(result.weakestSubject?.scorePercent).toBeLessThanOrEqual(strongestScore);
   });
 
   it("generates prioritized, actionable diagnostic recommendations", () => {

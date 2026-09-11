@@ -225,7 +225,9 @@ const SendNotifications = () => {
                             new Date(b.createdAt || b.created_at).getTime() -
                             new Date(a.createdAt || a.created_at).getTime()
                         );
-                    } catch (e) { }
+                    } catch {
+                      // Broadcast fetch is best-effort; list still renders.
+                    }
                 }
 
                 setRecentNotifications(uniqueBroadcasts.slice(0, 30));

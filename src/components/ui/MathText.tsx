@@ -38,7 +38,7 @@ export const MathText: React.FC<MathTextProps> = ({
     const intro = rawParts[0].trim();
     const bullets = rawParts
       .slice(1)
-      .map(p => p.trim().replace(/^[•\u2022●▪◆\-\*]\s*/, ''))
+      .map(p => p.trim().replace(/^[•\u2022●▪◆\-*]\s*/, ''))
       .filter(Boolean);
 
     if (bullets.length > 0) {
@@ -70,7 +70,7 @@ export const MathText: React.FC<MathTextProps> = ({
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
   if (lines.length > 1) {
-    const hasBulletsOrNumbers = lines.some(l => /^[-*]\s+/.test(l) || /^(\d+|[০-৯]+)[\.\)]\s+/.test(l));
+    const hasBulletsOrNumbers = lines.some(l => /^[-*]\s+/.test(l) || /^(\d+|[০-৯]+)[.)]\s+/.test(l));
 
     if (hasBulletsOrNumbers) {
       return (
@@ -92,7 +92,7 @@ export const MathText: React.FC<MathTextProps> = ({
             }
 
             // Numbered list item
-            const numMatch = line.match(/^((?:\d+|[০-৯]+)[\.\)])\s*(.*)$/);
+            const numMatch = line.match(/^((?:\d+|[০-৯]+)[.)])\s*(.*)$/);
             if (numMatch) {
               const num = numMatch[1];
               const content = numMatch[2];
