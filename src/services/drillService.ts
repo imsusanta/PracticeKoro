@@ -77,7 +77,7 @@ export async function fetchPYQQuestions(filter: Partial<DrillConfig>): Promise<D
     const rpcRows = await fetchPracticeViaRpc({
       subject: filter.subject && filter.subject !== "all" ? filter.subject : null,
       topic: null,
-      difficulty: filter.difficulty && filter.difficulty !== "all" ? filter.difficulty : null,
+      difficulty: null,
       year: rpcYear,
       limit: filter.questionCount || 100,
     });
@@ -114,10 +114,6 @@ export async function fetchPYQQuestions(filter: Partial<DrillConfig>): Promise<D
       query = query.eq("subject", filter.subject);
     }
 
-    if (filter.difficulty && filter.difficulty !== "all") {
-      query = query.eq("difficulty", filter.difficulty.toLowerCase());
-    }
-
     const limit = filter.questionCount || 100;
     query = query.order("created_at", { ascending: false }).limit(limit);
 
@@ -133,7 +129,6 @@ export async function fetchPYQQuestions(filter: Partial<DrillConfig>): Promise<D
       const candidates = FALLBACK_DRILL_QUESTIONS.filter((fb) => {
         if (filter.year && filter.year !== "all" && fb.year !== Number(filter.year)) return false;
         if (filter.subject && filter.subject !== "all" && fb.subject?.toLowerCase() !== filter.subject.toLowerCase()) return false;
-        if (filter.difficulty && filter.difficulty !== "all" && fb.difficulty?.toLowerCase() !== filter.difficulty.toLowerCase()) return false;
         return true;
       });
 
@@ -176,7 +171,7 @@ export async function fetchTopicQuestions(
     const rpcRows = await fetchPracticeViaRpc({
       subject: subject && subject !== "all" ? subject : null,
       topic: topic && topic !== "All Topics" && topic !== "all" ? topic : null,
-      difficulty: difficulty && difficulty !== "all" ? difficulty : null,
+      difficulty: null,
       year: null,
       limit: limit * 2,
     });
@@ -202,10 +197,6 @@ export async function fetchTopicQuestions(
 
     if (topic && topic !== "All Topics" && topic !== "all") {
       query = query.eq("topic", topic);
-    }
-
-    if (difficulty && difficulty !== "all") {
-      query = query.eq("difficulty", difficulty.toLowerCase());
     }
 
     query = query.order("created_at", { ascending: false }).limit(limit * 2);

@@ -61,7 +61,6 @@ export const SubjectPractice = () => {
   // Configuration States
   const [selectedSubject, setSelectedSubject] = useState<string>("Mathematics");
   const [selectedTopic, setSelectedTopic] = useState<string>("All Topics");
-  const [selectedDifficulty, setSelectedDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [drillMode, setDrillMode] = useState<"instant_feedback" | "timed_quiz">("instant_feedback");
 
@@ -124,7 +123,7 @@ export const SubjectPractice = () => {
   // Load preview questions for selected subject
   useEffect(() => {
     let isCancelled = false;
-    fetchTopicQuestions(selectedSubject, selectedTopic, selectedDifficulty, 20).then(qs => {
+    fetchTopicQuestions(selectedSubject, selectedTopic, undefined, 20).then(qs => {
       if (!isCancelled) {
         setPreviewQuestions(qs);
       }
@@ -132,7 +131,7 @@ export const SubjectPractice = () => {
     return () => {
       isCancelled = true;
     };
-  }, [selectedSubject, selectedTopic, selectedDifficulty]);
+  }, [selectedSubject, selectedTopic]);
 
   // Load bookmarks
   useEffect(() => {
@@ -177,7 +176,6 @@ export const SubjectPractice = () => {
       subtitle: `${questionCount} Questions • ${drillMode === "instant_feedback" ? "Instant Solutions" : "Timed Test"}`,
       subject: selectedSubject,
       topic: selectedTopic !== "All Topics" ? selectedTopic : undefined,
-      difficulty: selectedDifficulty,
       questionCount,
       marksPerQuestion: 1,
       negativeMarks: 0.25,
@@ -326,34 +324,7 @@ export const SubjectPractice = () => {
               </div>
             </div>
 
-            {/* 3. Difficulty */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
-                Difficulty Level
-              </label>
-              <div className="grid grid-cols-4 gap-1">
-                {[
-                  { id: "all", label: "All" },
-                  { id: "easy", label: "Easy" },
-                  { id: "medium", label: "Medium" },
-                  { id: "hard", label: "Hard" },
-                ].map((dif) => (
-                  <button
-                    key={dif.id}
-                    onClick={() => setSelectedDifficulty(dif.id as any)}
-                    className={`h-10 rounded-xl text-[11px] font-bold transition-all ${
-                      selectedDifficulty === dif.id
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {dif.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Drill Mode */}
+            {/* 3. Drill Mode */}
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-wider text-slate-400">
                 Practice Mode
@@ -442,11 +413,6 @@ export const SubjectPractice = () => {
                       {q.topic && (
                         <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
                           {q.topic}
-                        </span>
-                      )}
-                      {q.difficulty && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-medium uppercase">
-                          {q.difficulty}
                         </span>
                       )}
                       {q.year && (

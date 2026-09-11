@@ -297,30 +297,48 @@ export type Database = {
       }
       exams: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string
           description: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_paid: boolean | null
           name: string
+          order_index: number | null
+          price: number | null
+          slug: string | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_paid?: boolean | null
           name: string
+          order_index?: number | null
+          price?: number | null
+          slug?: string | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_paid?: boolean | null
           name?: string
+          order_index?: number | null
+          price?: number | null
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -345,6 +363,9 @@ export type Database = {
           is_paid: boolean
           price: number
           subject_id: string | null
+          negative_marks: number | null
+          status: string | null
+          total_questions: number | null
           updated_at: string
         }
         Insert: {
@@ -366,6 +387,9 @@ export type Database = {
           is_paid?: boolean
           price?: number
           subject_id?: string | null
+          negative_marks?: number | null
+          status?: string | null
+          total_questions?: number | null
           updated_at?: string
         }
         Update: {
@@ -387,6 +411,9 @@ export type Database = {
           is_paid?: boolean
           price?: number
           subject_id?: string | null
+          negative_marks?: number | null
+          status?: string | null
+          total_questions?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -589,54 +616,161 @@ export type Database = {
         }
         Relationships: []
       }
-      questions: {
+      mock_test_questions: {
         Row: {
-          correct_answer: string
           created_at: string
-          created_by: string
-          exam_id: string
-          explanation: string | null
           id: string
-          option_a: string
-          option_b: string
-          option_c: string
-          option_d: string
-          question_text: string
-          subject: string | null
-          topic: string | null
-          updated_at: string
+          marks: number | null
+          mock_test_id: string
+          question_id: string
+          question_number: number
         }
         Insert: {
-          correct_answer: string
           created_at?: string
-          created_by: string
-          exam_id: string
-          explanation?: string | null
           id?: string
-          option_a: string
-          option_b: string
-          option_c: string
-          option_d: string
-          question_text: string
-          subject?: string | null
-          topic?: string | null
-          updated_at?: string
+          marks?: number | null
+          mock_test_id: string
+          question_id: string
+          question_number: number
         }
         Update: {
-          correct_answer?: string
+          created_at?: string
+          id?: string
+          marks?: number | null
+          mock_test_id?: string
+          question_id?: string
+          question_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_test_questions_mock_test_id_fkey"
+            columns: ["mock_test_id"]
+            isOneToOne: false
+            referencedRelation: "mock_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_test_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_options: {
+        Row: {
+          created_at: string
+          id: string
+          is_correct: boolean
+          option_order: number
+          option_text: string
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          option_order: number
+          option_text: string
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          option_order?: number
+          option_text?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          correct_answer: string | null
+          created_at: string
+          created_by: string
+          difficulty: string | null
+          exam_id: string | null
+          explanation: string | null
+          id: string
+          language: string | null
+          marks: number | null
+          negative_marks: number | null
+          option_a: string | null
+          option_b: string | null
+          option_c: string | null
+          option_d: string | null
+          question_text: string
+          question_type: string | null
+          source: string | null
+          status: string | null
+          subject: string | null
+          subject_id: string | null
+          topic: string | null
+          topic_id: string | null
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          correct_answer?: string | null
           created_at?: string
           created_by?: string
-          exam_id?: string
+          difficulty?: string | null
+          exam_id?: string | null
           explanation?: string | null
           id?: string
-          option_a?: string
-          option_b?: string
-          option_c?: string
-          option_d?: string
-          question_text?: string
+          language?: string | null
+          marks?: number | null
+          negative_marks?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
+          question_text: string
+          question_type?: string | null
+          source?: string | null
+          status?: string | null
           subject?: string | null
+          subject_id?: string | null
           topic?: string | null
+          topic_id?: string | null
           updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          correct_answer?: string | null
+          created_at?: string
+          created_by?: string
+          difficulty?: string | null
+          exam_id?: string | null
+          explanation?: string | null
+          id?: string
+          language?: string | null
+          marks?: number | null
+          negative_marks?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
+          question_text?: string
+          question_type?: string | null
+          source?: string | null
+          status?: string | null
+          subject?: string | null
+          subject_id?: string | null
+          topic?: string | null
+          topic_id?: string | null
+          updated_at?: string
+          year?: number | null
         }
         Relationships: [
           {
@@ -644,6 +778,20 @@ export type Database = {
             columns: ["exam_id"]
             isOneToOne: false
             referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]

@@ -176,7 +176,7 @@ export async function startAttempt(req: StartAttemptRequest): Promise<StartAttem
 
   let attemptId = "";
   let startedAt = new Date().toISOString();
-  let expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
   let savedResponses: Record<string, string> = {};
   let savedReviews: string[] = [];
 

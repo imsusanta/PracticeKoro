@@ -302,13 +302,12 @@ const QuestionSubjectManagement = () => {
             .order("order_index", { ascending: true });
 
         if (error) {
-            console.error("Error loading subjects with category:", error);
-            // Fallback: try without order_index or just search by category
+            console.warn("Error loading subjects with category, falling back to all subjects:", error);
+            // Fallback: try without category filter in case column doesn't exist
             const fallback = await supabase
                 .from("subjects")
                 .select("id, exam_id, name, description, order_index")
-                .or('category.eq.questions,category.is.null')
-                .order("name");
+                .order("order_index", { ascending: true });
 
             data = fallback.data;
             error = fallback.error;
@@ -356,13 +355,13 @@ const QuestionSubjectManagement = () => {
             .order("order_index", { ascending: true });
 
         if (error) {
-            // Fallback: Try without order_index
+            console.warn("Error loading topics with category, falling back to all topics:", error);
+            // Fallback: Try without category filter
             const fallback = await supabase
                 .from("topics")
                 .select("id, subject_id, name, description, order_index")
                 .eq("subject_id", subjectId)
-                .or('category.eq.questions,category.is.null')
-                .order("name");
+                .order("order_index", { ascending: true });
 
             data = fallback.data;
             error = fallback.error;

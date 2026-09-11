@@ -31,16 +31,17 @@ const Footer = () => {
                         {/* Social Links */}
                         <div className="flex items-center justify-center sm:justify-start gap-4 pt-2 mb-[3px]">
                             {[
-                                { icon: Send, href: "https://t.me/parikshanotespdf", color: "hover:bg-[#0088cc]" },
-                                { icon: Instagram, href: "https://www.instagram.com/parikshanotes_in", color: "hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500" },
-                                { icon: Youtube, href: "https://www.youtube.com/@parikshanotesofficial", color: "hover:bg-red-600" },
-                                { icon: Facebook, href: "https://www.facebook.com/parikshanotes.official", color: "hover:bg-blue-600" }
+                                { icon: Send, label: "Telegram", href: "https://t.me/parikshanotespdf", color: "hover:bg-[#0088cc]" },
+                                { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/parikshanotes_in", color: "hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500" },
+                                { icon: Youtube, label: "YouTube", href: "https://www.youtube.com/@parikshanotesofficial", color: "hover:bg-red-600" },
+                                { icon: Facebook, label: "Facebook", href: "https://www.facebook.com/parikshanotes.official", color: "hover:bg-blue-600" }
                             ].map((social, i) => (
                                 <a
                                     key={i}
                                     href={social.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    aria-label={`PracticeKoro on ${social.label}`}
                                     className={`w-11 h-11 rounded-xl bg-slate-800/80 flex items-center justify-center transition-all duration-300 group ${social.color}`}
                                 >
                                     <social.icon className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />

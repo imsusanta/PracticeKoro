@@ -26,7 +26,7 @@ export interface DrillConfig {
   subject?: string;
   topic?: string;
   subtopic?: string;
-  difficulty?: 'all' | 'easy' | 'medium' | 'hard';
+  difficulty?: 'all' | 'easy' | 'medium' | 'hard' | string;
   year?: number | 'all';
   questionCount: number;
   timeLimitMinutes?: number;
@@ -46,7 +46,7 @@ export interface DrillQuestion {
   explanation: string | null;
   subject: string | null;
   topic: string | null;
-  difficulty: string | null;
+  difficulty?: string | null;
   year: number | null;
   source?: string | null;
 }

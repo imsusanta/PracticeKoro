@@ -13,6 +13,9 @@ dist-ssr
 coverage
 *.local
 
+# Environment secrets — never commit. See .env.example for placeholders.
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

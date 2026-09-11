@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS public.questions (
     option_d TEXT NOT NULL,
     correct_answer TEXT NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
     explanation TEXT,
-    difficulty TEXT DEFAULT 'medium' CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    difficulty TEXT DEFAULT 'medium',
     year INTEGER,
     source TEXT,
     tags TEXT,

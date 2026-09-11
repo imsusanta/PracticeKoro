@@ -84,6 +84,7 @@ export function useTodayMetrics(userId?: string) {
           accuracy: 0,
           studyTimeMinutes: 0,
           streakDays: 0,
+          mockTestsToday: 0,
         });
       }
       return fetchTodayMetrics(userId);

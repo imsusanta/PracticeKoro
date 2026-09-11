@@ -5,7 +5,7 @@ import { fetchStudentOverallRank } from '@/services/studentService';
 // never from a live round-trip (previously ~1300ms network call).
 vi.mock('@/integrations/supabase/client', () => {
   const chain: Record<string, unknown> = { data: [], error: null };
-  for (const m of ['select', 'eq', 'not', 'neq', 'order', 'limit', 'maybeSingle', 'single', 'is', 'in', 'or']) {
+  for (const m of ['select', 'eq', 'not', 'neq', 'order', 'limit', 'maybeSingle', 'single', 'is', 'in', 'or', 'gte']) {
     (chain as Record<string, unknown>)[m] = () => chain;
   }
   return {
@@ -48,5 +48,13 @@ describe('Student Overall Rank Engine', () => {
     // Rank C should be in realistic mid-upper tier (~140s / ~120s)
     expect(rankC).toBeGreaterThan(50);
     expect(rankC).toBeLessThan(200);
+  });
+
+  it('fetchTodayMetrics returns mockTestsToday correctly', async () => {
+    const { fetchTodayMetrics } = await import('@/services/studentService');
+    const result = await fetchTodayMetrics('00000000-0000-0000-0000-000000000000');
+    expect(result).toHaveProperty('mockTestsToday');
+    expect(typeof result.mockTestsToday).toBe('number');
+    expect(result.mockTestsToday).toBe(0);
   });
 });

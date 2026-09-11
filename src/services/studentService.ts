@@ -95,6 +95,7 @@ export interface TodayMetrics {
   accuracy: number;
   studyTimeMinutes: number;
   streakDays: number;
+  mockTestsToday: number;
 }
 
 export interface UnfinishedPracticeSession {
@@ -210,11 +211,14 @@ export async function fetchTodayMetrics(userId: string): Promise<TodayMetrics> {
       }
     }
 
+    const mockTestsToday = todayAttempts && todayAttempts.length > 0 ? todayAttempts.length : 0;
+
     return {
       questions,
       accuracy,
       studyTimeMinutes,
       streakDays,
+      mockTestsToday,
     };
   } catch (err) {
     console.error("fetchTodayMetrics failed:", err);
@@ -223,6 +227,7 @@ export async function fetchTodayMetrics(userId: string): Promise<TodayMetrics> {
       accuracy: 0,
       studyTimeMinutes: 0,
       streakDays: 0,
+      mockTestsToday: 0,
     };
   }
 }

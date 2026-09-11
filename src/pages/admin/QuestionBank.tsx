@@ -20,6 +20,7 @@ import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
 import { SubjectTopicSelectors } from "@/components/admin/SubjectTopicSelectors";
 import { MathText } from "@/components/ui/MathText";
 import { fetchAllRows, buildSafeUpdateData } from "@/utils/questionSecurity";
+import { checkIsAdmin } from "@/utils/adminAuth";
 
 interface Question {
   id: string;
@@ -64,7 +65,6 @@ const QuestionBank = () => {
   const [filterMockTest, setFilterMockTest] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterSubcategory, setFilterSubcategory] = useState<string>("all");
-  const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterLanguage, setFilterLanguage] = useState<string>("all");
   const [mockTests, setMockTests] = useState<any[]>([]);
@@ -92,7 +92,6 @@ const QuestionBank = () => {
     topic_name: "" as string | null,
     exam_id: "",
     mock_test_id: "",
-    difficulty: "all",
     year: "",
     language: "all",
   });
@@ -124,7 +123,7 @@ const QuestionBank = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [searchQuery, filterExam, filterMockTest, mockTestQuestionIds, filterSubject, filterTopic, filterDifficulty, filterYear, filterLanguage, questions]);
+  }, [searchQuery, filterExam, filterMockTest, mockTestQuestionIds, filterSubject, filterTopic, filterYear, filterLanguage, questions]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -133,8 +132,8 @@ const QuestionBank = () => {
       navigate("/admin/login");
       return;
     }
-    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).in("role", ["admin", "super_admin"]).maybeSingle();
-    if (!roleData) {
+    const isAdmin = await checkIsAdmin(session.user.id);
+    if (!isAdmin) {
       setLoading(false);
       await supabase.auth.signOut();
       toast({ title: "Access Denied", description: "You do not have admin privileges", variant: "destructive" });
@@ -360,11 +359,6 @@ const QuestionBank = () => {
           (selectedTopName && q.topic === selectedTopName)
         );
       }
-    }
-
-    // Difficulty filter
-    if (filterDifficulty !== "all") {
-      filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
     }
 
     // PYQ / Year filter
@@ -726,9 +720,6 @@ const QuestionBank = () => {
       }
 
       // Universal updates (applicable to both exam and subject questions)
-      if (bulkEditData.difficulty && bulkEditData.difficulty !== "all") {
-        updateData.difficulty = bulkEditData.difficulty;
-      }
       if (bulkEditData.year) {
         updateData.year = parseInt(bulkEditData.year, 10) || null;
       }
@@ -780,7 +771,6 @@ const QuestionBank = () => {
         topic_name: "",
         exam_id: "",
         mock_test_id: "",
-        difficulty: "all",
         year: "",
         language: "all",
       });
@@ -847,37 +837,29 @@ const QuestionBank = () => {
           </div>
         </div>
 
-        {/* Stats Row with Difficulty & PYQ breakdown */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/70 to-indigo-50/30 border border-blue-100/80 shadow-xs">
             <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{questions.length}</p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mt-0.5">Total MCQs</p>
-          </div>
-          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 shadow-xs">
-            <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{questions.filter(q => q.difficulty === 'easy').length}</p>
-            <p className="text-[10px] text-emerald-700 uppercase tracking-wider font-bold mt-0.5">Easy</p>
-          </div>
-          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/70 to-orange-50/30 border border-amber-100/80 shadow-xs">
-            <p className="text-xl sm:text-2xl font-black text-amber-700 tracking-tight">{questions.filter(q => q.difficulty === 'medium').length}</p>
-            <p className="text-[10px] text-amber-700 uppercase tracking-wider font-bold mt-0.5">Medium</p>
-          </div>
-          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-rose-50/70 to-red-50/30 border border-rose-100/80 shadow-xs">
-            <p className="text-xl sm:text-2xl font-black text-rose-700 tracking-tight">{questions.filter(q => q.difficulty === 'hard').length}</p>
-            <p className="text-[10px] text-rose-700 uppercase tracking-wider font-bold mt-0.5">Hard</p>
           </div>
           <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-purple-50/70 to-violet-50/30 border border-purple-100/80 shadow-xs">
             <p className="text-xl sm:text-2xl font-black text-purple-700 tracking-tight">{questions.filter(q => q.year && Number(q.year) > 0).length}</p>
             <p className="text-[10px] text-purple-700 uppercase tracking-wider font-bold mt-0.5">PYQs</p>
           </div>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 shadow-xs">
+            <p className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">{subjectOptions.length}</p>
+            <p className="text-[10px] text-emerald-700 uppercase tracking-wider font-bold mt-0.5">Subjects</p>
+          </div>
           <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-slate-50 to-slate-100/80 border border-slate-200/90 shadow-xs">
-            <p className="text-xl sm:text-2xl font-black text-blue-700 tracking-tight">{subjectOptions.length}</p>
-            <p className="text-[10px] text-blue-700 uppercase tracking-wider font-bold mt-0.5">Subjects</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">{exams.length}</p>
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold mt-0.5">Target Exams</p>
           </div>
         </div>
 
         {/* Filters */}
         <div className="space-y-3.5 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="relative md:col-span-2 lg:col-span-2">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -917,19 +899,6 @@ const QuestionBank = () => {
                 {filterCategory === "subject" && subjectOptions.map((subject) => (
                   <SelectItem key={`subject:${subject.id}`} value={`subject:${subject.id}`}>{subject.name}</SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            {/* Difficulty Filter */}
-            <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-              <SelectTrigger className="h-11 rounded-2xl bg-white border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs">
-                <SelectValue placeholder="Difficulty" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl shadow-lg border-slate-200">
-                <SelectItem value="all">All Difficulties</SelectItem>
-                <SelectItem value="easy">🟢 Easy</SelectItem>
-                <SelectItem value="medium">🟡 Medium</SelectItem>
-                <SelectItem value="hard">🔴 Hard</SelectItem>
               </SelectContent>
             </Select>
 
@@ -1023,7 +992,7 @@ const QuestionBank = () => {
               </div>
             )}
 
-            {(filterCategory !== "all" || filterExam !== "all" || filterDifficulty !== "all" || filterYear !== "all" || filterLanguage !== "all" || searchQuery) && (
+            {(filterCategory !== "all" || filterExam !== "all" || filterYear !== "all" || filterLanguage !== "all" || searchQuery) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1035,7 +1004,6 @@ const QuestionBank = () => {
                   setFilterSubject("all");
                   setFilterTopic("all");
                   setFilterMockTest("all");
-                  setFilterDifficulty("all");
                   setFilterYear("all");
                   setFilterLanguage("all");
                 }}
@@ -1113,7 +1081,6 @@ const QuestionBank = () => {
                         topic_name: "",
                         exam_id: "",
                         mock_test_id: "",
-                        difficulty: "all",
                         year: "",
                         language: "all"
                       });
@@ -1285,16 +1252,6 @@ const QuestionBank = () => {
                       </Badge>
                     )}
 
-                    {question.difficulty && (
-                      <Badge variant="secondary" className={`rounded-full text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 ${
-                        question.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-800' :
-                        question.difficulty === 'hard' ? 'bg-rose-100 text-rose-800' :
-                        'bg-amber-100 text-amber-800'
-                      }`}>
-                        {question.difficulty}
-                      </Badge>
-                    )}
-
                     <span className="text-slate-400 font-medium text-[11px] uppercase">
                       LANG: {question.language || "bn"}
                     </span>
@@ -1350,7 +1307,7 @@ const QuestionBank = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Edit Question</DialogTitle>
-            <DialogDescription>Update question details, difficulty level, PYQ year, and tags</DialogDescription>
+            <DialogDescription>Update question details, PYQ year, and tags</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div className="space-y-1.5">
@@ -1381,7 +1338,7 @@ const QuestionBank = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs font-bold text-slate-700">Correct Answer *</Label>
                 <Select value={formData.correct_answer} onValueChange={(value) => setFormData({ ...formData, correct_answer: value })}>
@@ -1393,20 +1350,6 @@ const QuestionBank = () => {
                     <SelectItem value="B">Option B</SelectItem>
                     <SelectItem value="C">Option C</SelectItem>
                     <SelectItem value="D">Option D</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-700">Difficulty Level</Label>
-                <Select value={formData.difficulty} onValueChange={(val: any) => setFormData({ ...formData, difficulty: val })}>
-                  <SelectTrigger className="h-11 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">🟢 Easy</SelectItem>
-                    <SelectItem value="medium">🟡 Medium</SelectItem>
-                    <SelectItem value="hard">🔴 Hard</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1520,15 +1463,6 @@ const QuestionBank = () => {
             <div className="space-y-4">
               {/* Badges Bar */}
               <div className="flex flex-wrap items-center gap-2">
-                {selectedQuestion.difficulty && (
-                  <Badge variant="outline" className={`text-xs font-bold ${
-                    selectedQuestion.difficulty === 'easy' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                    selectedQuestion.difficulty === 'hard' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                    'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}>
-                    Difficulty: {selectedQuestion.difficulty.toUpperCase()}
-                  </Badge>
-                )}
                 {selectedQuestion.year && (
                   <Badge variant="outline" className="text-xs font-bold bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
@@ -1662,29 +1596,14 @@ const QuestionBank = () => {
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Bulk Update Questions</DialogTitle>
             <DialogDescription>
-              Batch update {selectedQuestions.length} selected questions with common difficulty, year, language, or curriculum tags.
+              Batch update {selectedQuestions.length} selected questions with common year, language, or curriculum tags.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-3">
             {/* Common Metadata Fields */}
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
               <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Universal Metadata</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-600">Difficulty</Label>
-                  <Select value={bulkEditData.difficulty} onValueChange={(val) => setBulkEditData({ ...bulkEditData, difficulty: val })}>
-                    <SelectTrigger className="h-10 rounded-xl text-xs bg-white">
-                      <SelectValue placeholder="Difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Do not change</SelectItem>
-                      <SelectItem value="easy">🟢 Easy</SelectItem>
-                      <SelectItem value="medium">🟡 Medium</SelectItem>
-                      <SelectItem value="hard">🔴 Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-slate-600">PYQ Year</Label>
                   <Input
@@ -1785,7 +1704,6 @@ const QuestionBank = () => {
                 !bulkEditData.topic_name &&
                 (!bulkEditData.exam_id || bulkEditData.exam_id === "all") &&
                 (!bulkEditData.mock_test_id || bulkEditData.mock_test_id === "all") &&
-                (!bulkEditData.difficulty || bulkEditData.difficulty === "all") &&
                 !bulkEditData.year &&
                 (!bulkEditData.language || bulkEditData.language === "all")
               )}

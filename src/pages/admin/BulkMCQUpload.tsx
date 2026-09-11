@@ -58,7 +58,6 @@ const BulkMCQUpload = () => {
 
   const [defaultSubject, setDefaultSubject] = useState({ id: "" as string | null, name: "" as string | null });
   const [defaultTopic, setDefaultTopic] = useState({ id: "" as string | null, name: "" as string | null });
-  const [defaultDifficulty, setDefaultDifficulty] = useState<string>("medium");
   const [defaultYear, setDefaultYear] = useState<string>("");
   const [defaultLanguage, setDefaultLanguage] = useState<string>("bn");
   const [defaultSource, setDefaultSource] = useState<string>("");
@@ -372,7 +371,7 @@ Short Notes:
       // - Upload Type 'subject' → exam_id is ALWAYS NULL, subject/topic from defaults
       const questionsToInsert = parsedQuestions.map(q => {
         const commonMetadata = {
-          difficulty: defaultDifficulty || "medium",
+          difficulty: "medium",
           year: defaultYear ? parseInt(defaultYear, 10) || null : null,
           language: defaultLanguage || "bn",
           source: defaultSource || null,
@@ -655,20 +654,7 @@ Short Notes:
                   Default MCQ Properties (Applied to all parsed questions)
                 </Label>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-600">Difficulty</Label>
-                  <Select value={defaultDifficulty} onValueChange={setDefaultDifficulty}>
-                    <SelectTrigger className="h-11 rounded-2xl bg-white text-xs border-slate-200 shadow-2xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                      <SelectItem value="easy">🟢 Easy (Beginner)</SelectItem>
-                      <SelectItem value="medium">🟡 Medium (Standard)</SelectItem>
-                      <SelectItem value="hard">🔴 Hard (Advanced)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-600">PYQ Year (Optional)</Label>
