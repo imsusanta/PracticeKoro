@@ -9,12 +9,13 @@ import {
   Trophy
 } from "lucide-react";
 
-// Mobile Bottom Navigation (Balanced 5 Core Pillars: Home, Exams, Practice, Results, Profile)
+// Mobile Bottom Navigation (5 Core Pillars: Home, Exams, Practice, Study, Profile)
+// Results stay reachable via Test Result → Detailed Analysis → Profile → My Performance.
 export const studentNav = [
   { name: "Home", path: "/student/dashboard", icon: Home },
   { name: "Exams", path: "/student/exam", icon: ClipboardList },
   { name: "Practice", path: "/student/practice", icon: Target },
-  { name: "Results", path: "/student/results", icon: BarChart3 },
+  { name: "Study", path: "/student/notes", icon: BookOpen },
   { name: "Profile", path: "/student/profile", icon: UserRound },
 ];
 

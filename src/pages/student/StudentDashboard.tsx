@@ -32,6 +32,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { TestDetailsModal } from "@/components/student/TestDetailsModal";
 import { DashboardSearch } from "@/components/student/DashboardSearch";
+import { TodaysMission, TARGET_EXAM_STORAGE_KEY, DEFAULT_TARGET_EXAM_ID } from "@/components/student/TodaysMission";
+import { EXAM_CATALOG } from "@/data/examCatalog";
 import { initRazorpayPayment } from "@/utils/payment";
 import { useStudentAuth } from "@/contexts/StudentContext";
 import {
@@ -376,15 +378,33 @@ const StudentDashboard = () => {
 
   const [readiness, setReadiness] = useState<ExamReadinessResult | null>(null);
 
+  // Student's target exam (catalog id), persisted locally until a DB column exists.
+  const [targetExamId, setTargetExamId] = useState<string>(() => {
+    try {
+      return localStorage.getItem(TARGET_EXAM_STORAGE_KEY) || DEFAULT_TARGET_EXAM_ID;
+    } catch {
+      return DEFAULT_TARGET_EXAM_ID;
+    }
+  });
+
+  const handleTargetExamChange = (examId: string) => {
+    setTargetExamId(examId);
+    try {
+      localStorage.setItem(TARGET_EXAM_STORAGE_KEY, examId);
+    } catch {
+      // storage unavailable — selection still applies for this session
+    }
+  };
+
   useEffect(() => {
     let isCancelled = false;
-    fetchStudentReadiness(user?.id, "wb-panchayat").then((res) => {
+    fetchStudentReadiness(user?.id, targetExamId).then((res) => {
       if (!isCancelled) setReadiness(res);
     });
     return () => {
       isCancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, targetExamId]);
 
   // Student details
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "Aspirant";
@@ -732,6 +752,11 @@ const StudentDashboard = () => {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
+            SECTION 3.4: TODAY'S MISSION (dynamic daily objective)
+            ═══════════════════════════════════════════════════════════════ */}
+        <TodaysMission questions={todayMetrics.questions} loading={loadingToday} />
+
+        {/* ═══════════════════════════════════════════════════════════════
             SECTION: RANK (Overall Rank among all mock test participants)
             ═══════════════════════════════════════════════════════════════ */}
         <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
@@ -762,6 +787,23 @@ const StudentDashboard = () => {
         {/* ═══════════════════════════════════════════════════════════════
             SECTION 3.5: TARGET EXAM READINESS CARD (Phase 4 Diagnostic Engine)
             ═══════════════════════════════════════════════════════════════ */}
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-black text-sm sm:text-base text-slate-900 tracking-tight">
+            My Target Exam
+          </h3>
+          <select
+            value={targetExamId}
+            onChange={(e) => handleTargetExamChange(e.target.value)}
+            aria-label="Select target exam"
+            className="text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 max-w-[60%]"
+          >
+            {EXAM_CATALOG.map((exam) => (
+              <option key={exam.id} value={exam.id}>
+                {exam.name}
+              </option>
+            ))}
+          </select>
+        </div>
         {readiness && (
           <div
             onClick={() => navigate("/student/performance")}

@@ -387,17 +387,19 @@ CREATE INDEX IF NOT EXISTS idx_purchases_status ON public.purchases(status);
 
 -- 21. SITE SETTINGS & NOTIFICATIONS
 CREATE TABLE IF NOT EXISTS public.site_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    key TEXT UNIQUE NOT NULL,
-    value JSONB NOT NULL,
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- Default Settings Seed
 INSERT INTO public.site_settings (key, value)
 VALUES 
-    ('subscription_fee', '{"amount": 299, "currency": "INR", "label": "1 Year VIP All-Access Pass"}'::jsonb),
-    ('maintenance_mode', '{"enabled": false}'::jsonb)
+    ('yearly_subscription_fee', '199'),
+    ('maintenance_mode', 'false'),
+    ('auto_approve_students', 'true'),
+    ('openrouter_api_key', ''),
+    ('openrouter_model', 'meta-llama/llama-3.1-405b-instruct:free')
 ON CONFLICT (key) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.notifications (
@@ -915,3 +917,102 @@ VALUES
     ('English Grammar & Vocabulary', 'english', 'Grammar, Synonyms, Antonyms, One Word Substitution', 4, true),
     ('Bengali Language', 'bengali', 'বাংলা ব্যাকরণ ও সাহিত্য', 5, true)
 ON CONFLICT DO NOTHING;
+
+-- ==============================================================================
+-- 26. STORAGE BUCKETS (Avatars & Blog Images)
+-- ==============================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES 
+    ('avatars', 'avatars', true),
+    ('blog_images', 'blog_images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public avatar access" ON storage.objects;
+CREATE POLICY "Public avatar access" ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+CREATE POLICY "Users can upload their own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+CREATE POLICY "Users can update their own avatar" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+CREATE POLICY "Users can delete their own avatar" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Public blog images access" ON storage.objects;
+CREATE POLICY "Public blog images access" ON storage.objects FOR SELECT TO public USING (bucket_id = 'blog_images');
+
+DROP POLICY IF EXISTS "Authenticated users upload blog images" ON storage.objects;
+CREATE POLICY "Authenticated users upload blog images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'blog_images');
+
+-- ==============================================================================
+-- 27. INITIAL ADMIN & STUDENT ACCOUNT (Susanta Lohar)
+-- ==============================================================================
+DO $$
+DECLARE
+  v_user_id UUID := gen_random_uuid();
+  v_email TEXT := 'susantalohr@gmail.com';
+  v_password TEXT := 'practicekorp@2026';
+BEGIN
+  -- 1. Check if user already exists in auth.users
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = v_email) THEN
+    SELECT id INTO v_user_id FROM auth.users WHERE email = v_email;
+    UPDATE auth.users
+    SET encrypted_password = crypt(v_password, gen_salt('bf')),
+        email_confirmed_at = COALESCE(email_confirmed_at, now()),
+        updated_at = now()
+    WHERE id = v_user_id;
+  ELSE
+    INSERT INTO auth.users (
+      id,
+      instance_id,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      role,
+      aud,
+      confirmation_token
+    ) VALUES (
+      v_user_id,
+      '00000000-0000-0000-0000-000000000000',
+      v_email,
+      crypt(v_password, gen_salt('bf')),
+      now(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"full_name":"Susanta Lohar"}'::jsonb,
+      now(),
+      now(),
+      'authenticated',
+      'authenticated',
+      ''
+    );
+  END IF;
+
+  -- 2. Profiles table
+  INSERT INTO public.profiles (id, email, full_name, is_active, created_at, updated_at)
+  VALUES (v_user_id, v_email, 'Susanta Lohar', true, now(), now())
+  ON CONFLICT (id) DO UPDATE
+  SET full_name = 'Susanta Lohar', is_active = true;
+
+  -- 3. Roles: both Admin and Student!
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (v_user_id, 'admin')
+  ON CONFLICT (user_id, role) DO NOTHING;
+
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (v_user_id, 'student')
+  ON CONFLICT (user_id, role) DO NOTHING;
+
+  -- 4. Approval status: Approved
+  INSERT INTO public.approval_status (user_id, status)
+  VALUES (v_user_id, 'approved')
+  ON CONFLICT (user_id) DO UPDATE
+  SET status = 'approved';
+
+END $$;
+
+
