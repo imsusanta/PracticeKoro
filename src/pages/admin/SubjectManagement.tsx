@@ -491,7 +491,7 @@ const SubjectManagement = () => {
         if (!session) return;
 
         // Helper to strip list prefixes like "1.", "2)", "*", "-", "•"
-        // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
+        {/* eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional. */}
         const cleanBulkLine = (line: string) => line.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim();
 
         const lines = bulkTopicText
@@ -784,11 +784,11 @@ const SubjectManagement = () => {
                                 {bulkTopicText.trim() && (
                                     <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
                                         <p className="text-xs font-semibold text-violet-700 mb-1">
-                                            // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
+                                            {/* eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional. */}
                                             📋 {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} topics will be added
                                         </p>
                                         <div className="max-h-24 overflow-y-auto space-y-0.5">
-                                            // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
+                                            {/* eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional. */}
                                             {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).map((line, i) => (
                                                 <p key={i} className="text-xs text-violet-600 truncate">
                                                     {i + 1}. {line}
@@ -834,7 +834,7 @@ const SubjectManagement = () => {
                                 {isSavingBulk ? (
                                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Adding...</>
                                 ) : (
-                                    // eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional.
+                                    {/* eslint-disable-next-line no-useless-escape -- \- in [*-•] prevents a range; intentional. */}
                                     <><ListPlus className="w-4 h-4 mr-2" /> Add {bulkTopicText.split("\n").map(l => l.replace(/^\s*(?:\d+[.)\-]\s*|[*\-•]\s*)/, "").trim()).filter(l => l).length} Topics</>
                                 )}
                             </Button>
